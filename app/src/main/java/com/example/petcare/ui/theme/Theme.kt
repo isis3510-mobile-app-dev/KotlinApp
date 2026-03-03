@@ -1,6 +1,6 @@
 package com.example.petcare.ui.theme
 
-import android.app.Activity
+//import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -20,8 +20,9 @@ private val DarkColorScheme = darkColorScheme(
 private val LightColorScheme = lightColorScheme(
     primary = GreenLight,
     secondary = GreenDark,
-    tertiary = OffWhite
-
+    tertiary = Black,
+    background = OffWhite,
+    surface =  White
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
     surface = Color(0xFFFFFBFE),
