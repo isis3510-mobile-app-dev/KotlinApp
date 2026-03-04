@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun VaccineCard(name: String, pet: String, maxDate: String, daysOverdue: Int){
+fun NextEventCard(name: String, pet: String, maxDate: String, daysOverdue: Int){
     Card(modifier = Modifier.fillMaxWidth().padding(16.dp),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(4.dp)
@@ -88,8 +88,8 @@ fun VaccineCard(name: String, pet: String, maxDate: String, daysOverdue: Int){
 
 @Preview(showBackground = false)
 @Composable
-fun VaccineCardPreview(){
-    VaccineCard(name="Rabies",
+fun NextEventCardPreview(){
+    NextEventCard(name="Rabies",
         pet = "Max",
         maxDate = "Mar 14, 2025",
         daysOverdue = 349)
