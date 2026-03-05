@@ -20,37 +20,72 @@ import com.example.petcare.R
 import com.example.petcare.ui.theme.PetCareTheme
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 
+
+enum class PetStatus {
+    SUCCESS,
+    WARNING,
+    DEFAULT
+}
+
 @Composable
-fun PetCard() {
-    PetCareTheme {
-        Box(modifier = Modifier.size(85.dp)) {
-            Box(modifier = Modifier
+fun PetCard(
+    image: Painter? = null,
+    text: String = "Add pet",
+    status: PetStatus = PetStatus.DEFAULT
+) {
+    val borderColor = if (status == PetStatus.DEFAULT)
+        Color.Gray
+    else
+        MaterialTheme.colorScheme.primary
+
+    Box(modifier = Modifier.size(85.dp)) {
+
+        Box(
+            modifier = Modifier
                 .size(65.dp)
                 .align(Alignment.TopCenter)
-            ) {
-                OutlinedCard(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                    modifier = Modifier
-                        .size(width = 61.33.dp, height = 61.33.dp)
+        ) {
 
+            OutlinedCard(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+                border = BorderStroke(1.dp, borderColor),
+                modifier = Modifier.size(61.33.dp)
+            ) {
+
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        val image = painterResource(R.drawable.pet)
+
+                    if (status == PetStatus.DEFAULT) {
+
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(28.dp)
+                        )
+
+                    } else {
+
                         Image(
-                            painter = image,
+                            painter = image!!,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
@@ -58,99 +93,72 @@ fun PetCard() {
 
                     }
                 }
+            }
+
+            if (status != PetStatus.DEFAULT) {
+
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .size(14.dp)
                         .shadow(4.dp, CircleShape)
-                        //.offset(x = (-1).dp, y = (-1).dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surface)
+                        .background(MaterialTheme.colorScheme.surface),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = Color(0xFF4CAF50),
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            //.padding(1.dp)
-                            .size(14.dp)
 
+                    Icon(
+                        imageVector = when (status) {
+                            PetStatus.SUCCESS -> Icons.Default.CheckCircle
+                            PetStatus.WARNING -> Icons.Default.Warning
+                            else -> Icons.Default.Add
+                        },
+                        contentDescription = null,
+                        tint = when (status) {
+                            PetStatus.SUCCESS -> Color(0xFF4CAF50)
+                            PetStatus.WARNING -> Color(0xFFFFC107)
+                            else -> Color.Gray
+                        },
+                        modifier = Modifier.size(10.dp)
                     )
                 }
             }
-            Text(
-                text = "Max",
-                modifier = Modifier
-                    .padding(2.dp)
-                    .align(Alignment.BottomCenter),
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyLarge
-            )
         }
 
+        Text(
+            text = text,
+            modifier = Modifier
+                .padding(2.dp)
+                .align(Alignment.BottomCenter),
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }
 
-@Preview
+
+@Preview(showBackground = true)
 @Composable
-fun OutlinedCardExample() {
+fun PetCardPreview() {
     PetCareTheme {
-        Box(modifier = Modifier.size(85.dp)) {
-            Box(modifier = Modifier
-                .size(65.dp)
-                .align(Alignment.TopCenter)
-            ) {
-                OutlinedCard(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                    modifier = Modifier
-                        .size(width = 61.33.dp, height = 61.33.dp)
 
-                ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        val image = painterResource(R.drawable.pet)
-                        Image(
-                            painter = image,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
 
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(14.dp)
-                        .shadow(4.dp, CircleShape)
-                        //.offset(x = (-1).dp, y = (-1).dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surface)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = Color(0xFF4CAF50),
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            //.padding(1.dp)
-                            .size(10.dp)
-
-                    )
-                }
-            }
-            Text(
+            PetCard(
+                image = painterResource(R.drawable.pet),
                 text = "Max",
-                modifier = Modifier
-                    .padding(2.dp)
-                    .align(Alignment.BottomCenter),
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyLarge
+                status = PetStatus.SUCCESS
             )
-        }
 
+            PetCard(
+                image = painterResource(R.drawable.pet),
+                text = "Luna",
+                status = PetStatus.WARNING
+            )
+
+            PetCard()
+        }
+    }
 }
-}
+
+
