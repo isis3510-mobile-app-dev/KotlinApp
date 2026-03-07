@@ -28,7 +28,7 @@ fun TextFieldComponent(name: String, label: String = "",icon: (@Composable () ->
 
         Text(
             text = name,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.padding(bottom = 8.dp)
         )
@@ -37,9 +37,9 @@ fun TextFieldComponent(name: String, label: String = "",icon: (@Composable () ->
             value = text,
             onValueChange = { text = it },
             modifier = Modifier
-                .fillMaxWidth()
+                .size(width = 342.dp, height = 53.17.dp)
                 .clip(RoundedCornerShape(12.dp)),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(20.dp),
             singleLine = true,
             placeholder = {
                 Text(
@@ -49,7 +49,7 @@ fun TextFieldComponent(name: String, label: String = "",icon: (@Composable () ->
             },
             textStyle = TextStyle(
                 color = Color.Black,
-                fontSize = 18.sp,
+                fontSize = 15.sp,
                 fontFamily = RobotoMedium,
                 fontWeight = FontWeight.Normal
             ),
@@ -75,7 +75,7 @@ fun TextFieldComponent(name: String, label: String = "",icon: (@Composable () ->
 @Preview(showBackground = true)
 @Composable
 fun TextFieldPreview(){
-    PetCareTheme() {
+    PetCareTheme{
         TextFieldComponent(
             name = "Full Name",
             label = "Sarah Johnson",

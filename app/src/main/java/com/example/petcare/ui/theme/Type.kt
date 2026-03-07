@@ -21,10 +21,10 @@ val RobotoRegular = FontFamily(
     Font(R.font.roboto_regular)
 )
 val Typography = Typography(
-    bodyLarge = TextStyle(
+    bodySmall = TextStyle(
         fontFamily = RobotoMedium,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
+        fontWeight = FontWeight.Medium,
+        fontSize = 13.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.sp
     ),
@@ -39,6 +39,13 @@ val Typography = Typography(
     labelMedium = TextStyle(
         fontFamily = RobotoMedium,
         fontWeight = FontWeight.Medium,
+        fontSize = 16.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = RobotoRegular,
+        fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.sp
