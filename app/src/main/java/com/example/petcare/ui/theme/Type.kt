@@ -23,9 +23,9 @@ val RobotoRegular = FontFamily(
 val Typography = Typography(
     bodyLarge = TextStyle(
         fontFamily = RobotoMedium,
-        fontWeight = FontWeight.Bold,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
+        fontWeight = FontWeight.Normal,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
         letterSpacing = 0.sp
     ),
 
