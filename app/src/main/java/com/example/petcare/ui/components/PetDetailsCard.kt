@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Female
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Male
 import androidx.compose.material.icons.filled.Vaccines
@@ -41,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
 
 
 @Composable
@@ -74,7 +74,7 @@ fun PetAction(
     }
 }
 @Composable
-fun PetDetailsCard(petName: String, breed:String, age: String, weight: String, gender: String, status: String, photoPath: Int, species: String){
+fun PetDetailsCard(petName: String, breed:String, age: Int, weight: Double, gender: String, status: String, photoPath: Int, species: String){
     val (statusColor, textStatusColor) = when (status.lowercase()) {
         "healthy" -> Pair(Color(0xFFE8F5E9), Color(0xFF2E7D32))   // verde
         else -> Pair(Color(0xFFFFF8E1), Color(0xFFE65100))        // amarillo
@@ -83,6 +83,12 @@ fun PetDetailsCard(petName: String, breed:String, age: String, weight: String, g
     val logo = when (species.lowercase()){
         "dog" -> R.drawable.dog_logo
         else -> R.drawable.cat_logo
+    }
+
+    val genderIcon = when (gender.lowercase()) {
+        "Male" -> Icons.Default.Male
+        "Female" -> Icons.Default.Female
+        else -> Icons.Default.Male
     }
 
     Card(modifier = Modifier.fillMaxWidth().size(width = 350.dp, height = 153.33.dp),
@@ -128,7 +134,7 @@ fun PetDetailsCard(petName: String, breed:String, age: String, weight: String, g
                                 modifier = Modifier.clip(RoundedCornerShape(50.dp))
                                     .background(statusColor).padding(horizontal = 10.dp, vertical = 4.dp),
 
-                            ) {
+                                ) {
                                 Row {
                                     Text(
                                         text = status,
@@ -165,7 +171,7 @@ fun PetDetailsCard(petName: String, breed:String, age: String, weight: String, g
                                 modifier = Modifier.padding(end = 5.dp).size(14.dp)
                             )
                             Text(
-                                text = age,
+                                text = "$age",
                                 fontSize = 14.sp,
                                 color = Color.Gray
                             )
@@ -177,13 +183,13 @@ fun PetDetailsCard(petName: String, breed:String, age: String, weight: String, g
                                 modifier = Modifier.padding(end = 5.dp).size(14.dp)
                             )
                             Text(
-                                text = weight,
+                                text = "$weight",
                                 fontSize = 14.sp,
                                 color = Color.Gray
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Icon(
-                                imageVector = Icons.Default.Male,
+                                imageVector = genderIcon,
                                 contentDescription = "Detail",
                                 tint = Color.Black,
                                 modifier = Modifier.padding(end = 5.dp).size(14.dp)
@@ -239,8 +245,8 @@ fun PetDetailsCard(petName: String, breed:String, age: String, weight: String, g
 fun PetDetailsCardPreview () {
     PetDetailsCard(petName ="Max",
         breed = "Golden Retriever",
-        age = "6",
-        weight = "20",
+        age = 6,
+        weight = 20.0,
         gender = "Male",
         status = "Healthy",
         photoPath = R.drawable.pet,
@@ -252,8 +258,8 @@ fun PetDetailsCardPreview () {
 fun PetDetailsCardPreview2 () {
     PetDetailsCard(petName ="Max",
         breed = "Golden Retriever",
-        age = "6",
-        weight = "20",
+        age = 6,
+        weight = 20.0,
         gender = "Male",
         status = "Vaccine due",
         photoPath = R.drawable.pet,
