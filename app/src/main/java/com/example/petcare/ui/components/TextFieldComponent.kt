@@ -63,7 +63,9 @@ fun TextFieldComponent(name: String, label: String = "",icon: (@Composable () ->
             ),
             trailingIcon = {
                 if (icon != null) {
-                    icon()
+                    IconButton(onClick = {}) {
+                        icon()
+                    }
                 }
             }
 
