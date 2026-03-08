@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.example.petcare.R
 import com.example.petcare.ui.components.NavBar
 import com.example.petcare.ui.components.PetDetailsCard
-import com.example.petcare.ui.components.PetFilters
+import com.example.petcare.ui.components.Filters
 import com.example.petcare.ui.components.SearchBar
 
 data class PetListItem(
@@ -97,7 +97,8 @@ fun PetsScreen(){
                 onQueryChange = { searchQuery = it }
             )
 
-            PetFilters(
+            Filters(
+                filters = listOf("All Pets", "Healthy", "Vaccine Due", "Lost"),
                 selectedFilter = selectedFilter,
                 onFilterSelected = { selectedFilter = it }
             )

@@ -13,11 +13,11 @@ import androidx.compose.ui.unit.dp
 import com.example.petcare.ui.theme.GreenDark
 
 @Composable
-fun PetFilters(
+fun Filters(
+    filters: List<String>,
     selectedFilter: String,
     onFilterSelected: (String) -> Unit
 ) {
-    val filters = listOf("All Pets", "Healthy", "Vaccine Due", "Lost")
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -47,8 +47,9 @@ fun PetFilters(
 
 @Preview(showBackground = false)
 @Composable
-fun PetFiltersPreview() {
-    PetFilters(
+fun FiltersPreview() {
+    Filters(
+        filters = listOf("All Pets", "Healthy", "Vaccine Due", "Lost"),
         selectedFilter = "All Pets",
         onFilterSelected = {}
     )
