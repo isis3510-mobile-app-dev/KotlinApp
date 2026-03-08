@@ -2,6 +2,7 @@ package com.example.petcare.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -52,6 +54,7 @@ fun PetAction(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(12.dp)
+            .clickable(onClick = {})
     ) {
 
         Icon(
@@ -195,13 +198,14 @@ fun PetDetailsCard(petName: String, breed:String, age: String, weight: String, g
                     }
                 }
                 Spacer(modifier = Modifier.weight(1f))
-
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = "Detail",
-                    tint = Color.Black,
-                    modifier = Modifier.padding(end = 16.dp)
-                )
+                IconButton(onClick = {}) {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "Detail",
+                        tint = Color.Black,
+                        modifier = Modifier.padding(end = 16.dp)
+                    )
+                }
 
             }
             HorizontalDivider(
