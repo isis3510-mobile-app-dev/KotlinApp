@@ -31,8 +31,8 @@ val Typography = Typography(
 
     titleLarge = TextStyle(
         fontFamily = RobotoBold,
-        fontWeight = FontWeight.Bold,
-        fontSize = 26.sp,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 18.sp,
         lineHeight = 33.8.sp,
         letterSpacing = 0.sp
     ),

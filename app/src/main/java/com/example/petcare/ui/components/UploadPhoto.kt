@@ -26,48 +26,50 @@ fun IconCardButton(
     textBottom: String,
     onClick: () -> Unit
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        OutlinedCard(
-            modifier = Modifier
-                .size(112.dp)
-                .clickable { onClick() },
-            shape = RoundedCornerShape(30.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
+    PetCareTheme {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
+            OutlinedCard(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .size(112.dp)
+                    .clickable { onClick() },
+                shape = RoundedCornerShape(30.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Box(
-                    contentAlignment = Alignment.Center
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    icon()
+                    Box(
+                        contentAlignment = Alignment.Center
+                    ) {
+                        icon()
+                    }
+
+                    Text(
+                        text = text,
+                        fontSize = 12.sp,
+                        fontFamily = RobotoMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+
                 }
-
-                Text(
-                    text = text,
-                    fontSize = 12.sp,
-                    fontFamily = RobotoMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = textBottom,
+                fontSize = 12.sp,
+                fontFamily = RobotoRegular,
+                fontWeight = FontWeight.Normal,
+                color = MaterialTheme.colorScheme.tertiary
+            )
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = textBottom,
-            fontSize = 12.sp,
-            fontFamily = RobotoRegular,
-            fontWeight = FontWeight.Normal,
-            color = MaterialTheme.colorScheme.tertiary
-        )
     }
 }
 

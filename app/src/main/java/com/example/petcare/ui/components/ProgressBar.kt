@@ -16,39 +16,53 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.material3.Icon
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.petcare.ui.theme.PetCareTheme
 
 @Composable
-fun Stepper(currentStep: Int, totalSteps: Int = 3) {
+fun Stepper(currentStep: Int, totalSteps: Int = 3,
+            stepLabels: List<String> = listOf("Step 1", "Step 2", "Step 3")) {
     Row(
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 32.dp)
+            .padding(horizontal = 5.dp)
     ) {
         for (step in 1..totalSteps) {
-
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .background(
-                        color = if (step <= currentStep) Color(0xFF006A60) else Color(0xFFBDBDBD),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (step <= currentStep) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Completed",
-                        tint = Color.White
-                    )
-                } else {
-                    Text(
-                        text = "$step",
-                        color = Color.Black
-                    )
+
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(
+                            color = if (step <= currentStep) Color(0xFF006A60) else Color(0xFFBDBDBD),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (step <= currentStep) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Completed",
+                            tint = Color.White
+                        )
+                    } else {
+                        Text(
+                            text = "$step",
+                            color = Color.Black
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = stepLabels.getOrNull(step - 1) ?: "",
+                    fontSize = 10.sp,
+                    color = if (step <= currentStep) Color(0xFF006A60) else Color(0xFFBDBDBD)
+                )
             }
 
 
@@ -56,13 +70,14 @@ fun Stepper(currentStep: Int, totalSteps: Int = 3) {
                 Canvas(modifier = Modifier
                     .weight(1f)
                     .height(3.dp)
-                    .padding(horizontal = 6.dp)) {
+                    .padding(horizontal = 6.dp, vertical = 12.dp)) {
                     val lineColor = if (step < currentStep) Color(0xFF006A60) else Color(0xFFBDBDBD)
+                    val stroke = with(density) { 2.dp.toPx() }
                     drawLine(
                         color = lineColor,
                         start = Offset(0f, size.height / 2),
                         end = Offset(size.width, size.height / 2),
-                        strokeWidth = size.height,
+                        strokeWidth = stroke,
                         cap = StrokeCap.Round
                     )
                 }
@@ -76,12 +91,14 @@ fun Stepper(currentStep: Int, totalSteps: Int = 3) {
 @Preview(showBackground = true)
 @Composable
 fun StepperPreview() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center
-    ) {
-        Stepper(currentStep = 2)
+    PetCareTheme {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Stepper(currentStep = 2)
+        }
     }
 }
