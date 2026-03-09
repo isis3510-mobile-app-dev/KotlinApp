@@ -14,3 +14,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+*GEMINI.md
+.agents/*
+skills-lock.json
+
+.idea*
