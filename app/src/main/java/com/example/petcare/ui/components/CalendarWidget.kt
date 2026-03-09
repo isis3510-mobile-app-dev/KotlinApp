@@ -95,7 +95,7 @@ fun CalendarWidget(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .aspectRatio(1f),
+                                .height(30.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             if (isCurrentMonthDay) {
