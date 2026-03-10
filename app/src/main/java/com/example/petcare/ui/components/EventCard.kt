@@ -78,13 +78,14 @@ fun EventCard(eventName: String,pet:String, date: String){
                 modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(GreenLight).padding(horizontal = 10.dp, vertical = 4.dp)
 
             ){
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = "Event",
                         tint = Color.Black,
                         modifier = Modifier.size(16.dp)
                     )
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                     text = "Reminder on",
                     fontSize = 12.sp,
