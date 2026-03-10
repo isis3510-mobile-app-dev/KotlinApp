@@ -23,6 +23,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import com.example.petcare.ui.theme.ErrorContainer
+import com.example.petcare.ui.theme.ErrorContent
+
 @Composable
 fun OverdueWarningBanner(
     overdueCount: Int
@@ -31,7 +34,7 @@ fun OverdueWarningBanner(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFFFFEBEE))
+            .background(ErrorContainer)
             .padding(12.dp)
     ) {
         Row(
@@ -41,19 +44,19 @@ fun OverdueWarningBanner(
             Icon(
                 imageVector = Icons.Default.Warning,
                 contentDescription = "Warning",
-                tint = Color(0xFFE53935),
+                tint = ErrorContent,
                 modifier = Modifier.size(24.dp)
             )
             Column {
                 Text(
                     text = "$overdueCount Overdue Vaccines",
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFE53935),
+                    color = ErrorContent,
                     fontSize = 14.sp
                 )
                 Text(
                     text = "Schedule appointments immediately to keep your pets protected",
-                    color = Color(0xFFE53935),
+                    color = ErrorContent,
                     fontSize = 12.sp
                 )
             }

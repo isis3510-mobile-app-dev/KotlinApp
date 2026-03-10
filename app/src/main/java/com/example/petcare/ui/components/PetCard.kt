@@ -18,6 +18,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.petcare.R
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.ui.theme.WarningYellow
+import com.example.petcare.ui.theme.SuccessGreen
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -62,7 +64,7 @@ fun PetCard(
 
             OutlinedCard(
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = Color.White,
                 ),
                 border = BorderStroke(1.dp, borderColor),
                 modifier = Modifier.size(61.33.dp)
@@ -115,8 +117,8 @@ fun PetCard(
                         },
                         contentDescription = null,
                         tint = when (status) {
-                            PetStatus.SUCCESS -> Color(0xFF4CAF50)
-                            PetStatus.WARNING -> Color(0xFFFFC107)
+                            PetStatus.SUCCESS -> SuccessGreen
+                            PetStatus.WARNING -> WarningYellow
                             else -> Color.Gray
                         },
                         modifier = Modifier.size(10.dp)

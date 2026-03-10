@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.petcare.ui.theme.GreenDark
+import com.example.petcare.ui.theme.GreenAccentLight
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -163,9 +164,9 @@ private fun CalendarDay(
             .background(
                 when {
                     isSingleSelection -> Color.Transparent
-                    isInRange -> Color(0xFFB2EBE0) // Light green for middle
-                    isStart -> Color(0xFFB2EBE0).copy(alpha = 0f) // We'll handle this in the Box below to not overdraw if we want rounded edges
-                    isEnd -> Color(0xFFB2EBE0).copy(alpha = 0f)
+                    isInRange -> GreenAccentLight // Light green for middle
+                    isStart -> GreenAccentLight.copy(alpha = 0f) // We'll handle this in the Box below to not overdraw if we want rounded edges
+                    isEnd -> GreenAccentLight.copy(alpha = 0f)
                     else -> Color.Transparent
                 }
             )
@@ -176,7 +177,7 @@ private fun CalendarDay(
                 .fillMaxHeight()
                 .fillMaxWidth(0.5f)
                 .align(Alignment.CenterEnd)
-                .background(Color(0xFFB2EBE0)))
+                .background(GreenAccentLight))
         }
         // For the end node, add a partial background extending to the left if not the start
         if (isEnd && !isSingleSelection) {
@@ -184,7 +185,7 @@ private fun CalendarDay(
                 .fillMaxHeight()
                 .fillMaxWidth(0.5f)
                 .align(Alignment.CenterStart)
-                .background(Color(0xFFB2EBE0)))
+                .background(GreenAccentLight))
         }
     }
 

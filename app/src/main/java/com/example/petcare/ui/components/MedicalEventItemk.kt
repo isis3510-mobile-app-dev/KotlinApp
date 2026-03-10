@@ -31,6 +31,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.petcare.ui.theme.ErrorContainer
+import com.example.petcare.ui.theme.ErrorContent
+import com.example.petcare.ui.theme.GrayDark
+import com.example.petcare.ui.theme.GrayLight
+import com.example.petcare.ui.theme.GrayMedium
+import com.example.petcare.ui.theme.GrayText
+import com.example.petcare.ui.theme.PurpleContainer
+import com.example.petcare.ui.theme.PurpleContent
 
 data class MedicalEventData(
     val eventType: String,
@@ -43,10 +51,10 @@ data class MedicalEventData(
 @Composable
 fun MedicalEventItem(event: MedicalEventData){
     val (icon, iconColor, iconBackground) = when (event.eventType.lowercase()){
-        "checkup" -> Triple(Icons.Default.ContentPaste, Color(0xFF7B1FA2), Color(0xFFF3E5F5))
-        "emergency" -> Triple(Icons.Default.AddBox, Color(0xFFE53935), Color(0xFFFFEBEE))
-        "dental" -> Triple(Icons.Default.HealthAndSafety, Color(0xFF424242), Color(0xFFF5F5F5))
-        else -> Triple(Icons.Default.MedicalServices, Color.Gray, Color.LightGray)
+        "checkup" -> Triple(Icons.Default.ContentPaste, PurpleContent, PurpleContainer)
+        "emergency" -> Triple(Icons.Default.AddBox, ErrorContent, ErrorContainer)
+        "dental" -> Triple(Icons.Default.HealthAndSafety, GrayDark, GrayLight)
+        else -> Triple(Icons.Default.MedicalServices, GrayText, GrayMedium)
     }
     Card(
         modifier = Modifier.fillMaxWidth(),

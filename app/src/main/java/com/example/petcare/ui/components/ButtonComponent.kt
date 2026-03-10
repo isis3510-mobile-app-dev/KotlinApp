@@ -31,6 +31,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.draw.shadow
+import com.example.petcare.ui.theme.GrayMedium
+import com.example.petcare.ui.theme.GreenTextDark
 
 
 @Composable
@@ -101,7 +103,7 @@ fun ButtonSwitch(
 
     Box(
         modifier = Modifier
-            .background(Color(0xFFE5E5E5), RoundedCornerShape(40.dp))
+            .background(GrayMedium, RoundedCornerShape(40.dp))
             .padding(4.dp).size( width= 342.dp, height= 48.dp)
     ) {
 
@@ -130,7 +132,7 @@ fun ButtonSwitch(
                     Text(
                         text = text,
                         color = if (isSelected)
-                            Color(0xFF2F6F64)
+                            GreenTextDark
                         else
                             Color.Gray,
                         fontWeight = FontWeight.Medium

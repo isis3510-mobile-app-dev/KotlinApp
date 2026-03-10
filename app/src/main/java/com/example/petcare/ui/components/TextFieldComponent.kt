@@ -16,6 +16,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.RobotoMedium
+import com.example.petcare.ui.theme.GrayText
+import com.example.petcare.ui.theme.GrayBorder
 
 @Composable
 fun TextFieldComponent(name: String, label: String = "",icon: (@Composable () -> Unit)? = null) {
@@ -44,7 +46,7 @@ fun TextFieldComponent(name: String, label: String = "",icon: (@Composable () ->
                 placeholder = {
                     Text(
                         label,
-                        color = Color(0xFF9E9E9E)
+                        color = GrayText
                     )
                 },
                 textStyle = TextStyle(
@@ -56,7 +58,7 @@ fun TextFieldComponent(name: String, label: String = "",icon: (@Composable () ->
                 colors = OutlinedTextFieldDefaults.colors(
 
                     focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                    unfocusedBorderColor = Color(0xFFBDBDBD),
+                    unfocusedBorderColor = GrayBorder,
 
                     focusedTextColor = Color.Black,
                     unfocusedTextColor = Color.Gray

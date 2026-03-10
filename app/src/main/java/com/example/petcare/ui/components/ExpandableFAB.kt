@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Vaccines
+import androidx.compose.material.icons.outlined.Contactless
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SmallFloatingActionButton
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.petcare.ui.theme.GreenLight
 
 @Composable
 fun FABMenuItem(
@@ -45,7 +47,7 @@ fun FABMenuItem(
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(50.dp))
-                .background(Color.White)
+                .background(GreenLight)
                 .padding(horizontal = 12.dp, vertical = 6.dp)
         ){
             Text(label, fontSize = 14.sp)
@@ -72,7 +74,8 @@ fun ExpandableFAB(){
     val fabItems = listOf(
         Triple("Add Pet", Icons.Default.Pets) {},
         Triple("Add Vaccine", Icons.Default.Vaccines) {},
-        Triple("Add Event", Icons.Default.CalendarMonth) {}
+        Triple("Add Event", Icons.Default.CalendarMonth) {},
+        Triple("Scan NFC", Icons.Outlined.Contactless) {}
     )
 
     Box(
