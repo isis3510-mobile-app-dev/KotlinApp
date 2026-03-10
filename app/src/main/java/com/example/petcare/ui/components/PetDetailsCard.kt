@@ -42,6 +42,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.petcare.ui.theme.SuccessContainer
+import com.example.petcare.ui.theme.SuccessContent
+import com.example.petcare.ui.theme.WarningContainer
+import com.example.petcare.ui.theme.WarningContent
+import com.example.petcare.ui.theme.ErrorContent
+import com.example.petcare.ui.theme.GrayBackground
 
 
 @Composable
@@ -76,8 +82,8 @@ fun PetAction(
 @Composable
 fun PetDetailsCard(petName: String, breed:String, age: Int, weight: Double, gender: String, status: String, photoPath: Int, species: String){
     val (statusColor, textStatusColor) = when (status.lowercase()) {
-        "healthy" -> Pair(Color(0xFFE8F5E9), Color(0xFF2E7D32))   // verde
-        else -> Pair(Color(0xFFFFF8E1), Color(0xFFE65100))        // amarillo
+        "healthy" -> Pair(SuccessContainer, SuccessContent)   // verde
+        else -> Pair(WarningContainer, WarningContent)        // amarillo
     }
 
     val logo = when (species.lowercase()){
@@ -167,7 +173,7 @@ fun PetDetailsCard(petName: String, breed:String, age: Int, weight: Double, gend
                             Icon(
                                 imageVector = Icons.Default.Cake,
                                 contentDescription = "Detail",
-                                tint = Color(0xFFE63600),
+                                tint = ErrorContent,
                                 modifier = Modifier.padding(end = 5.dp).size(14.dp)
                             )
                             Text(
@@ -215,7 +221,7 @@ fun PetDetailsCard(petName: String, breed:String, age: Int, weight: Double, gend
 
             }
             HorizontalDivider(
-                color = Color(0xFFF0F4F3),
+                color = GrayBackground,
                 thickness = 3.dp
             )
             Row(
@@ -225,12 +231,12 @@ fun PetDetailsCard(petName: String, breed:String, age: Int, weight: Double, gend
 
                 PetAction("Vaccines", Icons.Default.Vaccines, 0xFF006A60)
                 VerticalDivider(
-                    color = Color(0xFFF0F4F3),
+                    color = GrayBackground,
                     thickness = 3.dp
                 )
                 PetAction("Lost Mode", Icons.Default.LocationOn, 0xFF3F4948)
                 VerticalDivider(
-                    color = Color(0xFFF0F4F3),
+                    color = GrayBackground,
                     thickness = 3.dp
                 )
                 PetAction("NFC", Icons.Outlined.Contactless, 0xFF3949AB)

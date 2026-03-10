@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.petcare.R
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.ui.theme.GreenDark
 
 data class SpeciesOption(val name: String, val iconResId: Int)
 
@@ -52,11 +53,11 @@ fun SpeciesSelector(
                         .size(width = 111.33.dp, height = 42.67.dp)
                         .border(
                             width = 1.dp,
-                            color = if (isSelected) Color(0xFF006A60) else Color.LightGray,
+                            color = if (isSelected) GreenDark else Color.LightGray,
                             shape = RoundedCornerShape(30.dp)
                         )
                         .background(
-                            color = if (isSelected) Color(0xFF006A60) else Color.White,
+                            color = if (isSelected) GreenDark else Color.White,
                             shape = RoundedCornerShape(12.dp)
                         )
                         .clickable {

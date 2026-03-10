@@ -52,7 +52,7 @@ fun CircularIconButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = iconColor,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(30.dp)
             )
         }
         

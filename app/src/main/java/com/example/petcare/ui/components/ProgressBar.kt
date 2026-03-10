@@ -18,6 +18,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.ui.theme.GreenDark
+import com.example.petcare.ui.theme.GrayBorder
 
 @Composable
 fun Stepper(currentStep: Int, totalSteps: Int = 3,
@@ -38,7 +40,7 @@ fun Stepper(currentStep: Int, totalSteps: Int = 3,
                     modifier = Modifier
                         .size(28.dp)
                         .background(
-                            color = if (step <= currentStep) Color(0xFF006A60) else Color(0xFFBDBDBD),
+                            color = if (step <= currentStep) GreenDark else GrayBorder,
                             shape = CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -61,7 +63,7 @@ fun Stepper(currentStep: Int, totalSteps: Int = 3,
                 Text(
                     text = stepLabels.getOrNull(step - 1) ?: "",
                     fontSize = 10.sp,
-                    color = if (step <= currentStep) Color(0xFF006A60) else Color(0xFFBDBDBD)
+                    color = if (step <= currentStep) GreenDark else GrayBorder
                 )
             }
 
@@ -71,7 +73,7 @@ fun Stepper(currentStep: Int, totalSteps: Int = 3,
                     .weight(1f)
                     .height(3.dp)
                     .padding(horizontal = 6.dp, vertical = 12.dp)) {
-                    val lineColor = if (step < currentStep) Color(0xFF006A60) else Color(0xFFBDBDBD)
+                    val lineColor = if (step < currentStep) GreenDark else GrayBorder
                     val stroke = with(density) { 2.dp.toPx() }
                     drawLine(
                         color = lineColor,

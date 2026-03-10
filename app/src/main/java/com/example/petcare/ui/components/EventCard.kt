@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import com.example.petcare.ui.theme.GreenDark
+import com.example.petcare.ui.theme.GreenLight
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -73,7 +75,7 @@ fun EventCard(eventName: String,pet:String, date: String){
                     )}
             }
             Box(
-                modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(Color(0xFF9FF2E2)).padding(horizontal = 10.dp, vertical = 4.dp)
+                modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(GreenLight).padding(horizontal = 10.dp, vertical = 4.dp)
 
             ){
                 Row {
@@ -86,7 +88,7 @@ fun EventCard(eventName: String,pet:String, date: String){
                     Text(
                     text = "Reminder on",
                     fontSize = 12.sp,
-                    color = Color(0xFF006A60),
+                    color = GreenDark,
                     fontWeight = FontWeight.Medium)
                 }
 

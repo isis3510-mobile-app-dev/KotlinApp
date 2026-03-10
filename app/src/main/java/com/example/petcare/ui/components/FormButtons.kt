@@ -18,6 +18,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.ui.theme.GrayText
+import com.example.petcare.ui.theme.GrayBorder
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,7 +61,7 @@ fun DateTextField(
             placeholder = {
                 Text(
                     label,
-                    color = Color(0xFF9E9E9E)
+                    color = GrayText
                 )
             },
             trailingIcon = {
@@ -74,7 +76,7 @@ fun DateTextField(
             colors = OutlinedTextFieldDefaults.colors(
 
                 focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                unfocusedBorderColor = Color(0xFFBDBDBD),
+                unfocusedBorderColor = GrayBorder,
 
                 focusedTextColor = Color.Black,
                 unfocusedTextColor = Color.Gray

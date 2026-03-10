@@ -26,6 +26,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.petcare.R
+import com.example.petcare.ui.theme.ErrorContainer
+import com.example.petcare.ui.theme.ErrorContent
+import com.example.petcare.ui.theme.GrayMedium
+import com.example.petcare.ui.theme.GrayText
+import com.example.petcare.ui.theme.InfoContainer
+import com.example.petcare.ui.theme.InfoContent
+import com.example.petcare.ui.theme.SuccessContainer
+import com.example.petcare.ui.theme.SuccessContent
 
 data class VaccineListItemData(
     val vaccineName: String,
@@ -39,10 +47,10 @@ data class VaccineListItemData(
 @Composable
 fun VaccineListItem(vaccine: VaccineListItemData){
     val (badgeColor, textColor) = when (vaccine.status.lowercase()){
-        "overdue" -> Pair(Color(0xFFFFEBEE), Color(0xFFE53935))
-        "upcoming" -> Pair(Color(0xFFE3F2FD), Color(0xFF1565C0))
-        "completed" -> Pair(Color(0xFFE8F5E9), Color(0xFF2E7D32))
-        else -> Pair(Color.LightGray, Color.Gray)
+        "overdue" -> Pair(ErrorContainer, ErrorContent)
+        "upcoming" -> Pair(InfoContainer, InfoContent)
+        "completed" -> Pair(SuccessContainer, SuccessContent)
+        else -> Pair(GrayMedium, GrayText)
     }
 
     Row(
