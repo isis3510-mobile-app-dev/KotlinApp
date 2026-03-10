@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -30,15 +31,18 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun EventCard(eventName: String,pet:String, date: String){
-    Card(modifier = Modifier.fillMaxWidth().padding(16.dp),
+    Card(modifier = Modifier
+        .fillMaxWidth()
+        .padding(16.dp)
+        .shadow(elevation = 12.dp, shape = RoundedCornerShape(16.dp), spotColor = Color(0x33000000)),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(modifier = Modifier.size(46.dp).clip(CircleShape).background(Color(0xFFD0BCFF)),
+            Box(modifier = Modifier.size(46.dp).clip(CircleShape).background(Color.White),
                 contentAlignment = Alignment.Center
             ){
                 Icon(

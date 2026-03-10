@@ -37,7 +37,9 @@ fun NavBar(
         BottomNavItem("profile", "Profile", Icons.Default.Person)
     )
 
-    NavigationBar {
+    NavigationBar(
+        containerColor = Color.White
+    ) {
         items.forEach { item ->
             NavigationBarItem(
                 selected = currentRoute == item.route,

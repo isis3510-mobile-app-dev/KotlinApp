@@ -62,7 +62,7 @@ fun PetCard(
 
             OutlinedCard(
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = Color.White,
                 ),
                 border = BorderStroke(1.dp, borderColor),
                 modifier = Modifier.size(61.33.dp)
