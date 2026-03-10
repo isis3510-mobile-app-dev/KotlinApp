@@ -81,7 +81,6 @@ fun DateTextField(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(6.dp)
                 .size(width = 342.dp, height = 53.17.dp)
                 .clip(RoundedCornerShape(12.dp)),
             shape = RoundedCornerShape(20.dp),

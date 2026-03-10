@@ -31,50 +31,54 @@ fun AddPetInitialForm(){
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(24.dp)
         ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(30.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
 
-            TransparentTopBar(title = "Add New Pet") {
-            }
 
-            Stepper(
-                currentStep = 1,
-                stepLabels = listOf("Basic Info", "Details", "Medical")
-            )
-
-            IconCardButton(
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.CameraAlt,
-                        contentDescription = "Photo",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(40.dp)
-                    )
-                },
-                text = "Add Photo",
-                textBottom = "Tap to upload or take a photo",
-                onClick = {
-                    println("Card !")
+                TransparentTopBar(title = "Add New Pet") {
                 }
-            )
 
-            TextFieldComponent(
-                name = "Pet Name *",
-                label = "e.g. Buddy"
+                Stepper(
+                    currentStep = 1,
+                    stepLabels = listOf("Basic Info", "Details", "Medical")
+                )
 
-            )
+                IconCardButton(
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = "Photo",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    },
+                    text = "Add Photo",
+                    textBottom = "Tap to upload or take a photo",
+                    onClick = {
+                        println("Card !")
+                    }
+                )
 
-            TextFieldComponent(
-                name = "Breed",
-                label = "e.g. Golden Retriever"
-            )
+                TextFieldComponent(
+                    name = "Pet Name *",
+                    label = "e.g. Buddy"
 
-            SpeciesSelector { selected ->
-                println("Selected: $selected")
+                )
+
+                TextFieldComponent(
+                    name = "Breed",
+                    label = "e.g. Golden Retriever"
+                )
+
+                SpeciesSelector { selected ->
+                    println("Selected: $selected")
+                }
             }
-
             ButtonDefault(
                 bgColor = MaterialTheme.colorScheme.secondary,
                 textColor = Color.White,

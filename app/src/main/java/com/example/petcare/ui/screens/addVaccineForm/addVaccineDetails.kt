@@ -35,49 +35,53 @@ fun AddVaccineDetailsForm(){
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(24.dp)
         ) {
-
-            TransparentTopBar(title = "Add New Vaccine") {
-            }
-
-            Stepper(
-                currentStep = 2,
-                stepLabels = listOf("Basic Info", "Details", "Overview")
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(30.dp),
+                horizontalAlignment = Alignment.CenterHorizontally)
+            {
 
 
-            TextFieldComponent(
-                name = "Administered By",
-                label = "e.g. Doctor Tatiana"
-
-            )
-
-            Text(
-                text = "Additional Files",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier.padding(bottom = 8.dp).align(Alignment.Start)
-            )
-
-            IconCardButton(
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Upload,
-                        contentDescription = "Upload",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(40.dp)
-                    )
-                },
-                text = "Add Documents",
-                textBottom = "Tap to upload documents",
-                onClick = {
-                    println("Card !")
+                TransparentTopBar(title = "Add New Vaccine") {
                 }
-            )
 
+                Stepper(
+                    currentStep = 2,
+                    stepLabels = listOf("Basic Info", "Details", "Overview")
+                )
+
+
+                TextFieldComponent(
+                    name = "Administered By",
+                    label = "e.g. Doctor Tatiana"
+
+                )
+
+                Text(
+                    text = "Additional Files",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.padding(bottom = 8.dp).align(Alignment.Start)
+                )
+
+                IconCardButton(
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Upload,
+                            contentDescription = "Upload",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    },
+                    text = "Add Documents",
+                    textBottom = "Tap to upload documents",
+                    onClick = {
+                        println("Card !")
+                    }
+                )
+            }
             Row() {
                 ButtonOutline(
                     bgColor = MaterialTheme.colorScheme.background,
