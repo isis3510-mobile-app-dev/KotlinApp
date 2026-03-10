@@ -29,47 +29,49 @@ fun AddPetFinalForm(){
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(24.dp)
         ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(30.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                TransparentTopBar(title = "Add New Vaccine") {
+                }
 
-            TransparentTopBar(title = "Add New Vaccine") {
+                Stepper(
+                    currentStep = 3,
+                    stepLabels = listOf("Basic Info", "Details", "Overview")
+                )
+
+
+                TextFieldComponent(
+                    name = "Vaccine Name",
+                    label = "Rabies"
+
+                )
+
+                TextFieldComponent(
+                    name = "Date",
+                    label = "07/03/2026"
+                )
+
+                TextFieldComponent(
+                    name = "Product Name",
+                    label = "Rabisin"
+                )
+
+                TextFieldComponent(
+                    name = "Manufacturer",
+                    label = "Boehringer"
+                )
+
+                TextFieldComponent(
+                    name = "Administered By",
+                    label = "Doctor Tatiana"
+                )
             }
-
-            Stepper(
-                currentStep = 3,
-                stepLabels = listOf("Basic Info", "Details", "Overview")
-            )
-
-
-            TextFieldComponent(
-                name = "Vaccine Name",
-                label = "Rabies"
-
-            )
-
-            TextFieldComponent(
-                name = "Date",
-                label = "07/03/2026"
-            )
-
-            TextFieldComponent(
-                name = "Product Name",
-                label = "Rabisin"
-            )
-
-            TextFieldComponent(
-                name = "Manufacturer",
-                label = "Boehringer"
-            )
-
-            TextFieldComponent(
-                name = "Administered By",
-                label = "Doctor Tatiana"
-            )
-
-            Row() {
+            Row {
                 ButtonOutline(
                     bgColor = MaterialTheme.colorScheme.background,
                     outlineColor = MaterialTheme.colorScheme.secondary,

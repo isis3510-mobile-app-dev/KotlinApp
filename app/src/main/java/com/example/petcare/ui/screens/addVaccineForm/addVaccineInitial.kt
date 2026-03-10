@@ -26,45 +26,46 @@ fun AddVaccineInitialForm(){
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(24.dp)
         ) {
-
-            TransparentTopBar(title = "Add New Vaccine") {
-            }
-
-            Stepper(
-                currentStep = 1,
-                stepLabels = listOf("Basic Info", "Details", "Overview")
-            )
-
-
-            TextFieldComponent(
-                name = "Vaccine Name * ",
-                label = "e.g. Rabies"
-
-            )
-
-            DateTextField(
-                name = "Date *",
-                onDateSelected = { date ->
-                    println("Selected date: $date")
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(30.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                TransparentTopBar(title = "Add New Vaccine") {
                 }
-            )
 
-            TextFieldComponent(
-                name = "Product Name",
-                label = "e.g. Rabisin"
-            )
-
-            TextFieldComponent(
-                name = "Manufacturer",
-                label = "e.g. Boehringer"
-            )
+                Stepper(
+                    currentStep = 1,
+                    stepLabels = listOf("Basic Info", "Details", "Overview")
+                )
 
 
+                TextFieldComponent(
+                    name = "Vaccine Name * ",
+                    label = "e.g. Rabies"
 
+                )
+
+                DateTextField(
+                    name = "Date *",
+                    onDateSelected = { date ->
+                        println("Selected date: $date")
+                    }
+                )
+
+                TextFieldComponent(
+                    name = "Product Name",
+                    label = "e.g. Rabisin"
+                )
+
+                TextFieldComponent(
+                    name = "Manufacturer",
+                    label = "e.g. Boehringer"
+                )
+
+
+            }
             ButtonDefault(
                 bgColor = MaterialTheme.colorScheme.secondary,
                 textColor = Color.White,

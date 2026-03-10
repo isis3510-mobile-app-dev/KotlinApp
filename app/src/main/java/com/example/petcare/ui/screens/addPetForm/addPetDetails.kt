@@ -31,34 +31,39 @@ fun AddPetDetailsForm(){
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
                 .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally
+
         ) {
 
-            TransparentTopBar(title = "Add New Pet") {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(30.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+                TransparentTopBar(title = "Add New Pet") {
+                }
+
+                Stepper(
+                    currentStep = 2,
+                    stepLabels = listOf("Basic Info", "Details", "Medical")
+                )
+
+                GenderSelector { selected ->
+                    println("Selected: $selected")
+                }
+
+                TextFieldComponent(
+                    name = "Weight (Kg)",
+                    label = "e.g. 4.5"
+
+                )
+
+                TextFieldComponent(
+                    name = "Color / Markings",
+                    label = "e.g. Golden, White Chest"
+                )
             }
-
-            Stepper(
-                currentStep = 2,
-                stepLabels = listOf("Basic Info", "Details", "Medical")
-            )
-
-            GenderSelector() { selected ->
-                println("Selected: $selected")
-            }
-
-            TextFieldComponent(
-                name = "Weight (Kg)",
-                label = "e.g. 4.5"
-
-            )
-
-            TextFieldComponent(
-                name = "Color / Markings",
-                label = "e.g. Golden, White Chest"
-            )
-
-            Row() {
+            Row {
                 ButtonOutline(
                     bgColor = MaterialTheme.colorScheme.background,
                     outlineColor = MaterialTheme.colorScheme.secondary,

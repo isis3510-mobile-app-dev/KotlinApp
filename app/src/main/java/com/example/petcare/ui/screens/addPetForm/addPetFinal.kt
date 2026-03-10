@@ -30,40 +30,42 @@ fun AddPetFinalForm(){
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(24.dp)
         ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(30.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                TransparentTopBar(title = "Add New Pet") {
+                }
 
-            TransparentTopBar(title = "Add New Pet") {
+                Stepper(
+                    currentStep = 3,
+                    stepLabels = listOf("Basic Info", "Details", "Medical")
+                )
+
+                GenderSelector() { selected ->
+                    println("Selected: $selected")
+                }
+
+                TextFieldComponent(
+                    name = "Veterinarian",
+                    label = "e.g. Dr. Smith"
+
+                )
+
+                TextFieldComponent(
+                    name = "Clinic Name",
+                    label = "e.g. Happy Paw Clinic"
+                )
+
+                TextFieldComponent(
+                    name = "Known Allergies",
+                    label = "e.g. None"
+                )
             }
-
-            Stepper(
-                currentStep = 3,
-                stepLabels = listOf("Basic Info", "Details", "Medical")
-            )
-
-            GenderSelector() { selected ->
-                println("Selected: $selected")
-            }
-
-            TextFieldComponent(
-                name = "Veterinarian",
-                label = "e.g. Dr. Smith"
-
-            )
-
-            TextFieldComponent(
-                name = "Clinic Name",
-                label = "e.g. Happy Paw Clinic"
-            )
-
-            TextFieldComponent(
-                name = "Known Allergies",
-                label = "e.g. None"
-            )
-
-            Row() {
+            Row {
                 ButtonOutline(
                     bgColor = MaterialTheme.colorScheme.background,
                     outlineColor = MaterialTheme.colorScheme.secondary,

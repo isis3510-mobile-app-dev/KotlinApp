@@ -14,6 +14,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.petcare.ui.components.ButtonDefault
 import com.example.petcare.ui.components.DateTextField
+import com.example.petcare.ui.components.DropdownSelector
 import com.example.petcare.ui.components.Stepper
 import com.example.petcare.ui.components.TextFieldComponent
 import com.example.petcare.ui.components.TransparentTopBar
@@ -26,39 +27,48 @@ fun AddEventInitialForm(){
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+                .padding(24.dp)
+             ) {
 
-            TransparentTopBar(title = "Add New Event") {
-            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(30.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
 
-            Stepper(
-                currentStep = 1,
-                stepLabels = listOf("Basic Info", "Details", "Overview")
-            )
-
-
-            TextFieldComponent(
-                name = "Event Name * ",
-                label = "e.g. Doctor's Appointment"
-
-            )
-
-            DateTextField(
-                name = "Date *",
-                onDateSelected = { date ->
-                    println("Selected date: $date")
+                TransparentTopBar(title = "Add New Event") {
                 }
-            )
 
-            TextFieldComponent(
-                name = "Time",
-                label = "e.g. 9:00 am"
-            )
+                Stepper(
+                    currentStep = 1,
+                    stepLabels = listOf("Basic Info", "Details", "Overview")
+                )
 
 
+                TextFieldComponent(
+                    name = "Event Name * ",
+                    label = "e.g. Doctor's Appointment"
+
+                )
+
+                DateTextField(
+                    name = "Date *",
+                    onDateSelected = { date ->
+                        println("Selected date: $date")
+                    }
+                )
+
+                TextFieldComponent(
+                    name = "Time",
+                    label = "e.g. 9:00 am"
+                )
+
+                DropdownSelector(
+                    title = "Pet Name * ",
+                    options = listOf("Max", "Luna", "Coco")
+                ) {}
+
+            }
 
             ButtonDefault(
                 bgColor = MaterialTheme.colorScheme.secondary,

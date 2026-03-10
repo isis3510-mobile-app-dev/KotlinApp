@@ -29,37 +29,46 @@ fun AddPetFinalForm(){
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(24.dp)
         ) {
 
-            TransparentTopBar(title = "Add New Event") {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(30.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+                TransparentTopBar(title = "Add New Event") {
+                }
+
+
+                Stepper(
+                    currentStep = 3,
+                    stepLabels = listOf("Basic Info", "Details", "Overview")
+                )
+
+
+                TextFieldComponent(
+                    name = "Event Name",
+                    label = "Doctor's Appointment"
+
+                )
+
+                TextFieldComponent(
+                    name = "Date",
+                    label = "07/03/2026 09:00 am"
+                )
+
+
+                TextFieldComponent(
+                    name = "Description",
+                    label = "Doctor's Appointment"
+                )
+
+
+
             }
-
-            Stepper(
-                currentStep = 3,
-                stepLabels = listOf("Basic Info", "Details", "Overview")
-            )
-
-
-            TextFieldComponent(
-                name = "Event Name",
-                label = "Doctor's Appointment"
-
-            )
-
-            TextFieldComponent(
-                name = "Date",
-                label = "07/03/2026 09:00 am"
-            )
-
-            TextFieldComponent(
-                name = "Description",
-                label = "Doctor's Appointment"
-            )
-
-            Row() {
+            Row {
                 ButtonOutline(
                     bgColor = MaterialTheme.colorScheme.background,
                     outlineColor = MaterialTheme.colorScheme.secondary,
