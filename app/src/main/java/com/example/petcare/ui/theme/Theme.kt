@@ -8,9 +8,10 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import com.example.petcare.data.preferences.AppThemeMode
 
 private val DarkColorScheme = darkColorScheme(
-    primary = GreenLight,
+    primary = GreenDark,
     secondary = GreenDark,
     tertiary = Black,
     background = OffWhite,
@@ -23,7 +24,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = GreenLight,
+    primary = GreenDark,
     secondary = GreenDark,
     tertiary = Black,
     background = OffWhite,
@@ -45,9 +46,15 @@ private val LightColorScheme = lightColorScheme(
 )
 @Composable
 fun PetCareTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (themeMode) {
+        AppThemeMode.DARK -> true
+        AppThemeMode.LIGHT -> false
+        AppThemeMode.SYSTEM -> isSystemInDarkTheme()
+    }
+    
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     MaterialTheme(

@@ -1,5 +1,7 @@
 package com.example.petcare.ui.screens.calendar
 
+import com.example.petcare.ui.theme.*
+
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.*
@@ -131,7 +133,7 @@ fun CalendarScreen(
             Text(
                 text = dateText,
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF4A6863),
+                color = GreenTextDark,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )

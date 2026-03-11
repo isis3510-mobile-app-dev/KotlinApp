@@ -1,5 +1,7 @@
 package com.example.petcare.ui.components
 
+import com.example.petcare.ui.theme.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,7 +39,7 @@ fun NextEventCard(name: String, pet: String, maxDate: String, daysOverdue: Int){
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(Color(0xFFB2EBE0)),
+            Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(GreenAccentLight),
                 contentAlignment = Alignment.Center
             ){
                 Icon(
@@ -73,12 +75,12 @@ fun NextEventCard(name: String, pet: String, maxDate: String, daysOverdue: Int){
                 }
             }
             Box(
-                modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(Color(0xFFE3F2FD)).padding(horizontal = 10.dp, vertical = 4.dp)
+                modifier = Modifier.clip(RoundedCornerShape(50.dp)).background(InfoContainer).padding(horizontal = 10.dp, vertical = 4.dp)
             ){
                 Text(
                     text = "-${daysOverdue}d",
                     fontSize = 12.sp,
-                    color = Color(0xFF1565C0),
+                    color = InfoContent,
                     fontWeight = FontWeight.Medium
                 )
             }

@@ -31,6 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.draw.shadow
+import com.example.petcare.ui.theme.GrayBorder
 import com.example.petcare.ui.theme.GrayMedium
 import com.example.petcare.ui.theme.GreenTextDark
 
@@ -170,7 +171,7 @@ fun IconButtonPreview() {
             icon = { Icon(
                     imageVector = Icons.Default.Phone,
                     contentDescription = "Call Owner Now",
-                    tint = Color(0xFFFFFFFF)
+                    tint = Color.White
                 )
             }
         )
@@ -183,7 +184,7 @@ fun OutlinedButtonIconPreview() {
     PetCareTheme {
         ButtonOutline(
             bgColor = MaterialTheme.colorScheme.background,
-            outlineColor = Color(0xFFBEC9C8),
+            outlineColor = GrayBorder,
             textColor = MaterialTheme.colorScheme.tertiary,
             width = 342.dp,
             height = 56.dp,

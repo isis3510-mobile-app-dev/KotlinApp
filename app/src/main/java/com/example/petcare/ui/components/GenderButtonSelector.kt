@@ -1,5 +1,7 @@
 package com.example.petcare.ui.components
 
+import com.example.petcare.ui.theme.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -51,11 +53,11 @@ fun GenderSelector(
                         .height(48.dp)
                         .border(
                             width = 2.dp,
-                            color = if (isSelected) Color(0xFF006A60) else Color.Gray,
+                            color = if (isSelected) GreenDark else Color.Gray,
                             shape = RoundedCornerShape(30.dp)
                         )
                         .background(
-                            color = if (isSelected) Color(0xFF006A60) else Color.White,
+                            color = if (isSelected) GreenDark else Color.White,
                             shape = RoundedCornerShape(30.dp)
                         )
                         .clickable {
