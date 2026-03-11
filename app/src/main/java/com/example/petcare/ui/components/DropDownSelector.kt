@@ -1,5 +1,7 @@
 package com.example.petcare.ui.components
 
+import com.example.petcare.ui.theme.*
+
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,7 +47,7 @@ fun DropdownSelector(
                 readOnly = true,
                 placeholder = { Text(
                     text = "Select an option",
-                    color =Color(0xFF9E9E9E))
+                    color = GrayText)
                               },
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
@@ -56,7 +58,7 @@ fun DropdownSelector(
 
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                    unfocusedBorderColor = Color(0xFFBDBDBD),
+                    unfocusedBorderColor = GrayBorder,
                     focusedTextColor = Color.Black,
                     unfocusedTextColor = Color.Gray
             )

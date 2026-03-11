@@ -1,5 +1,7 @@
 package com.example.petcare.ui.screens.auth
 
+import com.example.petcare.ui.theme.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -132,7 +134,7 @@ fun SignInScreen(){
 
         ButtonOutline(
             bgColor = MaterialTheme.colorScheme.background,
-            outlineColor = Color(0xFFBEC9C8),
+            outlineColor = GrayBorder,
             textColor = MaterialTheme.colorScheme.tertiary,
             width = 342.dp,
             height = 56.dp,

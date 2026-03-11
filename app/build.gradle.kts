@@ -5,9 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.petcare"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.petcare"
@@ -35,7 +33,6 @@ android {
     buildFeatures {
         compose = true
     }
-    buildToolsVersion = "36.0.0"
 }
 
 dependencies {
@@ -58,4 +55,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 }

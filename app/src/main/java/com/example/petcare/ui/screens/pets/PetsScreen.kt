@@ -1,5 +1,7 @@
 package com.example.petcare.ui.screens.pets
 
+import com.example.petcare.ui.theme.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -79,12 +81,12 @@ fun PetsScreen(){
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50.dp))
-                        .background(Color(0xFFE8F5F3))
+                        .background(OffWhite)
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = "${pets.size} pets",
-                        color = Color(0xFF00897B),
+                        color = GreenAccentDark,
                         fontSize = 12.sp
                     )
                 }

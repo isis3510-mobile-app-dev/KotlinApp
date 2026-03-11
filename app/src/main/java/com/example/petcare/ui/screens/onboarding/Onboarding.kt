@@ -1,5 +1,7 @@
 package com.example.petcare.ui.screens.onboarding
 
+import com.example.petcare.ui.theme.*
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -224,8 +226,8 @@ fun PreviewOnboarding(){
             page = 1,
             title = "All your pet's health, \n in one place",
             description = "Centralize vaccines, medications, records, and documents. Never miss a dose or appointment again.",
-            backgroundStart = Color(0xFF006A60),
-            backgroundEnd = Color(0xFF00897B),
+            backgroundStart = GreenDark,
+            backgroundEnd = GreenAccentDark,
             image = R.drawable.onboarding_dop,
             onSignInClick = {},
             onSkipClick = {}
@@ -244,8 +246,8 @@ fun PreviewOnboarding2(){
             page = 2,
             title = "Track vaccines & \n medications",
             description = "Timeline-based vaccine history, smart reminders for medications, and overdue alerts that keep you informed.",
-            backgroundStart = Color(0xFF4B607A),
-            backgroundEnd = Color(0xFF37505F),
+            backgroundStart = OnboardingBlueStart,
+            backgroundEnd = OnboardingBlueEnd,
             image = R.drawable.onboarding_vaccine,
             onSignInClick = {},
             onSkipClick = {}
@@ -264,8 +266,8 @@ fun PreviewOnboarding3(){
             page = 3,
             title = "NFC tag \n integration",
             description = "Write your pet's info to an NFC tag. Anyone who finds your pet can contact you instantly.",
-            backgroundStart = Color(0xFF7B3DC4),
-            backgroundEnd = Color(0xFF5E2A9D),
+            backgroundStart = OnboardingPurpleStart,
+            backgroundEnd = OnboardingPurpleEnd,
             image = R.drawable.onboarding_nfc,
             onSignInClick = {},
             onSkipClick = {}

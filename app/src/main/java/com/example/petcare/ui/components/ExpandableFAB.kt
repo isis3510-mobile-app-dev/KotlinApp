@@ -1,5 +1,7 @@
 package com.example.petcare.ui.components
 
+import com.example.petcare.ui.theme.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -7,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -16,6 +19,7 @@ import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material.icons.outlined.Contactless
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
@@ -55,13 +59,15 @@ fun FABMenuItem(
 
         SmallFloatingActionButton(
             onClick = onClick,
-            containerColor = Color(0xFFB2EBE0),
+            containerColor = GreenAccentLight,
+            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp),
+            modifier = Modifier.size(56.dp),
             shape = RoundedCornerShape(12.dp)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = Color(0xFF00695C)
+                tint = GreenAccentDark
             )
         }
     }
@@ -95,7 +101,9 @@ fun ExpandableFAB(){
 
             FloatingActionButton(
                 onClick = { expanded = !expanded },
-                containerColor = Color(0xFF00695C),
+                containerColor = GreenAccentDark,
+                contentColor = Color.White,
+                modifier = Modifier.size(56.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Icon(
@@ -133,7 +141,7 @@ fun ExpandableFABExpandedPreview() {
 
             FloatingActionButton(
                 onClick = {},
-                containerColor = Color(0xFF00695C),
+                containerColor = GreenAccentDark,
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)

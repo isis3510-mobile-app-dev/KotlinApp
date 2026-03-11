@@ -40,3 +40,9 @@ val GreenTextDark = Color(0xFF2F6F64)
 // Other Accents
 val PurpleContainer = Color(0xFFF3E5F5)
 val PurpleContent = Color(0xFF7B1FA2)
+
+// Onboarding Gradients
+val OnboardingBlueStart = Color(0xFF4B607A)
+val OnboardingBlueEnd = Color(0xFF37505F)
+val OnboardingPurpleStart = Color(0xFF7B3DC4)
+val OnboardingPurpleEnd = Color(0xFF5E2A9D)

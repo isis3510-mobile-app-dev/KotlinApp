@@ -1,5 +1,7 @@
 package com.example.petcare.ui.components
 
+import com.example.petcare.ui.theme.*
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -31,7 +33,7 @@ fun EmptyStateView(
         Icon(
             imageVector = icon,
             contentDescription = message,
-            tint = Color(0xFFA5C5C0),
+            tint = GreenTextDark,
             modifier = Modifier.size(72.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))

@@ -1,5 +1,7 @@
 package com.example.petcare.ui.screens.records
 
+import com.example.petcare.ui.theme.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -140,9 +142,9 @@ private fun AllRecordsContent(){
             fontSize = 16.sp
         )
         Spacer(modifier = Modifier.weight(1f))
-        StatusChip("2 overdue", Color(0xFFFFEBEE), Color(0xFFE53935))
+        StatusChip("2 overdue", ErrorContainer, ErrorContent)
         Spacer(modifier = Modifier.width(8.dp))
-        StatusChip("2 upcoming", Color(0xFFE3F2FD), Color(0xFF1565C0))
+        StatusChip("2 upcoming", InfoContainer, InfoContent)
     }
 
     LazyColumn(
@@ -151,7 +153,7 @@ private fun AllRecordsContent(){
     ) {
         items(vaccines){ vaccine ->
             VaccineListItem(vaccine=vaccine)
-            HorizontalDivider(color = Color(0xFFF0F4F3))
+            HorizontalDivider(color = GrayBackground)
         }
     }
 }
@@ -167,7 +169,7 @@ private fun VaccinesContent() {
     SectionHeader(
         title = "Vaccines",
         badges = {
-            StatusChip("3 active", Color(0xFFE8F5E9), Color(0xFF2E7D32))
+            StatusChip("3 active", SuccessContainer, SuccessContent)
         }
     )
 

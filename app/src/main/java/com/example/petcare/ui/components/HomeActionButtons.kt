@@ -1,5 +1,7 @@
 package com.example.petcare.ui.components
 
+import com.example.petcare.ui.theme.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -61,7 +63,7 @@ fun CircularIconButton(
                 modifier = Modifier
                     .size(10.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFE53935)) // Red dot
+                    .background(ErrorContent) // Red dot
                     .align(Alignment.TopEnd)
                     .offset(x = (-2).dp, y = 2.dp)
             )
@@ -96,7 +98,7 @@ fun NotificationButton(hasNotifications: Boolean = true, onClick: () -> Unit = {
 @Preview(showBackground = true)
 @Composable
 fun HomeActionButtonsPreview() {
-    Row(modifier = Modifier.padding(16.dp).background(Color(0xFFF6FCFB))) {
+    Row(modifier = Modifier.padding(16.dp).background(OffWhite)) {
         NfcButton()
         Spacer(modifier = Modifier.width(8.dp))
         NotificationButton()

@@ -1,5 +1,7 @@
 package com.example.petcare.ui.components
 
+import com.example.petcare.ui.theme.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -30,7 +32,7 @@ fun SearchBar(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(50.dp))
-            .background(Color(0xFFE8F5F3))
+            .background(OffWhite)
             .padding(horizontal = 16.dp, vertical = 4.dp)
     )
     {

@@ -36,7 +36,7 @@ fun EventCard(eventName: String,pet:String, date: String){
     Card(modifier = Modifier
         .fillMaxWidth()
         .padding(16.dp)
-        .shadow(elevation = 12.dp, shape = RoundedCornerShape(16.dp), spotColor = Color(0x33000000)),
+        .shadow(elevation = 12.dp, shape = RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.2f)),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {

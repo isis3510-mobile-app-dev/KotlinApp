@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -32,6 +32,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.petcare.R
+import com.example.petcare.ui.theme.SuccessContainer
+import com.example.petcare.ui.theme.SuccessContent
+import com.example.petcare.ui.theme.WarningYellow
 
 data class ActiveVaccineListItemData(
     val vaccineName: String,
@@ -46,7 +49,7 @@ fun ActiveVaccineCard(vaccine: ActiveVaccineListItemData){
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(elevation = 12.dp, shape = RoundedCornerShape(16.dp), spotColor = Color(0x33000000)),
+            .shadow(elevation = 12.dp, shape = RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.2f)),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
@@ -90,10 +93,10 @@ fun ActiveVaccineCard(vaccine: ActiveVaccineListItemData){
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50.dp))
-                        .background(Color(0xFFE8F5E9))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                        .background(SuccessContainer)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    Text("Active", fontSize = 11.sp, color = Color(0xFF2E7D32))
+                    Text("Active", fontSize = 11.sp, color = SuccessContent)
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -102,13 +105,13 @@ fun ActiveVaccineCard(vaccine: ActiveVaccineListItemData){
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 ){
                     Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Reminder",
-                        tint = Color(0xFFF9A825),
+                        imageVector = Icons.Default.NotificationsActive,
+                        contentDescription = "Notification",
+                        tint = WarningYellow,
                         modifier = Modifier.size(12.dp)
                     )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text("Reminder", fontSize = 11.sp, color = Color(0xFFF9A825))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Reminder", fontSize = 11.sp, color = WarningYellow)
                 }
             }
         }
@@ -123,7 +126,7 @@ fun ActiveVaccineCardPreview() {
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.padding(8.dp)
     ) {
-        ActiveVaccineCard(ActiveVaccineListItemData("Rabbies", "Max", "24-02-2026", "Dr. Smith", R.drawable.pet))
+        ActiveVaccineCard(ActiveVaccineListItemData("Rabies", "Max", "24-02-2026", "Dr. Smith", R.drawable.pet))
 
     }
 }
