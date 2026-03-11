@@ -23,6 +23,7 @@ val SuccessContent = Color(0xFF2E7D32)
 val SuccessGreen = Color(0xFF4CAF50)
 val InfoContainer = Color(0xFFE3F2FD)
 val InfoContent = Color(0xFF1565C0)
+val DentalContainer = Color(0xFFF1F8E9)
 
 // Neutral Colors
 val GrayBorder = Color(0xFFBDBDBD)
