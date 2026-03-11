@@ -39,10 +39,9 @@ import com.example.petcare.ui.components.ProfileHeader
 import com.example.petcare.ui.components.SettingsListItem
 import com.example.petcare.ui.components.SettingsSection
 import com.example.petcare.ui.components.ExpandableFAB
-import com.example.petcare.ui.theme.GrayBorder
-import com.example.petcare.ui.theme.GrayText
-import com.example.petcare.ui.theme.GreenLight
-import com.example.petcare.ui.theme.GreenDark
+import com.example.petcare.ui.screens.profile.components.AccountSection
+import com.example.petcare.ui.screens.profile.components.PreferencesSection
+import com.example.petcare.ui.screens.profile.components.SupportSection
 import com.example.petcare.ui.theme.InfoContainer
 import com.example.petcare.ui.theme.InfoContent
 import com.example.petcare.ui.theme.PetCareTheme
@@ -94,129 +93,26 @@ fun ProfileScreen(
             )
 
             // Account Section
-            SettingsSection(title = "Account", items = listOf(
-                {
-                    SettingsListItem(
-                        icon = Icons.Default.Person,
-                        iconBackgroundColor = GreenLight.copy(alpha = 0.2f),
-                        iconTintColor = MaterialTheme.colorScheme.secondary,
-                        title = "Edit Profile",
-                        subtitle = "Sarah Johnson",
-                        trailingContent = {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Edit Profile", tint = GrayText)
-                        },
-                        onClick = { /* Navigate to edit profile */ }
-                    )
-                },
-                {
-                    SettingsListItem(
-                        icon = Icons.Default.Email,
-                        iconBackgroundColor = InfoContainer,
-                        iconTintColor = InfoContent,
-                        title = "Email",
-                        subtitle = "sarah.johnson@email.com",
-                        trailingContent = {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Edit Email", tint = GrayText)
-                        },
-                        onClick = { /* Navigate to email */ }
-                    )
-                },
-                {
-                    SettingsListItem(
-                        icon = Icons.Default.Phone,
-                        iconBackgroundColor = SuccessContainer,
-                        iconTintColor = SuccessContent,
-                        title = "Phone",
-                        subtitle = "+1 (555) 012-3456",
-                        trailingContent = {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Edit Phone", tint = GrayText)
-                        },
-                        onClick = { /* Navigate to phone */ }
-                    )
-                }
-            ))
+            AccountSection(
+                onEditProfileClick = { /* Navigate to edit profile */ },
+                onEmailClick = { /* Navigate to email */ },
+                onPhoneClick = { /* Navigate to phone */ }
+            )
 
             // Preferences Section
-            SettingsSection(title = "Preferences", items = listOf(
-                {
-                    SettingsListItem(
-                        icon = Icons.Default.DarkMode,
-                        iconBackgroundColor = Color.LightGray.copy(alpha = 0.2f),
-                        iconTintColor = Color.DarkGray,
-                        title = "Dark Mode",
-                        trailingContent = {
-                            Switch(
-                                checked = uiState.currentThemeMode == AppThemeMode.DARK,
-                                onCheckedChange = { isDark ->
-                                    val mode = if (isDark) AppThemeMode.DARK else AppThemeMode.LIGHT
-                                    viewModel.onThemeModeChanged(mode)
-                                },
-                                colors = androidx.compose.material3.SwitchDefaults.colors(
-                                    checkedTrackColor = GreenDark,
-                                    uncheckedTrackColor = GrayBorder,
-                                    checkedThumbColor = Color.White
-                                ),
-                                modifier = Modifier.semantics { contentDescription = "Toggle Dark Mode" }
-                            )
-                        }
-                    )
-                },
-                {
-                    SettingsListItem(
-                        icon = Icons.Default.Notifications,
-                        iconBackgroundColor = WarningContainer,
-                        iconTintColor = WarningContent,
-                        title = "Notifications",
-                        subtitle = if (uiState.notificationsEnabled) "Enabled" else "Disabled",
-                        trailingContent = {
-                            Switch(
-                                checked = uiState.notificationsEnabled,
-                                onCheckedChange = { viewModel.onNotificationsToggled(it) },
-                                colors = androidx.compose.material3.SwitchDefaults.colors(
-                                    checkedTrackColor = GreenDark,
-                                    uncheckedTrackColor = GrayBorder,
-                                    checkedThumbColor = Color.White
-                                ),
-                                modifier = Modifier.semantics { contentDescription = "Toggle Notifications" }
-                            )
-                        }
-                    )
-                },
-                {
-                    SettingsListItem(
-                        icon = Icons.Default.WifiOff,
-                        iconBackgroundColor = Color.LightGray.copy(alpha = 0.2f),
-                        iconTintColor = Color.DarkGray,
-                        title = "Offline Mode",
-                        trailingContent = {
-                            Switch(
-                                checked = uiState.offlineModeEnabled,
-                                onCheckedChange = { viewModel.onOfflineModeToggled(it) },
-                                colors = androidx.compose.material3.SwitchDefaults.colors(
-                                    checkedTrackColor = GreenDark,
-                                    uncheckedTrackColor = GrayBorder,
-                                    checkedThumbColor = Color.White
-                                ),
-                                modifier = Modifier.semantics { contentDescription = "Toggle Offline Mode" }
-                            )
-                        }
-                    )
-                }
-            ))
+            PreferencesSection(
+                currentThemeMode = uiState.currentThemeMode,
+                onThemeModeChanged = viewModel::onThemeModeChanged,
+                notificationsEnabled = uiState.notificationsEnabled,
+                onNotificationsToggled = viewModel::onNotificationsToggled,
+                offlineModeEnabled = uiState.offlineModeEnabled,
+                onOfflineModeToggled = viewModel::onOfflineModeToggled
+            )
 
             // Support Section
-            SettingsSection(title = "Support", items = listOf(
-                {
-                    SettingsListItem(
-                        icon = Icons.AutoMirrored.Filled.ExitToApp,
-                        iconBackgroundColor = MaterialTheme.colorScheme.errorContainer,
-                        iconTintColor = MaterialTheme.colorScheme.error,
-                        title = "Sign Out",
-                        titleColor = MaterialTheme.colorScheme.error,
-                        onClick = { viewModel.onSignOutClicked() }
-                    )
-                }
-            ))
+            SupportSection(
+                onSignOutClicked = viewModel::onSignOutClicked
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
         }
@@ -248,119 +144,26 @@ fun ProfileScreenPreviewStub() {
                 )
 
                 // Account Section
-                SettingsSection(title = "Account", items = listOf(
-                    {
-                        SettingsListItem(
-                            icon = Icons.Default.Person,
-                            iconBackgroundColor = GreenLight.copy(alpha = 0.2f),
-                            iconTintColor = MaterialTheme.colorScheme.secondary,
-                            title = "Edit Profile",
-                            subtitle = "Sarah Johnson",
-                            trailingContent = {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Edit Profile", tint = GrayText)
-                            },
-                        )
-                    },
-                    {
-                        SettingsListItem(
-                            icon = Icons.Default.Email,
-                            iconBackgroundColor = InfoContainer,
-                            iconTintColor = InfoContent,
-                            title = "Email",
-                            subtitle = "sarah.johnson@email.com",
-                            trailingContent = {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Edit Email", tint = GrayText)
-                            },
-                        )
-                    },
-                    {
-                        SettingsListItem(
-                            icon = Icons.Default.Phone,
-                            iconBackgroundColor = SuccessContainer,
-                            iconTintColor = SuccessContent,
-                            title = "Phone",
-                            subtitle = "+1 (555) 012-3456",
-                            trailingContent = {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Edit Phone", tint = GrayText)
-                            },
-                        )
-                    }
-                ))
+                AccountSection(
+                    onEditProfileClick = {},
+                    onEmailClick = {},
+                    onPhoneClick = {}
+                )
 
                 // Preferences Section
-                SettingsSection(title = "Preferences", items = listOf(
-                    {
-                        SettingsListItem(
-                            icon = Icons.Default.DarkMode,
-                            iconBackgroundColor = Color.LightGray.copy(alpha = 0.2f),
-                            iconTintColor = Color.DarkGray,
-                            title = "Dark Mode",
-                            trailingContent = {
-                                Switch(
-                                    checked = false, 
-                                    onCheckedChange = {},
-                                    colors = androidx.compose.material3.SwitchDefaults.colors(
-                                        checkedTrackColor = GreenDark,
-                                        uncheckedTrackColor = GrayBorder,
-                                        checkedThumbColor = Color.White
-                                    )
-                                )
-                            }
-                        )
-                    },
-                    {
-                        SettingsListItem(
-                            icon = Icons.Default.Notifications,
-                            iconBackgroundColor = WarningContainer,
-                            iconTintColor = WarningContent,
-                            title = "Notifications",
-                            subtitle = "Enabled",
-                            trailingContent = {
-                                Switch(
-                                    checked = true, 
-                                    onCheckedChange = {},
-                                    colors = androidx.compose.material3.SwitchDefaults.colors(
-                                        checkedTrackColor = GreenDark,
-                                        uncheckedTrackColor = GrayBorder,
-                                        checkedThumbColor = Color.White
-                                    )
-                                )
-                            }
-                        )
-                    },
-                    {
-                        SettingsListItem(
-                            icon = Icons.Default.WifiOff,
-                            iconBackgroundColor = Color.LightGray.copy(alpha = 0.2f),
-                            iconTintColor = Color.DarkGray,
-                            title = "Offline Mode",
-                            trailingContent = {
-                                Switch(
-                                    checked = false, 
-                                    onCheckedChange = {},
-                                    colors = androidx.compose.material3.SwitchDefaults.colors(
-                                        checkedTrackColor = GreenDark,
-                                        uncheckedTrackColor = GrayBorder,
-                                        checkedThumbColor = Color.White
-                                    )
-                                )
-                            }
-                        )
-                    }
-                ))
+                PreferencesSection(
+                    currentThemeMode = AppThemeMode.LIGHT,
+                    onThemeModeChanged = {},
+                    notificationsEnabled = true,
+                    onNotificationsToggled = {},
+                    offlineModeEnabled = false,
+                    onOfflineModeToggled = {}
+                )
 
                 // Support Section
-                SettingsSection(title = "", items = listOf(
-                    {
-                        SettingsListItem(
-                            icon = Icons.AutoMirrored.Filled.ExitToApp,
-                            iconBackgroundColor = MaterialTheme.colorScheme.errorContainer,
-                            iconTintColor = MaterialTheme.colorScheme.error,
-                            title = "Sign Out",
-                            titleColor = MaterialTheme.colorScheme.error
-                        )
-                    }
-                ))
+                SupportSection(
+                    onSignOutClicked = {}
+                )
 
                 Spacer(modifier = Modifier.height(32.dp))
             }
