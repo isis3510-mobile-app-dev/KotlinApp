@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.ui.theme.OffWhite
 
 @Composable
 fun PetInformationCard(
@@ -91,7 +92,7 @@ private fun InfoItem(label: String, value: String, modifier: Modifier = Modifier
 @Composable
 fun PetInformationCardPreview() {
     PetCareTheme {
-        Box(modifier = Modifier.padding(16.dp).background(Color(0xFFF6FCFB))) {
+        Box(modifier = Modifier.padding(16.dp).background(OffWhite)) {
             PetInformationCard(
                 species = "Dog",
                 breed = "Golden Retriever",

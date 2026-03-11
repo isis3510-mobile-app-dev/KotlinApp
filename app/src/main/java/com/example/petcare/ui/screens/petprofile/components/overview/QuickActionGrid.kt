@@ -33,6 +33,7 @@ import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
 
 import androidx.compose.material.icons.outlined.Contactless
+import com.example.petcare.ui.theme.OffWhite
 
 @Composable
 fun QuickActionGrid(
@@ -133,7 +134,7 @@ private fun GridButton(
 @Composable
 fun QuickActionGridPreview() {
     PetCareTheme {
-        Box(modifier = Modifier.padding(16.dp).background(Color(0xFFF6FCFB))) {
+        Box(modifier = Modifier.padding(16.dp).background(OffWhite)) {
             QuickActionGrid(
                 onAddEventClick = {},
                 onAddVaccineClick = {},

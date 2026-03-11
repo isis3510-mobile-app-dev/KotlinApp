@@ -42,6 +42,7 @@ import com.example.petcare.ui.theme.InfoContent
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.SuccessContainer
 import com.example.petcare.ui.theme.SuccessContent
+import com.example.petcare.ui.theme.OffWhite
 
 data class VaccineRecord(
     val id: String,
@@ -232,7 +233,7 @@ private fun InfoBlock(label: String, value: String) {
 @Composable
 fun VaccineTimelineItemPreview() {
     PetCareTheme {
-        Box(modifier = Modifier.background(Color(0xFFF6FCFB)).padding(16.dp)) {
+        Box(modifier = Modifier.background(OffWhite).padding(16.dp)) {
             Column {
                 VaccineTimelineItem(
                     vaccine = VaccineRecord("3", "Leptospirosis", "Dr. Johnson · City Vet Center", "Oct 1, 2023", null, null, VaccineFilterStatus.OVERDUE), // Example of missing Next Due Date

@@ -29,6 +29,7 @@ import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.InfoContainer
 import com.example.petcare.ui.theme.InfoContent
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.ui.theme.OffWhite
 
 @Composable
 fun UpcomingEventsBanner(
@@ -88,7 +89,7 @@ fun UpcomingEventsBanner(
 @Composable
 fun UpcomingEventsBannerPreview() {
     PetCareTheme {
-        Box(modifier = Modifier.padding(16.dp).background(Color(0xFFF6FCFB))) {
+        Box(modifier = Modifier.padding(16.dp).background(OffWhite)) {
             UpcomingEventsBanner(upcomingCount = 2, onClick = {})
         }
     }

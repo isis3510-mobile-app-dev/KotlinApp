@@ -31,6 +31,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
 import com.example.petcare.ui.theme.*
+import com.example.petcare.ui.components.AttachedDocumentsCard
+import com.example.petcare.data.model.AttachedDocument
 
 @Composable
 fun VaccineDetailsScreen(
@@ -41,7 +43,7 @@ fun VaccineDetailsScreen(
     val vaccine = uiState.vaccine
 
     Scaffold(
-        containerColor = Color(0xFFF6FCFB),
+        containerColor = OffWhite,
         topBar = {
             Column(modifier = Modifier.background(GreenDark)) {
                 Row(
@@ -95,8 +97,13 @@ fun VaccineDetailsScreen(
                 // Mock clinic for now as it's not split in model
                 ProviderCard(veterinarian = vaccine.provider, clinic = "Happy Paws Clinic")
 
-                // Attached Document Card
-                AttachedDocumentCard(documentName = vaccine.attachedDocumentName)
+                // Attached Documents Card
+                AttachedDocumentsCard(
+                    documents = vaccine.attachedDocumentName?.let { 
+                        listOf(AttachedDocument(id = "1", fileName = it)) 
+                    } ?: emptyList(),
+                    onAddClicked = { /* Add Document action */ }
+                )
                 
                 Spacer(modifier = Modifier.height(32.dp))
             }
@@ -235,74 +242,7 @@ private fun ProviderCard(veterinarian: String, clinic: String) {
     }
 }
 
-@Composable
-private fun AttachedDocumentCard(documentName: String?) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color.White)
-            .padding(24.dp)
-    ) {
-        Column {
-            Text(
-                text = "ATTACHED DOCUMENT",
-                style = MaterialTheme.typography.labelMedium,
-                color = GrayText,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            if (documentName != null) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .border(1.dp, GrayBorder, RoundedCornerShape(12.dp))
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Description,
-                        contentDescription = "Document",
-                        tint = GreenDark,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = documentName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            } else {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(GreenDark)
-                            .clickable { /* Add Document */ },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Document", tint = Color.White)
-                    }
-                    Text(
-                        text = "Attach Document.",
-                        fontWeight = FontWeight.Bold,
-                        color = GreenDark,
-                        fontSize = 16.sp
-                    )
-                }
-            }
-        }
-    }
-}
+
 
 @Composable
 private fun StickyBottomActions(onDelete: () -> Unit, onEdit: () -> Unit) {
