@@ -8,51 +8,28 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.NetworkCheck
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Signpost
-import androidx.compose.material.icons.filled.WifiOff
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.data.preferences.AppThemeMode
+import com.example.petcare.ui.components.ExpandableFAB
 import com.example.petcare.ui.components.NavBar
 import com.example.petcare.ui.components.ProfileHeader
-import com.example.petcare.ui.components.SettingsListItem
-import com.example.petcare.ui.components.SettingsSection
-import com.example.petcare.ui.components.ExpandableFAB
 import com.example.petcare.ui.screens.profile.components.AccountSection
 import com.example.petcare.ui.screens.profile.components.PreferencesSection
 import com.example.petcare.ui.screens.profile.components.SupportSection
-import com.example.petcare.ui.theme.InfoContainer
-import com.example.petcare.ui.theme.InfoContent
 import com.example.petcare.ui.theme.PetCareTheme
-import com.example.petcare.ui.theme.SuccessContainer
-import com.example.petcare.ui.theme.SuccessContent
-import com.example.petcare.ui.theme.WarningContainer
-import com.example.petcare.ui.theme.WarningContent
 
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
+    currentRoute: String,
     onNavigateToLogin: () -> Unit = {},
     onNavigateTab: (String) -> Unit = {}
 ) {
@@ -72,7 +49,7 @@ fun ProfileScreen(
         },
         bottomBar = {
             NavBar(
-                currentRoute = "profile",
+                currentRoute = currentRoute,
                 onItemClick = onNavigateTab
             )
         },

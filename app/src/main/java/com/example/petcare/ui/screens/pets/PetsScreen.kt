@@ -1,8 +1,7 @@
 package com.example.petcare.ui.screens.pets
 
-import com.example.petcare.ui.theme.*
-
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,16 +22,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.petcare.R
+import com.example.petcare.ui.components.Filters
 import com.example.petcare.ui.components.NavBar
 import com.example.petcare.ui.components.PetDetailsCard
-import com.example.petcare.ui.components.Filters
 import com.example.petcare.ui.components.SearchBar
+import com.example.petcare.ui.theme.GreenAccentDark
+import com.example.petcare.ui.theme.OffWhite
 
 data class PetListItem(
     val name: String,
@@ -45,10 +45,15 @@ data class PetListItem(
     val species: String
 )
 @Composable
-fun PetsScreen(){
+fun PetsScreen(
+    currentRoute: String,
+    onNavigateTab: (String) -> Unit,
+    onPetSelected: (String) -> Unit
+    ){
+
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All Pets") }
-    var selectedTab by remember { mutableStateOf("pets") }
+
 
     val pets = listOf(
         PetListItem("Max", "Golden Retriever", 6, 28.5, "Male", "Healthy", R.drawable.pet, "DOG"),
@@ -59,8 +64,8 @@ fun PetsScreen(){
     Scaffold(
         bottomBar = {
             NavBar(
-                currentRoute = selectedTab,
-                onItemClick = {}
+                currentRoute = currentRoute,
+                onItemClick = onNavigateTab
             )
         }
     ) { paddingValues ->
@@ -110,16 +115,18 @@ fun PetsScreen(){
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
                 items(pets) { pet ->
-                    PetDetailsCard(
-                        petName = pet.name,
-                        breed = pet.breed,
-                        age = pet.age,
-                        weight = pet.weight,
-                        gender = pet.gender,
-                        status = pet.status,
-                        photoPath = pet.photoPath,
-                        species = pet.species
-                    )
+                    Box(modifier = Modifier.clickable { onPetSelected(pet.name) }) {
+                        PetDetailsCard(
+                            petName = pet.name,
+                            breed = pet.breed,
+                            age = pet.age,
+                            weight = pet.weight,
+                            gender = pet.gender,
+                            status = pet.status,
+                            photoPath = pet.photoPath,
+                            species = pet.species
+                        )
+                    }
                 }
             }
           }
@@ -131,5 +138,9 @@ fun PetsScreen(){
 @Preview(showBackground = true)
 @Composable
 fun PetScreenPreview(){
-    PetsScreen()
+    PetsScreen(
+        currentRoute = "pets",
+        onNavigateTab = {},
+        onPetSelected = {}
+    )
 }

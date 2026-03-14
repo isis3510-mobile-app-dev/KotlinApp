@@ -1,34 +1,37 @@
 package com.example.petcare.ui.screens.calendar
 
-import com.example.petcare.ui.theme.*
-
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.petcare.ui.components.ButtonDefault
+import com.example.petcare.ui.components.CalendarWidget
+import com.example.petcare.ui.components.EmptyStateView
 import com.example.petcare.ui.components.ExpandableFAB
 import com.example.petcare.ui.components.Filters
 import com.example.petcare.ui.components.NavBar
-import com.example.petcare.ui.components.CalendarWidget
-import com.example.petcare.ui.components.EmptyStateView
-import com.example.petcare.ui.theme.GreenDark
+import com.example.petcare.ui.theme.GreenTextDark
 import com.example.petcare.ui.theme.OffWhite
 import com.example.petcare.ui.theme.PetCareTheme
 import java.time.LocalDate
@@ -38,8 +41,8 @@ import java.time.format.DateTimeFormatter
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun CalendarScreen(
-    currentRoute: String = "calendar",
-    onNavigationClick: (String) -> Unit = {}
+    currentRoute: String,
+    onNavigateTab: (String) -> Unit
 ) {
     var selectedFilter by remember { mutableStateOf("All") }
     // Initialize date range with today
@@ -52,7 +55,7 @@ fun CalendarScreen(
         bottomBar = {
             NavBar(
                 currentRoute = currentRoute,
-                onItemClick = onNavigationClick
+                onItemClick = onNavigateTab
             )
         },
         floatingActionButton = {
@@ -156,7 +159,10 @@ fun CalendarScreen(
 @Composable
 fun CalendarScreenPreview() {
     PetCareTheme {
-        CalendarScreen()
+        CalendarScreen(
+            currentRoute = "calendar",
+            onNavigateTab = {}
+        )
     }
 }
 

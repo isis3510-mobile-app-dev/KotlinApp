@@ -77,16 +77,18 @@ private fun SectionHeader(
 }
 
 @Composable
-fun HealthRecordsScreen(){
+fun HealthRecordsScreen(
+    currentRoute: String,
+    onNavigateTab: (String) -> Unit
+){
     var selectedFilter by remember { mutableStateOf("All") }
-    var selectedTab by remember { mutableStateOf("records") }
 
     Scaffold(
         floatingActionButton = { ExpandableFAB() },
         bottomBar = {
             NavBar(
-                currentRoute = selectedTab,
-                onItemClick = {}
+                currentRoute = currentRoute,
+                onItemClick = onNavigateTab
             )
         }
     ) { paddingValues ->
@@ -207,5 +209,8 @@ private fun EventsContent() {
 @Preview(showBackground = true)
 @Composable
 fun AllRecordsPreview() {
-    HealthRecordsScreen()
+    HealthRecordsScreen(
+        currentRoute = "records",
+        onNavigateTab = {}
+    )
 }

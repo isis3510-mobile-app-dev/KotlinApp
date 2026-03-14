@@ -3,6 +3,7 @@ package com.example.petcare.ui.screens.auth
 import com.example.petcare.ui.theme.*
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,7 +36,10 @@ import androidx.compose.foundation.layout.Spacer
 
 
 @Composable
-fun SignInScreen(){
+fun SignInScreen(
+    onSignInSuccess: () -> Unit,
+    onGoToSignUp: () -> Unit
+){
     Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)
         .fillMaxSize()
         .padding(24.dp)
@@ -57,7 +61,7 @@ fun SignInScreen(){
             option1 = "Sign In",
             option2 = "Create account",
             selectedIndex = 0,
-            onSelectionChange = {}
+            onSelectionChange = { if (it == 1) onGoToSignUp() }
         )
 
 
@@ -95,13 +99,15 @@ fun SignInScreen(){
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        ButtonDefault(
-            bgColor = MaterialTheme.colorScheme.secondary,
-            textColor = Color.White,
-            width = 342.dp,
-            height = 56.dp,
-            text = "Sign In"
-        )
+        Box(modifier = Modifier.clickable { onSignInSuccess() }) {
+            ButtonDefault(
+                bgColor = MaterialTheme.colorScheme.secondary,
+                textColor = Color.White,
+                width = 342.dp,
+                height = 56.dp,
+                text = "Sign In"
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -152,7 +158,10 @@ fun SignInScreen(){
 @Preview
 @Composable
 fun SignInScreenPreview(){
-    PetCareTheme() {
-        SignInScreen()
+    PetCareTheme {
+        SignInScreen(
+            onSignInSuccess = {},
+            onGoToSignUp = {}
+        )
     }
 }
