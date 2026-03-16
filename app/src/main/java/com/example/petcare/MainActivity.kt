@@ -58,6 +58,11 @@ import com.example.petcare.ui.theme.OnboardingBlueEnd
 import com.example.petcare.ui.theme.OnboardingBlueStart
 import com.example.petcare.ui.theme.OnboardingPurpleEnd
 import com.example.petcare.ui.theme.OnboardingPurpleStart
+import android.content.Intent
+import android.nfc.NfcAdapter
+import com.example.petcare.data.nfc.NfcManager
+import com.example.petcare.ui.screens.nfc.NfcUiState
+import com.example.petcare.ui.screens.nfc.NfcViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -66,9 +71,13 @@ class MainActivity : ComponentActivity() {
         ViewModelFactory(app.userPreferencesRepository)
     }
 
+    private lateinit var nfcManager: NfcManager
+    val nfcViewModel: NfcViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        nfcManager = NfcManager(this)
         setContent {
             val themeMode by appThemeViewModel.themeMode.collectAsStateWithLifecycle()
             val navController = rememberNavController()
@@ -268,7 +277,12 @@ class MainActivity : ComponentActivity() {
                             composable(Routes.NfcScanning) {
                                 ScanningNFCScreen(
                                     onBack = { navController.popBackStack() },
-                                    onDone = {
+                                    onWriteSuccess = {
+                                        navController.navigate(Routes.NfcWriteSuccess) {
+                                            popUpTo(Routes.NfcScanning) { inclusive = true }
+                                        }
+                                    },
+                                    onReadSuccess = {
                                         navController.navigate(Routes.NfcScanSuccess) {
                                             popUpTo(Routes.NfcScanning) { inclusive = true }
                                         }
@@ -303,11 +317,12 @@ class MainActivity : ComponentActivity() {
                             composable(Routes.NfcWriting) {
                                 ScanningNFCScreen(
                                     onBack = { navController.popBackStack() },
-                                    onDone = {
+                                    onWriteSuccess = {
                                         navController.navigate(Routes.NfcWriteSuccess) {
                                             popUpTo(Routes.NfcWriting) { inclusive = true }
                                         }
-                                    }
+                                    },
+                                    onReadSuccess = { }
                                 )
                             }
 
@@ -459,4 +474,33 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        nfcManager.enableForegroundDispatch()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        nfcManager.disableForegroundDispatch()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)   // keep getIntent() fresh for any other code that reads it
+
+        val action = intent.action ?: return
+        if (action != NfcAdapter.ACTION_NDEF_DISCOVERED &&
+            action != NfcAdapter.ACTION_TAG_DISCOVERED
+        ) return
+
+        val tag = nfcManager.getTagFromIntent(intent) ?: return
+
+        if (nfcViewModel.isPendingWrite()) {
+            nfcViewModel.onTagDetectedForWrite(tag, nfcManager)
+        } else {
+            nfcViewModel.onTagDetectedForRead(tag, nfcManager)
+        }
+    }
+
 }

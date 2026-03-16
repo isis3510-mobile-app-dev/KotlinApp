@@ -1,5 +1,6 @@
 package com.example.petcare.ui.screens.nfc
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -19,13 +20,17 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.petcare.MainActivity
 import com.example.petcare.R
 import com.example.petcare.ui.screens.nfc.components.NFCCheckMark
 import com.example.petcare.ui.screens.nfc.components.NFCPetCard
@@ -38,6 +43,12 @@ fun ScannedSuccessScreen(
     onBack: () -> Unit = {},
     onDone: () -> Unit = {}
 ) {
+    val activity     = LocalActivity.current as MainActivity
+    val nfcViewModel = activity.nfcViewModel
+    val uiState by nfcViewModel.uiState.collectAsStateWithLifecycle()
+
+    val payload = (uiState as? NfcUiState.ReadSuccess)?.payload
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -80,15 +91,15 @@ fun ScannedSuccessScreen(
             )
             
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             NFCPetCard(
-                petName = "Max",
-                breedAndSpecies = "Golden Retriever · Dog",
-                photoPath = R.drawable.pet,
-                ownerName = "Sarah Johnson",
-                ownerPhone = "+1 (555) 012-3456",
-                ownerInitials = "SJ",
-                medicalNotes = "No known allergies. Microchip: XR123456789"
+                petName         = payload?.petName       ?: "Unknown pet",
+                breedAndSpecies = "${payload?.breed ?: ""} · ${payload?.species ?: ""}",
+                photoPath       = R.drawable.pet,
+                ownerName       = payload?.ownerName     ?: "",
+                ownerPhone      = payload?.ownerPhone    ?: "",
+                ownerInitials   = payload?.ownerInitials ?: "?",
+                medicalNotes    = "Contact the owner immediately if you found this pet."
             )
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -97,7 +108,8 @@ fun ScannedSuccessScreen(
                 text = "Scan another tag",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.clickable { onDone() }
+                modifier = Modifier.clickable { nfcViewModel.readAnother()
+                    onDone() } // Modificar una vez sepa que es funcional.
             )
             
             Spacer(modifier = Modifier.height(32.dp))

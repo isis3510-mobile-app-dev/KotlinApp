@@ -4,6 +4,7 @@ junit = "4.13.2"
 kotlin = "2.3.10"
 material3 = "1.4.0"
 foundation = "1.10.4"
+nfc = "1.1.0"
 runtime = "1.10.4"
 lifecycle = "2.10.0"
 navigation = "2.9.0"
@@ -11,6 +12,7 @@ navigation = "2.9.0"
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.17.0" }
+androidx-nfc = { module = "androidx.nfc:nfc", version.ref = "nfc" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version = "1.3.0" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version = "3.7.0" }

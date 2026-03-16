@@ -1,5 +1,6 @@
 package com.example.petcare.ui.screens.nfc
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,6 +27,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.petcare.MainActivity
 import com.example.petcare.R
 import com.example.petcare.ui.components.ButtonDefault
 import com.example.petcare.ui.screens.nfc.components.NFCHeader
@@ -51,6 +55,28 @@ fun WriteNFCScreen(
     )
     
     val selectedPet = myPets.find { it.id == selectedPetId } ?: myPets.first()
+
+    val activity = LocalActivity.current as MainActivity
+    val nfcViewModel = activity. nfcViewModel
+    val uiState by nfcViewModel.uiState.collectAsStateWithLifecycle()
+
+    // Firebase token — fetch once on composition
+    /**
+    var firebaseToken by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+        FirebaseAuth.getInstance().currentUser
+            ?.getIdToken(false)
+            ?.addOnSuccessListener { result -> firebaseToken = result.token ?: "" }
+    }*/
+
+    // React to ViewModel state: move to ScanningScreen once payload is ready
+    LaunchedEffect(uiState) {
+        when (uiState) {
+            is NfcUiState.WaitingForTag -> onDone()   // navigate to ScanningNFCScreen
+            is NfcUiState.Error -> { /* handled in ScanningScreen */ }
+            else -> Unit
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -104,7 +130,7 @@ fun WriteNFCScreen(
                 width = 342.dp,
                 height = 56.dp,
                 text = "Start Writing",
-                onclick = { onDone() }
+                onclick = { nfcViewModel.prepareWrite(selectedPetId, "") }
             )
         }
     }

@@ -1,5 +1,6 @@
 package com.example.petcare.ui.screens.nfc
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,6 +32,8 @@ import com.example.petcare.ui.screens.nfc.components.NFCInfoCard
 import com.example.petcare.ui.screens.nfc.components.NFCToggle
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.MainActivity
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +44,8 @@ fun ScanNFCScreen(
 ) {
     var isReadMode by remember { mutableStateOf(true) }
 
+    val activity = LocalActivity.current
+    val nfcViewModel = activity
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -86,7 +91,7 @@ fun ScanNFCScreen(
                 width = 342.dp,
                 height = 56.dp,
                 text = "Start Scanning",
-                onclick = { onDone() }
+                onclick = { onDone()}
             )
 
             Spacer(modifier = Modifier.height(32.dp))
