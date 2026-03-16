@@ -3,6 +3,7 @@ package com.example.petcare.data.auth
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.userProfileChangeRequest
 import kotlinx.coroutines.tasks.await
 
 class AuthRepository {
@@ -16,9 +17,15 @@ class AuthRepository {
             auth.signInWithEmailAndPassword(email, password).await().user!!
         }
 
-    suspend fun register(email: String, password: String): Result<FirebaseUser> =
+    suspend fun register(email: String, password: String, fullName: String): Result<FirebaseUser> =
         runCatching {
-            auth.createUserWithEmailAndPassword(email, password).await().user!!
+            val result = auth.createUserWithEmailAndPassword(email, password).await()
+            val profileUpdates = userProfileChangeRequest {
+                displayName = fullName
+            }
+            result.user!!.updateProfile(profileUpdates).await()
+            result.user!!.getIdToken(true).await()
+            result.user!!
         }
 
 
@@ -27,6 +34,11 @@ class AuthRepository {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             auth.signInWithCredential(credential).await().user!!
         }
+
+    suspend fun getFreshToken(): String {
+        val user = auth.currentUser ?: error("Not Authenticated")
+        return user.getIdToken(false).await().token ?: error("Token is null")
+    }
 
     fun logout() = auth.signOut()
 }

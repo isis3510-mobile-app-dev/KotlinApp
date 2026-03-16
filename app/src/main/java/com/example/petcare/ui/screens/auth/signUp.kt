@@ -203,7 +203,7 @@ fun LoginScreen(
         }
 
         ButtonDefault(
-            onclick = { viewModel.register(email, password) },
+            onclick = { viewModel.register(email, password, fullName) },
             bgColor = MaterialTheme.colorScheme.secondary,
             textColor = Color.White,
             width = 342.dp,
