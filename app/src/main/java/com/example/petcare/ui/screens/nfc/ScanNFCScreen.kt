@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -26,7 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.petcare.ui.components.ButtonDefault
-import com.example.petcare.ui.components.NavBar
 import com.example.petcare.ui.screens.nfc.components.NFCHeader
 import com.example.petcare.ui.screens.nfc.components.NFCInfoCard
 import com.example.petcare.ui.screens.nfc.components.NFCToggle
@@ -35,7 +34,11 @@ import com.example.petcare.ui.theme.PetCareTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScanNFCScreen() {
+fun ScanNFCScreen(
+    onBack: () -> Unit = {},
+    onDone: () -> Unit = {},
+    onWrite: () -> Unit = {}
+) {
     var isReadMode by remember { mutableStateOf(true) }
 
     Scaffold(
@@ -43,17 +46,18 @@ fun ScanNFCScreen() {
             CenterAlignedTopAppBar(
                 title = { Text("NFC Tag", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { /* Handle back navigation */ }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.Transparent
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Unspecified,
+                    navigationIconContentColor = Color.Unspecified,
+                    titleContentColor = Color.Unspecified,
+                    actionIconContentColor = Color.Unspecified
                 )
             )
-        },
-        bottomBar = {
-            NavBar(currentRoute = "home", onItemClick = {})
         }
     ) { paddingValues ->
         Column(
@@ -64,30 +68,31 @@ fun ScanNFCScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(16.dp))
-            
-            NFCToggle(isReadMode = isReadMode, onModeChanged = { isReadMode = it })
-            
+
+            NFCToggle(isReadMode = isReadMode, onModeChanged = { onWrite() })
+
             Spacer(modifier = Modifier.height(48.dp))
-            
+
             NFCHeader(
                 title = "Scan NFC Tag",
                 subtitle = "Bring your phone close to a PetCare NFC tag to read the pet information"
             )
-            
+
             Spacer(modifier = Modifier.height(48.dp))
-            
+
             ButtonDefault(
                 bgColor = GreenDark,
                 textColor = Color.White,
                 width = 342.dp,
                 height = 56.dp,
-                text = "Start Scanning"
+                text = "Start Scanning",
+                onclick = { onDone() }
             )
-            
+
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             NFCInfoCard()
-            
+
             Spacer(modifier = Modifier.height(16.dp))
         }
     }

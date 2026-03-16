@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -27,7 +27,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.petcare.R
 import com.example.petcare.ui.components.ButtonDefault
-import com.example.petcare.ui.components.NavBar
 import com.example.petcare.ui.screens.nfc.components.NFCHeader
 import com.example.petcare.ui.screens.nfc.components.NFCToggle
 import com.example.petcare.ui.screens.nfc.components.PetOption
@@ -37,7 +36,11 @@ import com.example.petcare.ui.theme.PetCareTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WriteNFCScreen() {
+fun WriteNFCScreen(
+    onBack: () -> Unit = {},
+    onDone: () -> Unit = {},
+    onRead: () -> Unit = {}
+) {
     var isReadMode by remember { mutableStateOf(false) } // Default to false for Write Screen
     var selectedPetId by remember { mutableStateOf("1") }
     
@@ -54,17 +57,18 @@ fun WriteNFCScreen() {
             CenterAlignedTopAppBar(
                 title = { Text("NFC Tag", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { /* Handle back navigation */ }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.Transparent
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Unspecified,
+                    navigationIconContentColor = Color.Unspecified,
+                    titleContentColor = Color.Unspecified,
+                    actionIconContentColor = Color.Unspecified
                 )
             )
-        },
-        bottomBar = {
-            NavBar(currentRoute = "home", onItemClick = {})
         }
     ) { paddingValues ->
         Column(
@@ -75,7 +79,7 @@ fun WriteNFCScreen() {
         ) {
             Spacer(modifier = Modifier.height(16.dp))
             
-            NFCToggle(isReadMode = isReadMode, onModeChanged = { isReadMode = it })
+            NFCToggle(isReadMode = isReadMode, onModeChanged = { onRead() })
             
             Spacer(modifier = Modifier.height(24.dp))
             
@@ -99,7 +103,8 @@ fun WriteNFCScreen() {
                 textColor = Color.White,
                 width = 342.dp,
                 height = 56.dp,
-                text = "Start Writing"
+                text = "Start Writing",
+                onclick = { onDone() }
             )
         }
     }

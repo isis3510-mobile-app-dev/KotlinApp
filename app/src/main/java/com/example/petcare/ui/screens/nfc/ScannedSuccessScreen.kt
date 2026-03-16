@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -27,7 +27,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.petcare.R
-import com.example.petcare.ui.components.NavBar
 import com.example.petcare.ui.screens.nfc.components.NFCCheckMark
 import com.example.petcare.ui.screens.nfc.components.NFCPetCard
 import com.example.petcare.ui.theme.PetCareTheme
@@ -35,23 +34,27 @@ import com.example.petcare.ui.theme.SuccessGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScannedSuccessScreen() {
+fun ScannedSuccessScreen(
+    onBack: () -> Unit = {},
+    onDone: () -> Unit = {}
+) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("NFC Tag", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { /* Handle back navigation */ }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = { onBack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.Transparent
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Unspecified,
+                    navigationIconContentColor = Color.Unspecified,
+                    titleContentColor = Color.Unspecified,
+                    actionIconContentColor = Color.Unspecified
                 )
             )
-        },
-        bottomBar = {
-            NavBar(currentRoute = "home", onItemClick = {})
         }
     ) { paddingValues ->
         Column(
@@ -94,7 +97,7 @@ fun ScannedSuccessScreen() {
                 text = "Scan another tag",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.clickable { /* Handle Scan Again */ }
+                modifier = Modifier.clickable { onDone() }
             )
             
             Spacer(modifier = Modifier.height(32.dp))

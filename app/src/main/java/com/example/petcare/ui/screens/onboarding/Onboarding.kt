@@ -9,11 +9,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,6 +61,7 @@ fun GradientBackground(backgroundStart: Color, backgroundEnd: Color) {
                     )
                 )
             )
+            .windowInsetsPadding(WindowInsets(0, 0, 0, 0))
     ) {
 
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -79,7 +83,7 @@ fun GradientBackground(backgroundStart: Color, backgroundEnd: Color) {
 
 
 @Composable
-fun OnBoardingScreen(page: Int, title: String, description: String, backgroundStart: Color, backgroundEnd: Color, image: Int, onSignInClick: () -> Unit, onSkipClick: () -> Unit){
+fun OnBoardingScreen(page: Int, title: String, description: String, backgroundStart: Color, backgroundEnd: Color, image: Int, onSignInClick: () -> Unit, onSkipClick: () -> Unit, onContinueClick: () -> Unit){
     val annotatedText = buildAnnotatedString {
 
         append("Already have an account? ")
@@ -101,7 +105,6 @@ fun OnBoardingScreen(page: Int, title: String, description: String, backgroundSt
         ) {
             withStyle(
                 SpanStyle(
-                    color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
             ) {
@@ -118,6 +121,7 @@ fun OnBoardingScreen(page: Int, title: String, description: String, backgroundSt
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
+                .windowInsetsPadding(WindowInsets.systemBars)
         ) {
             Text(
                 text = "Skip",
@@ -132,7 +136,8 @@ fun OnBoardingScreen(page: Int, title: String, description: String, backgroundSt
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 32.dp),
+                .padding(horizontal = 32.dp)
+                .windowInsetsPadding(WindowInsets.systemBars),
             horizontalAlignment = Alignment.Start
         ) {
 
@@ -191,6 +196,7 @@ fun OnBoardingScreen(page: Int, title: String, description: String, backgroundSt
             Spacer(modifier = Modifier.height(30.dp))
 
             ButtonOutline(
+                onclick = onContinueClick,
                 bgColor = Color.White.copy(alpha = 0.2f),
                 outlineColor = Color.White.copy(alpha = 0.8f),
                 textColor = Color.White,
@@ -230,7 +236,8 @@ fun PreviewOnboarding(){
             backgroundEnd = GreenAccentDark,
             image = R.drawable.onboarding_dop,
             onSignInClick = {},
-            onSkipClick = {}
+            onSkipClick = {},
+            onContinueClick = {}
         )
 
 
@@ -250,7 +257,8 @@ fun PreviewOnboarding2(){
             backgroundEnd = OnboardingBlueEnd,
             image = R.drawable.onboarding_vaccine,
             onSignInClick = {},
-            onSkipClick = {}
+            onSkipClick = {},
+            onContinueClick = {}
         )
 
     }
@@ -270,7 +278,8 @@ fun PreviewOnboarding3(){
             backgroundEnd = OnboardingPurpleEnd,
             image = R.drawable.onboarding_nfc,
             onSignInClick = {},
-            onSkipClick = {}
+            onSkipClick = {},
+            onContinueClick = {}
         )
 
     }

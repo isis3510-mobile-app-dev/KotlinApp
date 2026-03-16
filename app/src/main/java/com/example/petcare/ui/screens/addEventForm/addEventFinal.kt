@@ -40,7 +40,10 @@ import com.example.petcare.ui.components.SettingsListItem
 
 
 @Composable
-fun AddPetFinalForm(){
+fun AddEventFinalForm(
+    onclick: () -> Unit,
+    onBack: () -> Unit
+){
     PetCareTheme {
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
@@ -54,8 +57,7 @@ fun AddPetFinalForm(){
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                TransparentTopBar(title = "Add New Event") {
-                }
+                TransparentTopBar(title = "Add New Event", onBackClick = onBack)
 
 
                 Stepper(
@@ -139,7 +141,8 @@ fun AddPetFinalForm(){
                     textColor = MaterialTheme.colorScheme.secondary,
                     width = 169.dp,
                     height = 50.57.dp,
-                    text = "Back"
+                    text = "Back",
+                    onclick = onBack
                 )
 
                 Spacer(modifier = Modifier.width(10.dp))
@@ -149,7 +152,8 @@ fun AddPetFinalForm(){
                     textColor = Color.White,
                     width = 169.dp,
                     height = 50.57.dp,
-                    text = "Add Event"
+                    text = "Add Event",
+                    onclick = onclick
                 )
 
             }
@@ -162,6 +166,9 @@ fun AddPetFinalForm(){
 
 @Preview
 @Composable
-fun AddPetFinalFormPreview(){
-    AddPetFinalForm()
+fun AddEventFinalFormPreview(){
+    AddEventFinalForm(
+        onclick = {},
+        onBack = {}
+    )
 }

@@ -9,10 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
@@ -28,17 +26,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
-import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
 import com.example.petcare.ui.theme.*
 import com.example.petcare.ui.components.AttachedDocumentsCard
 import com.example.petcare.data.model.AttachedDocument
 
 @Composable
 fun VaccineDetailsScreen(
-    viewModel: VaccineDetailsViewModel,
+    petId: String,
+    vaccineId: String,
     onNavigateBack: () -> Unit = {}
 ) {
+    val viewModel: VaccineDetailsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val vaccine = uiState.vaccine
 
@@ -291,6 +291,10 @@ private fun StickyBottomActions(onDelete: () -> Unit, onEdit: () -> Unit) {
 @Composable
 fun VaccineDetailsScreenPreview() {
     PetCareTheme {
-        VaccineDetailsScreen(viewModel = VaccineDetailsViewModel())
+        VaccineDetailsScreen(
+            petId = "preview_pet",
+            vaccineId = "preview_vaccine",
+            onNavigateBack = {}
+        )
     }
 }

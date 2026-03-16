@@ -3,7 +3,6 @@ package com.example.petcare.ui.screens.auth
 import com.example.petcare.ui.theme.*
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -99,15 +98,16 @@ fun SignInScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Box(modifier = Modifier.clickable { onSignInSuccess() }) {
-            ButtonDefault(
-                bgColor = MaterialTheme.colorScheme.secondary,
-                textColor = Color.White,
-                width = 342.dp,
-                height = 56.dp,
-                text = "Sign In"
-            )
-        }
+        ButtonDefault(
+            onclick = onSignInSuccess,
+            bgColor = MaterialTheme.colorScheme.secondary,
+            textColor = Color.White,
+            width = 342.dp,
+            height = 56.dp,
+            text = "Sign In",
+
+        )
+
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -139,6 +139,7 @@ fun SignInScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         ButtonOutline(
+            onclick = onSignInSuccess,
             bgColor = MaterialTheme.colorScheme.background,
             outlineColor = GrayBorder,
             textColor = MaterialTheme.colorScheme.tertiary,

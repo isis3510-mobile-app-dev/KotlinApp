@@ -21,7 +21,10 @@ import com.example.petcare.ui.theme.PetCareTheme
 
 
 @Composable
-fun AddVaccineInitialForm(){
+fun AddVaccineInitialForm(
+    onclick: () -> Unit,
+    onBack: () -> Unit
+){
     PetCareTheme {
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
@@ -32,8 +35,7 @@ fun AddVaccineInitialForm(){
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(30.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
-                TransparentTopBar(title = "Add New Vaccine") {
-                }
+                TransparentTopBar(title = "Add New Vaccine", onBackClick = onBack)
 
                 Stepper(
                     currentStep = 1,
@@ -71,7 +73,8 @@ fun AddVaccineInitialForm(){
                 textColor = Color.White,
                 width = 342.dp,
                 height = 56.dp,
-                text = "Continue"
+                text = "Continue",
+                onclick = onclick
             )
 
         }
@@ -83,5 +86,8 @@ fun AddVaccineInitialForm(){
 @Preview
 @Composable
 fun AddVaccineInitialFormPreview(){
-    AddVaccineInitialForm()
+    AddVaccineInitialForm(
+        onclick = {},
+        onBack = {}
+    )
 }

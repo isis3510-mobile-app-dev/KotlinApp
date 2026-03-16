@@ -2,10 +2,14 @@ package com.example.petcare.ui.screens.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -29,9 +33,9 @@ import com.example.petcare.ui.theme.PetCareTheme
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
-    currentRoute: String,
     onNavigateToLogin: () -> Unit = {},
-    onNavigateTab: (String) -> Unit = {}
+    paddingValues: PaddingValues = PaddingValues(0.dp)
+
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -43,57 +47,46 @@ fun ProfileScreen(
         }
     }
 
-    Scaffold(
-        floatingActionButton = {
-            ExpandableFAB()
-        },
-        bottomBar = {
-            NavBar(
-                currentRoute = currentRoute,
-                onItemClick = onNavigateTab
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            ProfileHeader(
-                name = "Sarah Johnson",
-                email = "sarah.johnson@email.com",
-                petCount = 3,
-                initials = "SJ" // Replace with actual user details logic
-            )
 
-            // Account Section
-            AccountSection(
-                onEditProfileClick = { /* Navigate to edit profile */ },
-                onEmailClick = { /* Navigate to email */ },
-                onPhoneClick = { /* Navigate to phone */ }
-            )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        ProfileHeader(
+            name = "Sarah Johnson",
+            email = "sarah.johnson@email.com",
+            petCount = 3,
+            initials = "SJ" // Replace with actual user details logic
+        )
 
-            // Preferences Section
-            PreferencesSection(
-                currentThemeMode = uiState.currentThemeMode,
-                onThemeModeChanged = viewModel::onThemeModeChanged,
-                notificationsEnabled = uiState.notificationsEnabled,
-                onNotificationsToggled = viewModel::onNotificationsToggled,
-                offlineModeEnabled = uiState.offlineModeEnabled,
-                onOfflineModeToggled = viewModel::onOfflineModeToggled
-            )
+        // Account Section
+        AccountSection(
+            onEditProfileClick = { /* Navigate to edit profile */ },
+            onEmailClick = { /* Navigate to email */ },
+            onPhoneClick = { /* Navigate to phone */ }
+        )
 
-            // Support Section
-            SupportSection(
-                onSignOutClicked = viewModel::onSignOutClicked
-            )
+        // Preferences Section
+        PreferencesSection(
+            currentThemeMode = uiState.currentThemeMode,
+            onThemeModeChanged = viewModel::onThemeModeChanged,
+            notificationsEnabled = uiState.notificationsEnabled,
+            onNotificationsToggled = viewModel::onNotificationsToggled,
+            offlineModeEnabled = uiState.offlineModeEnabled,
+            onOfflineModeToggled = viewModel::onOfflineModeToggled
+        )
 
-            Spacer(modifier = Modifier.height(32.dp))
-        }
+        // Support Section
+        SupportSection(
+            onSignOutClicked = viewModel::onSignOutClicked
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
     }
+
 }
 
 // A Preview with mocked state
@@ -102,7 +95,12 @@ fun ProfileScreen(
 fun ProfileScreenPreviewStub() {
     PetCareTheme {
         Scaffold(
-            floatingActionButton = { ExpandableFAB() },
+            floatingActionButton = { ExpandableFAB(
+                onAddPet = {},
+                onAddEvent = {},
+                onAddVaccine = {},
+                onScanNFC = {}
+            ) },
             bottomBar = { NavBar(currentRoute = "profile", onItemClick = {}) },
             containerColor = MaterialTheme.colorScheme.background
         ) { paddingValues ->
@@ -110,7 +108,8 @@ fun ProfileScreenPreviewStub() {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
+                    .windowInsetsPadding(WindowInsets.systemBars),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 ProfileHeader(

@@ -2,6 +2,7 @@ package com.example.petcare.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,7 +46,8 @@ data class VaccineListItemData(
 )
 
 @Composable
-fun VaccineListItem(vaccine: VaccineListItemData){
+fun VaccineListItem(vaccine: VaccineListItemData, onClick: () -> Unit = {}
+){
     val (badgeColor, textColor) = when (vaccine.status.lowercase()){
         "overdue" -> Pair(ErrorContainer, ErrorContent)
         "upcoming" -> Pair(InfoContainer, InfoContent)
@@ -56,7 +58,8 @@ fun VaccineListItem(vaccine: VaccineListItemData){
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .clickable{ onClick() },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(

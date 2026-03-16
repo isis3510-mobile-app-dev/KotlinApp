@@ -38,6 +38,7 @@ import com.example.petcare.ui.theme.GreenTextDark
 
 @Composable
 fun ButtonDefault(
+    onclick: () -> Unit,
     bgColor: Color,
     textColor: Color,
     width: Dp,
@@ -45,7 +46,7 @@ fun ButtonDefault(
     icon: (@Composable () -> Unit)? = null
 ) {
         Button(
-            onClick = { },
+            onClick = onclick,
             colors = ButtonDefaults.buttonColors(containerColor = bgColor),
             modifier = Modifier.size(width, height)
         ) {
@@ -62,6 +63,7 @@ fun ButtonDefault(
 
 @Composable
 fun ButtonOutline(
+    onclick: () -> Unit,
     bgColor: Color,
     outlineColor: Color,
     textColor: Color,
@@ -71,7 +73,7 @@ fun ButtonOutline(
     iconSize: Dp = 40.dp
 ) {
     OutlinedButton(
-        onClick = { },
+        onClick = onclick,
         colors = ButtonDefaults.buttonColors(containerColor = bgColor),
         modifier = Modifier.size(width, height),
         border = BorderStroke(1.dp, outlineColor)
@@ -149,6 +151,7 @@ fun ButtonSwitch(
 fun ButtonPreview() {
     PetCareTheme {
         ButtonDefault(
+            onclick = {},
             bgColor = MaterialTheme.colorScheme.secondary,
             textColor = Color.White,
             width = 342.dp,
@@ -163,6 +166,7 @@ fun ButtonPreview() {
 fun IconButtonPreview() {
     PetCareTheme {
         ButtonDefault(
+            onclick = {},
             bgColor = MaterialTheme.colorScheme.secondary,
             textColor = Color.White,
             width = 342.dp,
@@ -183,6 +187,7 @@ fun IconButtonPreview() {
 fun OutlinedButtonIconPreview() {
     PetCareTheme {
         ButtonOutline(
+            onclick = {},
             bgColor = MaterialTheme.colorScheme.background,
             outlineColor = GrayBorder,
             textColor = MaterialTheme.colorScheme.tertiary,
@@ -204,6 +209,7 @@ fun OutlinedButtonIconPreview() {
 fun OutlinedButtonPreview() {
     PetCareTheme {
         ButtonOutline(
+            onclick = {},
             bgColor = MaterialTheme.colorScheme.background,
             outlineColor = MaterialTheme.colorScheme.secondary,
             textColor = MaterialTheme.colorScheme.secondary,
