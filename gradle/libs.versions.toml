@@ -6,6 +6,7 @@ kotlin = "2.3.10"
 kotlinxCoroutinesPlayServices = "1.10.2"
 material3 = "1.4.0"
 foundation = "1.10.4"
+nfc = "1.1.0"
 runtime = "1.10.4"
 lifecycle = "2.10.0"
 navigation = "2.9.0"
@@ -17,6 +18,7 @@ okhttp = "4.12.0"
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version = "1.17.0" }
+androidx-nfc = { module = "androidx.nfc:nfc", version.ref = "nfc" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-auth-ktx = { group = "com.google.firebase", name = "firebase-auth-ktx", version.ref = "firebaseAuth" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

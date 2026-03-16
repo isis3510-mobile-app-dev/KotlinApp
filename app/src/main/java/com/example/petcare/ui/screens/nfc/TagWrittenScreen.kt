@@ -1,5 +1,6 @@
 package com.example.petcare.ui.screens.nfc
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,6 +32,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.petcare.MainActivity
 import com.example.petcare.ui.components.ButtonDefault
 import com.example.petcare.ui.components.ButtonOutline
 import com.example.petcare.ui.screens.nfc.components.NFCCheckMark
@@ -45,12 +49,21 @@ fun TagWrittenScreen(
     onDone: () -> Unit = {},
     onAnother: () -> Unit = {}
 ) {
+    val activity     = LocalActivity.current as MainActivity
+    val nfcViewModel = activity.nfcViewModel
+    val uiState by nfcViewModel.uiState.collectAsStateWithLifecycle()
+
+    val petName = (uiState as? NfcUiState.WriteSuccess)?.petName ?: "your pet"
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("NFC Tag", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { onBack() }) {
+                    IconButton(onClick = {
+                        nfcViewModel.reset()
+                        onBack()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -89,7 +102,7 @@ fun TagWrittenScreen(
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "Max's information has been successfully written to the NFC tag. Anyone who scans it can contact you instantly.",
+                text = "$petName's information has been successfully written to the NFC tag. Anyone who scans it can contact you instantly.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = GrayDark,
                 textAlign = TextAlign.Center,
@@ -99,7 +112,7 @@ fun TagWrittenScreen(
             Spacer(modifier = Modifier.height(32.dp))
             
             NFCWriteInfoCard(
-                petNameAndBreed = "Max (Golden Retriever)",
+                petNameAndBreed = "$petName (Mock breed)",
                 ownerName = "Sarah Johnson",
                 ownerPhone = "+1 (555) 012-3456",
                 microchip = "XR123456789"
@@ -119,7 +132,8 @@ fun TagWrittenScreen(
                         width = 200.dp,
                         height = 56.dp,
                         text = "Write Another",
-                        onclick = onAnother
+                        onclick = {nfcViewModel.reset()
+                                onAnother()}
                     )
                 }
                 Box(modifier = Modifier.weight(1f)) {
@@ -129,7 +143,10 @@ fun TagWrittenScreen(
                         width = 200.dp,
                         height = 56.dp,
                         text = "Done",
-                        onclick = onDone
+                        onclick = {
+                            nfcViewModel.reset()
+                            onDone()
+                        }
                     )
                 }
             }
