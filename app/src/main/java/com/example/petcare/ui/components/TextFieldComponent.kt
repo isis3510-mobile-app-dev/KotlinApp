@@ -20,9 +20,12 @@ import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.GrayBorder
 
 @Composable
-fun TextFieldComponent(name: String, label: String = "",icon: (@Composable () -> Unit)? = null) {
-
-    var text by remember { mutableStateOf("") }
+fun TextFieldComponent(name: String, label: String = "",icon: (@Composable () -> Unit)? = null,
+                       value: String? = null,
+                       onValueChange: ((String) -> Unit)? = null
+){
+    var internalText by remember{ mutableStateOf("")}
+    val text = value ?: internalText
     PetCareTheme {
         Column(
             modifier = Modifier.fillMaxWidth()
@@ -37,7 +40,14 @@ fun TextFieldComponent(name: String, label: String = "",icon: (@Composable () ->
 
             OutlinedTextField(
                 value = text,
-                onValueChange = { text = it },
+                onValueChange = {
+                    newValue ->
+                    if (onValueChange != null){
+                        onValueChange(newValue)
+                    } else {
+                        internalText = newValue
+                    }
+                },
                 modifier = Modifier
                     .size(width = 342.dp, height = 53.17.dp)
                     .clip(RoundedCornerShape(12.dp)),
