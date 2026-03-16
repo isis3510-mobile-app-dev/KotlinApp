@@ -37,7 +37,10 @@ import com.example.petcare.ui.theme.RobotoRegular
 
 
 @Composable
-fun AddPetFinalForm(){
+fun AddPetFinalForm(
+    onclick: () -> Unit,
+    onBack: () -> Unit
+){
     PetCareTheme {
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
@@ -49,8 +52,7 @@ fun AddPetFinalForm(){
                 verticalArrangement = Arrangement.spacedBy(30.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                TransparentTopBar(title = "Add New Pet") {
-                }
+                TransparentTopBar(title = "Add New Pet", onBackClick = onBack)
 
                 Stepper(
                     currentStep = 3,
@@ -161,7 +163,8 @@ fun AddPetFinalForm(){
                     textColor = MaterialTheme.colorScheme.secondary,
                     width = 169.dp,
                     height = 50.57.dp,
-                    text = "Back"
+                    text = "Back",
+                    onclick = onBack
                 )
 
                 Spacer(modifier = Modifier.width(10.dp))
@@ -171,7 +174,8 @@ fun AddPetFinalForm(){
                     textColor = Color.White,
                     width = 169.dp,
                     height = 50.57.dp,
-                    text = "Add Pet"
+                    text = "Add Pet",
+                    onclick = onclick
                 )
 
             }
@@ -185,5 +189,8 @@ fun AddPetFinalForm(){
 @Preview
 @Composable
 fun AddPetFinalFormPreview(){
-    AddPetFinalForm()
+    AddPetFinalForm(
+        onclick = {},
+        onBack = {}
+    )
 }

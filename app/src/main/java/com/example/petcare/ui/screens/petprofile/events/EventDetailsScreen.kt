@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petcare.ui.components.ActionFooter
 import com.example.petcare.ui.components.AttachedDocumentsCard
 import com.example.petcare.ui.components.ProviderInfoCard
@@ -31,11 +32,11 @@ import com.example.petcare.ui.theme.OffWhite
 
 @Composable
 fun EventDetailsScreen(
-    viewModel: EventDetailsViewModel,
-    petName: String = "Max", // In a real app these would come from ViewModel or args
-    petSpecies: String = "Dog",
+    petId: String,
+    eventId: String,
     onNavigateBack: () -> Unit = {}
 ) {
+    val viewModel: EventDetailsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -88,7 +89,7 @@ fun EventDetailsScreen(
                         )
                     }
                     Text(
-                        text = "$petName · $petSpecies", // E.g., Max · Dog
+                        text = "Max · Dog", // E.g., Max · Dog
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -143,7 +144,9 @@ fun EventDetailsScreen(
 fun EventDetailsScreenPreview() {
     PetCareTheme {
         EventDetailsScreen(
-            viewModel = EventDetailsViewModel()
+            petId = "preview_pet",
+            eventId = "preview_event",
+            onNavigateBack = {}
         )
     }
 }
@@ -153,12 +156,10 @@ fun EventDetailsScreenPreview() {
 fun EventDetailsScreenNoFollowUpPreview() {
     // A variant showing what the layout looks like when the event has no follow-up
     PetCareTheme {
-        val viewModel = EventDetailsViewModel().apply {
-            // Overriding state inline for Preview only (hacky but visually useful)
-            // Using reflection or a dedicated constructor flow is safer, but this works to test UI fallback.
-        }
         EventDetailsScreen(
-            viewModel = viewModel
+            petId = "preview_pet",
+            eventId = "preview_event",
+            onNavigateBack = {}
         )
     }
 }

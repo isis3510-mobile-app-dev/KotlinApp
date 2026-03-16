@@ -1,6 +1,7 @@
 package com.example.petcare.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,7 +50,8 @@ data class MedicalEventData(
 )
 
 @Composable
-fun MedicalEventItem(event: MedicalEventData){
+fun MedicalEventItem(event: MedicalEventData, onClick: () -> Unit = {}
+){
     val (icon, iconColor, iconBackground) = when (event.eventType.lowercase()){
         "checkup" -> Triple(Icons.Default.ContentPaste, PurpleContent, PurpleContainer)
         "emergency" -> Triple(Icons.Default.AddBox, ErrorContent, ErrorContainer)
@@ -57,7 +59,7 @@ fun MedicalEventItem(event: MedicalEventData){
         else -> Triple(Icons.Default.MedicalServices, GrayText, GrayMedium)
     }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable{ onClick() },
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)

@@ -39,8 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.petcare.R
 import com.example.petcare.ui.components.ButtonDefault
-import com.example.petcare.ui.components.ButtonOutline
-import com.example.petcare.ui.theme.GrayBorder
 import com.example.petcare.ui.theme.GrayDark
 import com.example.petcare.ui.theme.GreenLight
 import com.example.petcare.ui.theme.GreenDark
@@ -195,7 +193,8 @@ fun NFCPetCard(
                             contentDescription = "Call",
                             tint = Color.White
                         )
-                    }
+                    },
+                    onclick = {}
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -217,7 +216,8 @@ fun NFCPetCard(
                                     contentDescription = "SMS",
                                     tint = InfoContent
                                 )
-                            }
+                            },
+                            onclick = {}
                         )
                     }
                     Box(modifier = Modifier.weight(1f)) {
@@ -233,7 +233,8 @@ fun NFCPetCard(
                                     contentDescription = "Share",
                                     tint = WarningContent
                                 )
-                            }
+                            },
+                            onclick = {}
                         )
                     }
                 }

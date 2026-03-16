@@ -27,7 +27,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -80,168 +79,142 @@ fun PetAction(
     }
 }
 @Composable
-fun PetDetailsCard(petName: String, breed:String, age: Int, weight: Double, gender: String, status: String, photoPath: Int, species: String){
+fun PetDetailsCard(
+    petName: String, breed: String, age: Int, weight: Double,
+    gender: String, status: String, photoPath: Int, species: String,
+    onPetSelect: () -> Unit,
+    onVaccineSelect: () -> Unit,
+    onLostSelect: () -> Unit,
+    onNFCSelect: () -> Unit
+) {
     val (statusColor, textStatusColor) = when (status.lowercase()) {
-        "healthy" -> Pair(SuccessContainer, SuccessContent)   // verde
-        else -> Pair(WarningContainer, WarningContent)        // amarillo
+        "healthy" -> Pair(SuccessContainer, SuccessContent)
+        else -> Pair(WarningContainer, WarningContent)
     }
 
-    val logo = when (species.lowercase()){
+    val logo = when (species.lowercase()) {
         "dog" -> R.drawable.dog_logo
         else -> R.drawable.cat_logo
     }
 
     val genderIcon = when (gender.lowercase()) {
-        "Male" -> Icons.Default.Male
-        "Female" -> Icons.Default.Female
+        "male" -> Icons.Default.Male
+        "female" -> Icons.Default.Female
         else -> Icons.Default.Male
     }
 
-    Card(modifier = Modifier.fillMaxWidth().size(width = 350.dp, height = 153.33.dp),
+    Card(
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Column(modifier = Modifier.fillMaxWidth().size(width = 350.dp, height = 153.33.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable { onPetSelect() }
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier.size(80.dp).background(color = Color.Gray, shape= RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id= photoPath),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                    )
-                }
+                Image(
+                    painter = painterResource(id = photoPath),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                )
+
                 Spacer(modifier = Modifier.width(16.dp))
-                Box(
-                    modifier = Modifier.size(width = 220.dp, height = 71.79.dp)
-                ) {
-                    Column {
-                        Row {
-                            Text(
-                                text = petName,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            Box(
-                                modifier = Modifier.clip(RoundedCornerShape(50.dp))
-                                    .background(statusColor).padding(horizontal = 10.dp, vertical = 4.dp),
-
-                                ) {
-                                Row {
-                                    Text(
-                                        text = status,
-                                        fontSize = 12.sp,
-                                        color = textStatusColor,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-
-                            }
-                        }
-                        Row {
-                            Image(
-                                painter = painterResource(id = logo),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Text(
-                                text = breed,
-                                fontSize = 14.sp,
-                                color = Color.Gray
-                            )
-                        }
-                        Row(
-                            modifier = Modifier.padding(3.dp)
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = petName,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50.dp))
+                                .background(statusColor)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Cake,
-                                contentDescription = "Detail",
-                                tint = ErrorContent,
-                                modifier = Modifier.padding(end = 5.dp).size(14.dp)
-                            )
                             Text(
-                                text = "$age",
-                                fontSize = 14.sp,
-                                color = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Icon(
-                                imageVector = Icons.Default.Balance,
-                                contentDescription = "Detail",
-                                tint = Color.Black,
-                                modifier = Modifier.padding(end = 5.dp).size(14.dp)
-                            )
-                            Text(
-                                text = "$weight",
-                                fontSize = 14.sp,
-                                color = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Icon(
-                                imageVector = genderIcon,
-                                contentDescription = "Detail",
-                                tint = Color.Black,
-                                modifier = Modifier.padding(end = 5.dp).size(14.dp)
-                            )
-                            Text(
-                                text = gender,
-                                fontSize = 14.sp,
-                                color = Color.Gray
+                                text = status,
+                                fontSize = 12.sp,
+                                color = textStatusColor,
+                                fontWeight = FontWeight.Medium
                             )
                         }
+                    }
 
+                    Spacer(modifier = Modifier.size(4.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = logo),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(text = breed, fontSize = 14.sp, color = Color.Gray)
+                    }
+
+                    Spacer(modifier = Modifier.size(4.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Cake, contentDescription = null, tint = ErrorContent, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "$age", fontSize = 14.sp, color = Color.Gray)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Icon(Icons.Default.Balance, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "$weight", fontSize = 14.sp, color = Color.Gray)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Icon(genderIcon, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = gender, fontSize = 14.sp, color = Color.Gray)
                     }
                 }
-                Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = {}) {
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "Detail",
-                        tint = Color.Black,
-                        modifier = Modifier.padding(end = 16.dp)
-                    )
-                }
 
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "Detail",
+                    tint = Color.Black
+                )
             }
-            HorizontalDivider(
-                color = GrayBackground,
-                thickness = 3.dp
-            )
+
+            HorizontalDivider(color = GrayBackground, thickness = 1.dp)
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-
-                PetAction("Vaccines", Icons.Default.Vaccines, 0xFF006A60)
-                VerticalDivider(
-                    color = GrayBackground,
-                    thickness = 3.dp
-                )
-                PetAction("Lost Mode", Icons.Default.LocationOn, 0xFF3F4948)
-                VerticalDivider(
-                    color = GrayBackground,
-                    thickness = 3.dp
-                )
-                PetAction("NFC", Icons.Outlined.Contactless, 0xFF3949AB)
+                Box(
+                    modifier = Modifier.weight(1f).clickable { onVaccineSelect() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    PetAction("Vaccines", Icons.Default.Vaccines, 0xFF006A60)
+                }
+                VerticalDivider(color = GrayBackground, thickness = 1.dp)
+                Box(
+                    modifier = Modifier.weight(1f).clickable { onLostSelect() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    PetAction("Lost Mode", Icons.Default.LocationOn, 0xFF3F4948)
+                }
+                VerticalDivider(color = GrayBackground, thickness = 1.dp)
+                Box(
+                    modifier = Modifier.weight(1f).clickable { onNFCSelect() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    PetAction("NFC", Icons.Outlined.Contactless, 0xFF3949AB)
+                }
             }
-
         }
     }
 }
@@ -256,7 +229,12 @@ fun PetDetailsCardPreview () {
         gender = "Male",
         status = "Healthy",
         photoPath = R.drawable.pet,
-        species = "DOG")
+        species = "DOG",
+        onPetSelect = {},
+        onVaccineSelect = {},
+        onLostSelect = {},
+        onNFCSelect = {}
+    )
 }
 
 @Preview(showBackground = false)
@@ -269,5 +247,10 @@ fun PetDetailsCardPreview2 () {
         gender = "Male",
         status = "Vaccine due",
         photoPath = R.drawable.pet,
-        species = "CAT")
+        species = "CAT",
+        onPetSelect = {},
+        onVaccineSelect = {},
+        onLostSelect = {},
+        onNFCSelect = {}
+    )
 }

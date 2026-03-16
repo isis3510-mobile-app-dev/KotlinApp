@@ -102,7 +102,10 @@ fun FeatureCard(
     }
 }
 @Composable
-fun LoginScreen(){
+fun LoginScreen(
+    onSignUpSuccess: () -> Unit,
+                onGoToSignIn: () -> Unit
+){
     Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)
         .fillMaxSize()
         .padding(24.dp)
@@ -124,7 +127,7 @@ fun LoginScreen(){
             option1 = "Sign In",
             option2 = "Create account",
             selectedIndex = 1,
-            onSelectionChange = {}
+            onSelectionChange = { if (it == 0) onGoToSignIn() }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -157,12 +160,14 @@ fun LoginScreen(){
         Spacer(modifier = Modifier.height(24.dp))
 
         ButtonDefault(
+            onclick = onSignUpSuccess,
             bgColor = MaterialTheme.colorScheme.secondary,
             textColor = Color.White,
             width = 342.dp,
             height = 56.dp,
             text = "Create Account"
         )
+
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -194,6 +199,7 @@ fun LoginScreen(){
         Spacer(modifier = Modifier.height(24.dp))
 
         ButtonOutline(
+            onclick = onSignUpSuccess,
             bgColor = MaterialTheme.colorScheme.background,
             outlineColor = GrayBorder,
             textColor = MaterialTheme.colorScheme.tertiary,
@@ -213,7 +219,10 @@ fun LoginScreen(){
 @Preview
 @Composable
 fun LoginScreenPreview(){
-    PetCareTheme() {
-    LoginScreen()
+    PetCareTheme {
+        LoginScreen(
+            onSignUpSuccess = {},
+            onGoToSignIn = {}
+        )
     }
 }

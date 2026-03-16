@@ -25,7 +25,10 @@ import com.example.petcare.ui.theme.PetCareTheme
 
 
 @Composable
-fun AddPetDetailsForm(){
+fun AddPetDetailsForm(
+    onclick: () -> Unit,
+    onBack: () -> Unit
+){
     PetCareTheme {
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
@@ -40,8 +43,7 @@ fun AddPetDetailsForm(){
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                TransparentTopBar(title = "Add New Pet") {
-                }
+                TransparentTopBar(title = "Add New Pet", onBackClick = onBack)
 
                 Stepper(
                     currentStep = 2,
@@ -70,7 +72,8 @@ fun AddPetDetailsForm(){
                     textColor = MaterialTheme.colorScheme.secondary,
                     width = 169.dp,
                     height = 50.57.dp,
-                    text = "Back"
+                    text = "Back",
+                    onclick = onBack
                 )
 
                 Spacer(modifier = Modifier.width(10.dp))
@@ -80,7 +83,8 @@ fun AddPetDetailsForm(){
                     textColor = Color.White,
                     width = 169.dp,
                     height = 50.57.dp,
-                    text = "Continue"
+                    text = "Continue",
+                    onclick = onclick
                 )
 
             }
@@ -94,5 +98,8 @@ fun AddPetDetailsForm(){
 @Preview
 @Composable
 fun AddPetDetailsFormPreview(){
-    AddPetDetailsForm()
+    AddPetDetailsForm(
+        onclick = {},
+        onBack = {}
+    )
 }

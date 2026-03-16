@@ -8,15 +8,13 @@ import com.example.petcare.ui.theme.PetCareTheme
 @Composable
 fun NFCToggle(
     isReadMode: Boolean,
-    onModeChanged: (Boolean) -> Unit
+    onModeChanged: () -> Unit
 ) {
     ButtonSwitch(
         option1 = "Read Tag",
         option2 = "Write Tag",
         selectedIndex = if (isReadMode) 0 else 1,
-        onSelectionChange = { index ->
-            onModeChanged(index == 0)
-        }
+        onSelectionChange = { onModeChanged() }
     )
 }
 

@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -32,33 +32,36 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.petcare.ui.components.ButtonDefault
 import com.example.petcare.ui.components.ButtonOutline
-import com.example.petcare.ui.components.NavBar
 import com.example.petcare.ui.screens.nfc.components.NFCCheckMark
 import com.example.petcare.ui.screens.nfc.components.NFCWriteInfoCard
-import com.example.petcare.ui.theme.GrayBorder
 import com.example.petcare.ui.theme.GrayDark
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TagWrittenScreen() {
+fun TagWrittenScreen(
+    onBack: () -> Unit = {},
+    onDone: () -> Unit = {},
+    onAnother: () -> Unit = {}
+) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("NFC Tag", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { /* Handle back navigation */ }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = { onBack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.Transparent
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Unspecified,
+                    navigationIconContentColor = Color.Unspecified,
+                    titleContentColor = Color.Unspecified,
+                    actionIconContentColor = Color.Unspecified
                 )
             )
-        },
-        bottomBar = {
-            NavBar(currentRoute = "home", onItemClick = {})
         }
     ) { paddingValues ->
         Column(
@@ -115,7 +118,8 @@ fun TagWrittenScreen() {
                         textColor = GreenDark,
                         width = 200.dp,
                         height = 56.dp,
-                        text = "Write Another"
+                        text = "Write Another",
+                        onclick = onAnother
                     )
                 }
                 Box(modifier = Modifier.weight(1f)) {
@@ -124,7 +128,8 @@ fun TagWrittenScreen() {
                         textColor = Color.White,
                         width = 200.dp,
                         height = 56.dp,
-                        text = "Done"
+                        text = "Done",
+                        onclick = onDone
                     )
                 }
             }

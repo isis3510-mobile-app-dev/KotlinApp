@@ -22,7 +22,10 @@ import com.example.petcare.ui.theme.PetCareTheme
 
 
 @Composable
-fun AddEventInitialForm(){
+fun AddEventInitialForm(
+    onclick: () -> Unit,
+    onBack: () -> Unit
+){
     PetCareTheme {
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
@@ -36,8 +39,7 @@ fun AddEventInitialForm(){
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                TransparentTopBar(title = "Add New Event") {
-                }
+                TransparentTopBar(title = "Add New Event", onBackClick = onBack)
 
                 Stepper(
                     currentStep = 1,
@@ -75,7 +77,8 @@ fun AddEventInitialForm(){
                 textColor = Color.White,
                 width = 342.dp,
                 height = 56.dp,
-                text = "Continue"
+                text = "Continue",
+                onclick = onclick
             )
 
         }
@@ -87,5 +90,8 @@ fun AddEventInitialForm(){
 @Preview
 @Composable
 fun AddEventInitialFormPreview(){
-    AddEventInitialForm()
+    AddEventInitialForm(
+        onclick = {},
+        onBack = {}
+    )
 }

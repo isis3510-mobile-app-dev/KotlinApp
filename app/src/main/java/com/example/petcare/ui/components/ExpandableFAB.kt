@@ -74,14 +74,19 @@ fun FABMenuItem(
 }
 
 @Composable
-fun ExpandableFAB(){
+fun ExpandableFAB(
+    onAddPet: () -> Unit,
+    onAddVaccine: () -> Unit,
+    onAddEvent: () -> Unit,
+    onScanNFC: () -> Unit
+){
     var expanded by remember { mutableStateOf(false) }
 
     val fabItems = listOf(
-        Triple("Add Pet", Icons.Default.Pets) {},
-        Triple("Add Vaccine", Icons.Default.Vaccines) {},
-        Triple("Add Event", Icons.Default.CalendarMonth) {},
-        Triple("Scan NFC", Icons.Outlined.Contactless) {}
+        Triple("Add Pet", Icons.Default.Pets, onAddPet),
+        Triple("Add Vaccine", Icons.Default.Vaccines, onAddVaccine) ,
+        Triple("Add Event", Icons.Default.CalendarMonth, onAddEvent),
+        Triple("Scan NFC", Icons.Outlined.Contactless, onScanNFC)
     )
 
     Box(
@@ -119,7 +124,12 @@ fun ExpandableFAB(){
 @Preview(showBackground = false)
 @Composable
 fun ExpandableFabPreview(){
-    ExpandableFAB()
+    ExpandableFAB(
+        onAddPet = {},
+        onAddEvent = {},
+        onAddVaccine = {},
+        onScanNFC = {}
+    )
 }
 
 @Preview(showBackground = false)

@@ -24,7 +24,10 @@ import com.example.petcare.ui.theme.PetCareTheme
 
 
 @Composable
-fun AddPetFinalForm(){
+fun AddVaccineFinalForm(
+    onclick: () -> Unit,
+    onBack: () -> Unit
+){
     PetCareTheme {
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
@@ -36,8 +39,7 @@ fun AddPetFinalForm(){
                 verticalArrangement = Arrangement.spacedBy(30.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                TransparentTopBar(title = "Add New Vaccine") {
-                }
+                TransparentTopBar(title = "Add New Vaccine", onBackClick = onBack)
 
                 Stepper(
                     currentStep = 3,
@@ -78,7 +80,8 @@ fun AddPetFinalForm(){
                     textColor = MaterialTheme.colorScheme.secondary,
                     width = 169.dp,
                     height = 50.57.dp,
-                    text = "Back"
+                    text = "Back",
+                    onclick = onBack
                 )
 
                 Spacer(modifier = Modifier.width(10.dp))
@@ -88,7 +91,8 @@ fun AddPetFinalForm(){
                     textColor = Color.White,
                     width = 169.dp,
                     height = 50.57.dp,
-                    text = "Add Vaccine"
+                    text = "Add Vaccine",
+                    onclick = onclick
                 )
 
             }
@@ -101,6 +105,9 @@ fun AddPetFinalForm(){
 
 @Preview
 @Composable
-fun AddPetFinalFormPreview(){
-    AddPetFinalForm()
+fun AddVaccineFinalFormPreview(){
+    AddVaccineFinalForm(
+        onclick = {},
+        onBack = {}
+    )
 }

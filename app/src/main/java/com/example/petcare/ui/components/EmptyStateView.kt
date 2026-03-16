@@ -23,7 +23,7 @@ fun EmptyStateView(
     icon: ImageVector,
     message: String,
     buttonText: String? = null,
-    onButtonClick: (() -> Unit)? = null
+    onButtonClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -49,7 +49,8 @@ fun EmptyStateView(
                 textColor = Color.White,
                 width = 160.dp,
                 height = 48.dp,
-                text = buttonText
+                text = buttonText,
+                onclick = onButtonClick
             )
         }
     }

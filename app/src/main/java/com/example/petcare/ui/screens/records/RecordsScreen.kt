@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,11 +35,9 @@ import androidx.compose.ui.unit.sp
 import com.example.petcare.R
 import com.example.petcare.ui.components.ActiveVaccineCard
 import com.example.petcare.ui.components.ActiveVaccineListItemData
-import com.example.petcare.ui.components.ExpandableFAB
 import com.example.petcare.ui.components.Filters
 import com.example.petcare.ui.components.MedicalEventData
 import com.example.petcare.ui.components.MedicalEventItem
-import com.example.petcare.ui.components.NavBar
 import com.example.petcare.ui.components.OverdueWarningBanner
 import com.example.petcare.ui.components.VaccineListItem
 import com.example.petcare.ui.components.VaccineListItemData
@@ -77,50 +74,47 @@ private fun SectionHeader(
 }
 
 @Composable
-fun HealthRecordsScreen(){
+fun HealthRecordsScreen(
+    paddingValues: PaddingValues =  PaddingValues(0.dp),
+    onNavigateToVaccineDetail: (petId: String, vaccineId: String) -> Unit = { _, _ -> },
+    onNavigateToEventDetail: (petId: String, eventId: String) -> Unit = { _, _ -> }
+){
     var selectedFilter by remember { mutableStateOf("All") }
-    var selectedTab by remember { mutableStateOf("records") }
 
-    Scaffold(
-        floatingActionButton = { ExpandableFAB() },
-        bottomBar = {
-            NavBar(
-                currentRoute = selectedTab,
-                onItemClick = {}
-            )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "Health Records",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Filters(
+            filters = listOf("All", "Vaccines", "Events"),
+            selectedFilter = selectedFilter,
+            onFilterSelected = { selectedFilter = it }
+        )
+
+        when (selectedFilter){
+            "All" -> AllRecordsContent(onNavigateToVaccineDetail = onNavigateToVaccineDetail)
+            "Vaccines" -> VaccinesContent(onNavigateToVaccineDetail = onNavigateToVaccineDetail)
+            "Events" -> EventsContent(onNavigateToEventDetail = onNavigateToEventDetail)
         }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Health Records",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Filters(
-                filters = listOf("All", "Vaccines", "Events"),
-                selectedFilter = selectedFilter,
-                onFilterSelected = { selectedFilter = it }
-            )
-
-            when (selectedFilter){
-                "All" -> AllRecordsContent()
-                "Vaccines" -> VaccinesContent()
-                "Events" -> EventsContent()
-            }
-        }
-
     }
+
+
 }
 
 @Composable
-private fun AllRecordsContent(){
+private fun AllRecordsContent(
+    onNavigateToVaccineDetail: (String, String) -> Unit
+){
     val vaccines = listOf(
         VaccineListItemData("Leptospirosis", "Max", "City Vet Center", "overdue", "493d ago", R.drawable.pet),
         VaccineListItemData("FVRCP (Core)", "Luna", "Cat Care Center", "overdue", "377d ago", R.drawable.pet),
@@ -152,14 +146,17 @@ private fun AllRecordsContent(){
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         items(vaccines){ vaccine ->
-            VaccineListItem(vaccine=vaccine)
+            VaccineListItem(vaccine=vaccine, onClick = { onNavigateToVaccineDetail(vaccine.petName, vaccine.vaccineName)
+            })
             HorizontalDivider(color = GrayBackground)
         }
     }
 }
 
 @Composable
-private fun VaccinesContent() {
+private fun VaccinesContent(
+    onNavigateToVaccineDetail: (String, String) -> Unit
+) {
     val vaccines = listOf(
         ActiveVaccineListItemData("Rabbies", "Max", "24-02-2026", "Dr. Smith", R.drawable.pet),
         ActiveVaccineListItemData("Rabies", "Max", "Happy Paws Clinic", "upcoming",  R.drawable.pet),
@@ -184,7 +181,9 @@ private fun VaccinesContent() {
 }
 
 @Composable
-private fun EventsContent() {
+private fun EventsContent(
+    onNavigateToEventDetail: (String, String) -> Unit
+) {
     val events = listOf(
         MedicalEventData("Checkup", "Max", "Happy Paws Clinic", "Nov 19, 2024", "$120"),
         MedicalEventData("Checkup", "Luna", "Cat Care Center", "Oct 14, 2024", "$95"),
@@ -199,7 +198,10 @@ private fun EventsContent() {
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         items(events) { event ->
-            MedicalEventItem(event = event)
+            MedicalEventItem(event = event,
+                onClick = {
+                    onNavigateToEventDetail(event.petName, event.eventType)
+                })
         }
     }
 }
@@ -207,5 +209,7 @@ private fun EventsContent() {
 @Preview(showBackground = true)
 @Composable
 fun AllRecordsPreview() {
-    HealthRecordsScreen()
+    HealthRecordsScreen(
+
+    )
 }

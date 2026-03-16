@@ -30,7 +30,10 @@ import com.example.petcare.ui.theme.PetCareTheme
 
 
 @Composable
-fun AddEventDetailsForm(){
+fun AddEventDetailsForm(
+    onclick: () -> Unit,
+    onBack: () -> Unit
+){
     PetCareTheme {
         Column(
             modifier = Modifier.background(MaterialTheme.colorScheme.background)
@@ -43,8 +46,7 @@ fun AddEventDetailsForm(){
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                TransparentTopBar(title = "Add New Event") {
-                }
+                TransparentTopBar(title = "Add New Event", onBackClick = onBack)
 
 
 
@@ -95,7 +97,8 @@ fun AddEventDetailsForm(){
                     textColor = MaterialTheme.colorScheme.secondary,
                     width = 169.dp,
                     height = 50.57.dp,
-                    text = "Back"
+                    text = "Back",
+                    onclick = onBack
                 )
 
                 Spacer(modifier = Modifier.width(10.dp))
@@ -105,7 +108,8 @@ fun AddEventDetailsForm(){
                     textColor = Color.White,
                     width = 169.dp,
                     height = 50.57.dp,
-                    text = "Continue"
+                    text = "Continue",
+                    onclick = onclick
                 )
 
             }
@@ -119,5 +123,8 @@ fun AddEventDetailsForm(){
 @Preview
 @Composable
 fun AddEventDetailsFormPreview(){
-    AddEventDetailsForm()
+    AddEventDetailsForm(
+        onclick = {},
+        onBack = {}
+    )
 }
