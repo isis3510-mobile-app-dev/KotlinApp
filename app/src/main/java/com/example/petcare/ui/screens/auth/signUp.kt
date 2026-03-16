@@ -2,6 +2,8 @@ package com.example.petcare.ui.screens.auth
 
 import com.example.petcare.ui.theme.*
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +44,12 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.sp
 import com.example.petcare.ui.theme.RobotoMedium
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.common.api.ApiException
+import androidx.compose.runtime.*
 
 
 @Composable
@@ -104,8 +112,28 @@ fun FeatureCard(
 @Composable
 fun LoginScreen(
     onSignUpSuccess: () -> Unit,
-                onGoToSignIn: () -> Unit
+    onGoToSignIn: () -> Unit,
+    viewModel: AuthViewModel = viewModel()
 ){
+    var fullName by remember { mutableStateOf("") }
+    var email by remember {mutableStateOf("")}
+    var password by remember {mutableStateOf("")}
+    val authState by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(authState) {
+        if (authState is AuthViewModel.AuthState.Success) onSignUpSuccess()
+    }
+
+    val googleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        runCatching { task.getResult(ApiException::class.java) }
+            .onSuccess { account -> account.idToken?.let { viewModel.loginWithGoogle(it) } }
+            .onFailure { viewModel.resetState() }
+    }
+
     Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)
         .fillMaxSize()
         .padding(24.dp)
@@ -134,14 +162,18 @@ fun LoginScreen(
 
         TextFieldComponent(
             name = "Full Name",
-            label = "Sarah Johnson"
+            label = "Sarah Johnson",
+            value = fullName,
+            onValueChange = { fullName = it}
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         TextFieldComponent(
             name = "Email Address",
-            label = "you@gmail.com"
+            label = "you@gmail.com",
+            value = email,
+            onValueChange = { email = it }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -149,6 +181,8 @@ fun LoginScreen(
         TextFieldComponent(
             name = "Password",
             label = "Min. 8 characters",
+            value = password,
+            onValueChange = { password = it},
             icon = { Icon(
                 imageVector = Icons.Default.RemoveRedEye,
                 contentDescription = "Password",
@@ -159,13 +193,22 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        if (authState is AuthViewModel.AuthState.Error) {
+            Text(
+                text = (authState as AuthViewModel.AuthState.Error).message,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
         ButtonDefault(
-            onclick = onSignUpSuccess,
+            onclick = { viewModel.register(email, password) },
             bgColor = MaterialTheme.colorScheme.secondary,
             textColor = Color.White,
             width = 342.dp,
             height = 56.dp,
-            text = "Create Account"
+            text = if (authState is AuthViewModel.AuthState.Loading) "..." else "Create Account"
         )
 
 
@@ -199,7 +242,10 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         ButtonOutline(
-            onclick = onSignUpSuccess,
+            onclick = {
+                val client = getGoogleSignInClient(context)
+                googleLauncher.launch(client.signInIntent)
+            },
             bgColor = MaterialTheme.colorScheme.background,
             outlineColor = GrayBorder,
             textColor = MaterialTheme.colorScheme.tertiary,
