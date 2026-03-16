@@ -37,6 +37,7 @@ import com.example.petcare.ui.screens.addPetForm.AddPetInitialForm
 import com.example.petcare.ui.screens.addVaccineForm.AddVaccineDetailsForm
 import com.example.petcare.ui.screens.addVaccineForm.AddVaccineFinalForm
 import com.example.petcare.ui.screens.addVaccineForm.AddVaccineInitialForm
+import com.example.petcare.ui.screens.auth.AuthViewModel
 import com.example.petcare.ui.screens.auth.LoginScreen
 import com.example.petcare.ui.screens.calendar.CalendarScreen
 import com.example.petcare.ui.screens.pets.PetsScreen
@@ -81,6 +82,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by appThemeViewModel.themeMode.collectAsStateWithLifecycle()
             val navController = rememberNavController()
+            val authViewModel : AuthViewModel = viewModel()
             val backStackEntry by navController.currentBackStackEntryAsState()
             val currentRoute = backStackEntry?.destination?.route
 
@@ -118,7 +120,7 @@ class MainActivity : ComponentActivity() {
                     ) { innerPadding ->
                         NavHost(
                             navController = navController,
-                            startDestination = Routes.Onboarding1,
+                            startDestination = if (authViewModel.isLoggedIn) Routes.Home else Routes.Onboarding1,
                             modifier = Modifier.padding(innerPadding)
                         ) {
                             //ONBOARDING 1
@@ -180,6 +182,7 @@ class MainActivity : ComponentActivity() {
                             // SIGN IN ROUTE
                             composable(Routes.SignIn) {
                                 SignInScreen(
+                                    viewModel = authViewModel,
                                     onSignInSuccess = {
                                         navController.navigate(Routes.Home) {
                                             popUpTo(Routes.SignIn) { inclusive = true }
@@ -192,6 +195,7 @@ class MainActivity : ComponentActivity() {
                             // SIGN UP ROUTE
                             composable(Routes.SignUp) {
                                 LoginScreen(
+                                    //viewModel = authViewModel,
                                     onSignUpSuccess = {
                                         navController.navigate(Routes.Home) {
                                             popUpTo(Routes.SignUp) { inclusive = true }
@@ -258,6 +262,7 @@ class MainActivity : ComponentActivity() {
                                 ProfileScreen(
                                     viewModel = profileViewModel,
                                     onNavigateToLogin = {
+                                        authViewModel.logout()
                                         navController.navigate(Routes.SignIn) {
                                             popUpTo(0)
                                         }
