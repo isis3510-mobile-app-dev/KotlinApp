@@ -44,12 +44,17 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.sp
 import com.example.petcare.ui.theme.RobotoMedium
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.IconButton
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 import androidx.compose.runtime.*
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 
 
 @Composable
@@ -120,6 +125,7 @@ fun LoginScreen(
     var password by remember {mutableStateOf("")}
     val authState by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var passwordVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(authState) {
         if (authState is AuthViewModel.AuthState.Success) onSignUpSuccess()
@@ -183,11 +189,21 @@ fun LoginScreen(
             label = "Min. 8 characters",
             value = password,
             onValueChange = { password = it},
-            icon = { Icon(
-                imageVector = Icons.Default.RemoveRedEye,
-                contentDescription = "Password",
-                tint = Color.LightGray
-            )
+            visualTransformation = if (passwordVisible)
+                VisualTransformation.None
+            else
+                PasswordVisualTransformation(),
+            icon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        imageVector = if (passwordVisible)
+                            Icons.Default.Visibility
+                        else
+                            Icons.Default.VisibilityOff,
+                        contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
+                        tint = Color.LightGray
+                    )
+                }
             }
         )
 
@@ -244,7 +260,9 @@ fun LoginScreen(
         ButtonOutline(
             onclick = {
                 val client = getGoogleSignInClient(context)
-                googleLauncher.launch(client.signInIntent)
+                client.signOut().addOnCompleteListener {
+                    googleLauncher.launch(client.signInIntent)
+                }
             },
             bgColor = MaterialTheme.colorScheme.background,
             outlineColor = GrayBorder,
