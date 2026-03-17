@@ -1,14 +1,14 @@
 package com.example.petcare.ui.screens.petprofile.events
 
 import androidx.lifecycle.ViewModel
+import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.EventType
-import com.example.petcare.data.model.MedicalEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 data class EventDetailsUiState(
-    val event: MedicalEvent? = null,
+    val event: Event? = null,
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -24,9 +24,10 @@ class EventDetailsViewModel : ViewModel() {
     }
 
     private fun loadMockEvent() {
-        val mockEvent = MedicalEvent(
+        val mockEvent = Event(
             id = "1",
             petId = "1",
+            ownerId = "owner123",
             title = "Checkup",
             eventType = EventType.CHECKUP,
             price = 120.0,

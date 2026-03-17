@@ -2,8 +2,8 @@ package com.example.petcare.ui.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.petcare.data.auth.AuthRepository
-import com.example.petcare.data.auth.UserRepository
+import com.example.petcare.data.repository.AuthRepository
+import com.example.petcare.data.repository.UserRepository
 import com.example.petcare.data.model.User
 import com.example.petcare.data.network.ApiClient
 import com.example.petcare.data.network.ApiService

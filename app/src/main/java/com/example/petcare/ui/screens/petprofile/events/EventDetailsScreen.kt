@@ -55,7 +55,7 @@ fun EventDetailsScreen(
             }
             return@Scaffold
         }
-        
+
         val event = uiState.event ?: return@Scaffold // Early return if null
 
         Column(
@@ -108,30 +108,30 @@ fun EventDetailsScreen(
                     title = event.title,
                     eventType = event.eventType
                 )
-                
+
                 // Dates
                 EventDateCard(
                     eventDate = event.date,
                     followUpDate = event.followUpDate
                 )
-                
+
                 // Provider Info
                 ProviderInfoCard(
                     veterinarian = event.provider,
                     clinic = event.clinic
                 )
-                
+
                 // Notes (if empty, we should still perhaps render it with empty state)
                 NotesCard(
                     description = event.description
                 )
-                
+
                 // Attached Documents
                 AttachedDocumentsCard(
                     documents = event.attachedDocuments,
                     onAddClicked = viewModel::onAttachDocumentClicked
                 )
-                
+
                 // Bottom padding to ensure scroll clears floating elements
                 Spacer(modifier = Modifier.height(32.dp))
             }

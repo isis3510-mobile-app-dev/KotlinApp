@@ -3,6 +3,7 @@ package com.example.petcare.ui.screens.nfc
 import android.nfc.Tag
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.model.Pet
 import com.example.petcare.data.repository.NfcPetPayload
 import com.example.petcare.data.repository.NfcRepository
 import com.example.petcare.data.nfc.NfcManager
@@ -11,9 +12,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import com.example.petcare.data.repository.INfcRepository
+import com.example.petcare.data.repository.RepositoryProvider
 
 // ── UI State ──────────────────────────────────────────────────────────────────
 
+data class PetsUiState(
+    val pets: List<Pet> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null // <--- ADD THIS LINE
+)
 sealed interface NfcUiState {
     object Idle : NfcUiState
     object Loading : NfcUiState
@@ -27,7 +35,7 @@ sealed interface NfcUiState {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class NfcViewModel(
-    private val repository: NfcRepository = NfcRepository()
+    private val repository: INfcRepository = RepositoryProvider.nfcRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<NfcUiState>(NfcUiState.Idle)
@@ -127,6 +135,7 @@ class NfcViewModel(
         _uiState.value = NfcUiState.WaitingForTag
     }
 
+
     /**
      * Called from MainActivity.onNewIntent() when a tag is detected in read mode.
      * Reads the petId from the tag, then fetches public info (mocked).
@@ -198,4 +207,7 @@ class NfcViewModel(
         pendingToken       = null
         pendingPayloadJson = null
     }
+
+
+
 }

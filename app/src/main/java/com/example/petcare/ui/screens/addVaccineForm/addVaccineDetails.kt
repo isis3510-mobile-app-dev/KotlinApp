@@ -1,116 +1,67 @@
 package com.example.petcare.ui.screens.addVaccineForm
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Upload
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.petcare.ui.components.ButtonDefault
-import com.example.petcare.ui.components.ButtonOutline
-import com.example.petcare.ui.components.IconCardButton
-import com.example.petcare.ui.components.Stepper
-import com.example.petcare.ui.components.TextFieldComponent
-import com.example.petcare.ui.components.TransparentTopBar
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.petcare.ui.components.*
 import com.example.petcare.ui.theme.PetCareTheme
 
 
 @Composable
 fun AddVaccineDetailsForm(
     onclick: () -> Unit,
-    onBack: () -> Unit
-){
+    onBack: () -> Unit,
+    viewModel: AddVaccineViewModel
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
     PetCareTheme {
         Column(
-            modifier = Modifier.background(MaterialTheme.colorScheme.background)
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
                 .padding(24.dp)
         ) {
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(30.dp),
-                horizontalAlignment = Alignment.CenterHorizontally)
-            {
-
-
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 TransparentTopBar(title = "Add New Vaccine", onBackClick = onBack)
-
-                Stepper(
-                    currentStep = 2,
-                    stepLabels = listOf("Basic Info", "Details", "Overview")
-                )
-
+                Stepper(currentStep = 2, stepLabels = listOf("Basic Info", "Details", "Overview"))
 
                 TextFieldComponent(
-                    name = "Administered By",
-                    label = "e.g. Doctor Tatiana"
-
+                    name = "Administered By", label = "e.g. Dr. Smith",
+                    value = state.administeredBy, onValueChange = viewModel::setAdministeredBy
                 )
-
-                Text(
-                    text = "Additional Files",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.padding(bottom = 8.dp).align(Alignment.Start)
-                )
-
-                IconCardButton(
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Upload,
-                            contentDescription = "Upload",
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(40.dp)
-                        )
-                    },
-                    text = "Add Documents",
-                    textBottom = "Tap to upload documents",
-                    onClick = {
-                        println("Card !")
-                    }
+                TextFieldComponent(
+                    name = "Lot Number (optional)", label = "e.g. LOT123",
+                    value = state.lotNumber, onValueChange = viewModel::setLotNumber
                 )
             }
-            Row() {
+            Row {
                 ButtonOutline(
                     bgColor = MaterialTheme.colorScheme.background,
                     outlineColor = MaterialTheme.colorScheme.secondary,
                     textColor = MaterialTheme.colorScheme.secondary,
-                    width = 169.dp,
-                    height = 50.57.dp,
-                    text = "Back",
-                    onclick = onBack
+                    width = 169.dp, height = 50.57.dp, text = "Back", onclick = onBack
                 )
-
                 Spacer(modifier = Modifier.width(10.dp))
-
                 ButtonDefault(
-                    bgColor = MaterialTheme.colorScheme.secondary,
-                    textColor = Color.White,
-                    width = 169.dp,
-                    height = 50.57.dp,
-                    text = "Continue",
-                    onclick = onclick
+                    bgColor = MaterialTheme.colorScheme.secondary, textColor = Color.White,
+                    width = 169.dp, height = 50.57.dp, text = "Continue", onclick = onclick
                 )
-
             }
-
         }
     }
-
 }
 
 
@@ -119,6 +70,7 @@ fun AddVaccineDetailsForm(
 fun AddVaccineDetailsFormPreview(){
     AddVaccineDetailsForm(
         onclick = {},
-        onBack = {}
+        onBack = {},
+        viewModel = AddVaccineViewModel()
     )
 }
