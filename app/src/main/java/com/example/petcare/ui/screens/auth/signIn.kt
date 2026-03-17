@@ -93,7 +93,7 @@ fun SignInScreen(
 
         TextFieldComponent(
             name = "Password",
-            label = "........",
+            label = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
             value = password,
             onValueChange = { password = it },
             visualTransformation = if (passwordVisible)
