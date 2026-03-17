@@ -144,7 +144,7 @@ fun SignInScreen(
             textColor = Color.White,
             width = 342.dp,
             height = 56.dp,
-            text = if (authState is AuthViewModel.AuthState.Loading) "..." else "Sign In"
+            text = if (authState is AuthViewModel.AuthState.Loading) "... Loading" else "Sign In"
         )
 
 

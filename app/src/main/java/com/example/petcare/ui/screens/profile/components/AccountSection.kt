@@ -8,17 +8,36 @@ import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
+import com.example.petcare.ui.components.EditFieldBottomSheet
 import com.example.petcare.ui.components.SettingsListItem
 import com.example.petcare.ui.components.SettingsSection
-import com.example.petcare.ui.theme.*
+import com.example.petcare.ui.theme.GrayText
+import com.example.petcare.ui.theme.GreenLight
+import com.example.petcare.ui.theme.InfoContainer
+import com.example.petcare.ui.theme.InfoContent
+import com.example.petcare.ui.theme.SuccessContainer
+import com.example.petcare.ui.theme.SuccessContent
+
+
+private enum class ActiveSheet { NONE, NAME, PHONE }
 
 @Composable
 fun AccountSection(
-    onEditProfileClick: () -> Unit,
+    userName: String = "---",
+    userEmail: String = "---",
+    userPhone: String = "",
+    onSaveName: (String) -> Unit,
+    onSavePhone: (String) -> Unit,
+
     onEmailClick: () -> Unit,
-    onPhoneClick: () -> Unit
 ) {
+    var activeSheet by remember { mutableStateOf(ActiveSheet.NONE) }
+
     SettingsSection(title = "Account", items = listOf(
         {
             SettingsListItem(
@@ -26,11 +45,15 @@ fun AccountSection(
                 iconBackgroundColor = GreenLight.copy(alpha = 0.2f),
                 iconTintColor = MaterialTheme.colorScheme.secondary,
                 title = "Edit Profile",
-                subtitle = "Sarah Johnson",
+                subtitle = userName,
                 trailingContent = {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Edit Profile", tint = GrayText)
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Edit Profile",
+                        tint = GrayText
+                    )
                 },
-                onClick = onEditProfileClick
+                onClick = { activeSheet = ActiveSheet.NAME }
             )
         },
         {
@@ -39,9 +62,13 @@ fun AccountSection(
                 iconBackgroundColor = InfoContainer,
                 iconTintColor = InfoContent,
                 title = "Email",
-                subtitle = "sarah.johnson@email.com",
+                subtitle = userEmail,
                 trailingContent = {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Edit Email", tint = GrayText)
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Edit Email",
+                        tint = GrayText
+                    )
                 },
                 onClick = onEmailClick
             )
@@ -52,12 +79,41 @@ fun AccountSection(
                 iconBackgroundColor = SuccessContainer,
                 iconTintColor = SuccessContent,
                 title = "Phone",
-                subtitle = "+1 (555) 012-3456",
+                subtitle = userPhone.ifEmpty { "Add phone number" },
                 trailingContent = {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Edit Phone", tint = GrayText)
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Edit Phone",
+                        tint = GrayText
+                    )
                 },
-                onClick = onPhoneClick
+                onClick = { activeSheet = ActiveSheet.PHONE }
             )
         }
     ))
+
+    when (activeSheet) {
+        ActiveSheet.NAME -> EditFieldBottomSheet(
+            title = "Edit name",
+            currentValue = userName,
+            placeholder = "Full name",
+            onDismiss = { activeSheet = ActiveSheet.NONE },
+            onSave = {
+                onSaveName(it)
+                activeSheet = ActiveSheet.NONE
+            }
+        )
+        ActiveSheet.PHONE -> EditFieldBottomSheet(
+            title = "Edit phone",
+            currentValue = userPhone,
+            placeholder = "+57 300 123 4567",
+            keyboardType = KeyboardType.Phone,
+            onDismiss = { activeSheet = ActiveSheet.NONE },
+            onSave = {
+                onSavePhone(it)
+                activeSheet = ActiveSheet.NONE
+            }
+        )
+        ActiveSheet.NONE -> Unit
+    }
 }
