@@ -147,12 +147,6 @@ class PetProfileViewModel : ViewModel() {
 
 /** Maps the network Event model to the local MedicalEvent UI model. */
 private fun Event.toMedicalEvent(): Event {
-    val type = when (eventType.lowercase()) {
-        "dental"  -> EventType.DENTAL
-        "surgery" -> EventType.SURGERY
-        "vaccine" -> EventType.VACCINE
-        else      -> EventType.CHECKUP
-    }
     return Event(
         id          = id,
         petId       = petId,

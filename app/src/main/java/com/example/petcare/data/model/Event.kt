@@ -18,7 +18,7 @@ enum class EventType {
     @SerializedName("petId")       val petId: String,
     @SerializedName("ownerId")     val ownerId: String,
     val title: String,
-    @SerializedName("eventType")   val eventType: String,
+    @SerializedName("eventType")   val eventType: EventType,
     val date: String,
     val price: Double? = null,
     val provider: String = "",

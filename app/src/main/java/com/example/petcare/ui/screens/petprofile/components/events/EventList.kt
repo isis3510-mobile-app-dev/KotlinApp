@@ -11,11 +11,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.petcare.data.model.MedicalEvent
+import com.example.petcare.data.model.Event
 import com.example.petcare.ui.theme.GreenDark
 
 fun LazyListScope.eventTabContent(
-    events: List<MedicalEvent>,
+    events: List<Event>,
     onEventClick: (String) -> Unit,
     onAddEventClick: () -> Unit
 ) {

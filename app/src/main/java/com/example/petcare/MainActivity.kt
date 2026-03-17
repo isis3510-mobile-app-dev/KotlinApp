@@ -23,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.petcare.data.nfc.NfcManager
 import com.example.petcare.data.preferences.AppThemeViewModel
+import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.components.ExpandableFAB
 import com.example.petcare.ui.components.NavBar
 import com.example.petcare.ui.navigation.Routes
@@ -45,7 +46,6 @@ import com.example.petcare.ui.screens.auth.SignInScreen
 import com.example.petcare.ui.screens.calendar.CalendarScreen
 import com.example.petcare.ui.screens.home.HomeScreen
 import com.example.petcare.ui.screens.home.HomeViewModel
-import com.example.petcare.ui.screens.nfc.NfcUiState
 import com.example.petcare.ui.screens.nfc.NfcViewModel
 import com.example.petcare.ui.screens.nfc.ScanNFCScreen
 import com.example.petcare.ui.screens.nfc.ScannedSuccessScreen
@@ -58,6 +58,8 @@ import com.example.petcare.ui.screens.petprofile.PetProfileViewModel
 import com.example.petcare.ui.screens.petprofile.events.EventDetailsScreen
 import com.example.petcare.ui.screens.petprofile.vaccines.VaccineDetailsScreen
 import com.example.petcare.ui.screens.pets.PetsScreen
+import com.example.petcare.ui.screens.pets.PetsViewModel
+import com.example.petcare.ui.screens.pets.PetsViewModelFactory
 import com.example.petcare.ui.screens.profile.ProfileScreen
 import com.example.petcare.ui.screens.profile.ProfileViewModel
 import com.example.petcare.ui.screens.records.HealthRecordsScreen
@@ -70,7 +72,6 @@ import com.example.petcare.ui.theme.OnboardingBlueStart
 import com.example.petcare.ui.theme.OnboardingPurpleEnd
 import com.example.petcare.ui.theme.OnboardingPurpleStart
 import com.example.petcare.ui.theme.PetCareTheme
-import androidx.compose.runtime.*
 
 class MainActivity : ComponentActivity() {
 
@@ -100,6 +101,9 @@ class MainActivity : ComponentActivity() {
             val addPetViewModel:     AddPetViewModel     = viewModel()
             val addVaccineViewModel: AddVaccineViewModel = viewModel()
             val addEventViewModel:   AddEventViewModel   = viewModel()
+            val petsViewModel: PetsViewModel by viewModels {
+                PetsViewModelFactory(RepositoryProvider.petRepository)
+            }
 
             // Fetch the logged-in user's profile once at startup
             LaunchedEffect(Unit) {
@@ -228,12 +232,13 @@ class MainActivity : ComponentActivity() {
                                 PetsScreen(
                                     pets = uiState.pets,
                                     isLoading = uiState.isLoading,
-                                    paddingValues = innerPadding,
                                     onPetSelected = { petId ->
-                                        navController.navigate("petProfile/$petId")
+                                        // BYPASS PROFILE: Go directly to NFC Writing to test the flow
+                                        nfcViewModel.prepareWrite(petId, "")
+                                        navController.navigate(Routes.NfcScanning)
                                     },
                                     onNfcSelected = { petId ->
-                                        // Prepare the NFC payload for the specific pet
+                                        // Standard NFC flow test
                                         nfcViewModel.prepareWrite(petId, "")
                                         navController.navigate(Routes.NfcScanning)
                                     }

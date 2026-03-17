@@ -59,7 +59,15 @@ fun AddEventInitialForm(
                 DropdownSelector(
                     title = "Event Type",
                     options = listOf("checkup", "dental", "surgery", "vaccine", "other"),
-                    onOptionSelected = viewModel::setEventType
+                    onOptionSelected = { selectedString ->
+                        // Convert the String back to the EventType Enum safely
+                        val enumValue = try {
+                            com.example.petcare.data.model.EventType.valueOf(selectedString.uppercase())
+                        } catch (e: Exception) {
+                            com.example.petcare.data.model.EventType.OTHER
+                        }
+                        viewModel.setEventType(enumValue)
+                    }
                 )
             }
             ButtonDefault(

@@ -3,7 +3,9 @@ package com.example.petcare.ui.screens.addEventForm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.CreateEventRequest
+import com.example.petcare.data.model.EventType
 import com.example.petcare.data.repository.RepositoryProvider
+import com.google.android.play.integrity.internal.v
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +18,7 @@ data class AddEventFormState(
     val title: String     = "",
     val date: String      = "",  // dd/MM/yyyy
     val time: String      = "",
-    val eventType: String = "checkup",
+    val eventType: EventType = EventType.CHECKUP,
     // Step 2
     val description: String = "",
     val price: String       = "",
@@ -40,7 +42,7 @@ class AddEventViewModel : ViewModel() {
     fun setTitle(v: String)            { _state.value = _state.value.copy(title = v) }
     fun setDate(v: String)             { _state.value = _state.value.copy(date = v) }
     fun setTime(v: String)             { _state.value = _state.value.copy(time = v) }
-    fun setEventType(v: String)        { _state.value = _state.value.copy(eventType = v) }
+    fun setEventType(v: EventType)        { _state.value = _state.value.copy(eventType = v) }
     fun setDescription(v: String)      { _state.value = _state.value.copy(description = v) }
     fun setPrice(v: String)            { _state.value = _state.value.copy(price = v) }
     fun setProvider(v: String)         { _state.value = _state.value.copy(provider = v) }
@@ -61,7 +63,7 @@ class AddEventViewModel : ViewModel() {
                 petId       = s.petId,
                 ownerId     = s.ownerId,
                 title       = s.title.trim(),
-                eventType   = s.eventType.trim().lowercase(),
+                eventType   = s.eventType,
                 date        = toIso(s.date),
                 price       = s.price.toDoubleOrNull(),
                 provider    = s.provider.trim(),
