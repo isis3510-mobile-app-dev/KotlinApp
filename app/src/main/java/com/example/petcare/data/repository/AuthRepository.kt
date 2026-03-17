@@ -1,4 +1,4 @@
-package com.example.petcare.data.auth
+package com.example.petcare.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser

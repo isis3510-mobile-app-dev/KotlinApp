@@ -1,6 +1,6 @@
 package com.example.petcare.data.network
 
-import com.example.petcare.data.auth.AuthRepository
+import com.example.petcare.data.repository.AuthRepository
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit

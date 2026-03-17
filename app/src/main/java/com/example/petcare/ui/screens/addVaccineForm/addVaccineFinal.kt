@@ -1,36 +1,32 @@
 package com.example.petcare.ui.screens.addVaccineForm
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.petcare.ui.components.ButtonDefault
-import com.example.petcare.ui.components.ButtonOutline
-import com.example.petcare.ui.components.Stepper
-import com.example.petcare.ui.components.TextFieldComponent
-import com.example.petcare.ui.components.TransparentTopBar
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.petcare.ui.components.*
 import com.example.petcare.ui.theme.PetCareTheme
 
 
 @Composable
 fun AddVaccineFinalForm(
     onclick: () -> Unit,
-    onBack: () -> Unit
-){
+    onBack: () -> Unit,
+    viewModel: AddVaccineViewModel
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
     PetCareTheme {
         Column(
-            modifier = Modifier.background(MaterialTheme.colorScheme.background)
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
                 .padding(24.dp)
         ) {
@@ -40,66 +36,50 @@ fun AddVaccineFinalForm(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 TransparentTopBar(title = "Add New Vaccine", onBackClick = onBack)
+                Stepper(currentStep = 3, stepLabels = listOf("Basic Info", "Details", "Overview"))
 
-                Stepper(
-                    currentStep = 3,
-                    stepLabels = listOf("Basic Info", "Details", "Overview")
-                )
-
-
+                // Summary (read-only except administeredBy which can still be edited)
                 TextFieldComponent(
-                    name = "Vaccine Name",
-                    label = "Rabies"
-
+                    name = "Vaccine Name", label = state.vaccineName,
+                    value = state.vaccineName, onValueChange = {}
                 )
-
                 TextFieldComponent(
-                    name = "Date",
-                    label = "07/03/2026"
+                    name = "Date Given", label = state.dateGiven,
+                    value = state.dateGiven, onValueChange = {}
+                )
+                TextFieldComponent(
+                    name = "Administered By", label = state.administeredBy,
+                    value = state.administeredBy, onValueChange = viewModel::setAdministeredBy
+                )
+                DateTextField(
+                    name = "Next Due Date (optional)",
+                    onDateSelected = viewModel::setNextDueDate
                 )
 
-                TextFieldComponent(
-                    name = "Product Name",
-                    label = "Rabisin"
-                )
-
-                TextFieldComponent(
-                    name = "Manufacturer",
-                    label = "Boehringer"
-                )
-
-                TextFieldComponent(
-                    name = "Administered By",
-                    label = "Doctor Tatiana"
-                )
+                state.error?.let {
+                    Text(
+                        text = it, color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
             Row {
                 ButtonOutline(
                     bgColor = MaterialTheme.colorScheme.background,
                     outlineColor = MaterialTheme.colorScheme.secondary,
                     textColor = MaterialTheme.colorScheme.secondary,
-                    width = 169.dp,
-                    height = 50.57.dp,
-                    text = "Back",
-                    onclick = onBack
+                    width = 169.dp, height = 50.57.dp, text = "Back", onclick = onBack
                 )
-
                 Spacer(modifier = Modifier.width(10.dp))
-
                 ButtonDefault(
-                    bgColor = MaterialTheme.colorScheme.secondary,
-                    textColor = Color.White,
-                    width = 169.dp,
-                    height = 50.57.dp,
-                    text = "Add Vaccine",
-                    onclick = onclick
+                    bgColor = MaterialTheme.colorScheme.secondary, textColor = Color.White,
+                    width = 169.dp, height = 50.57.dp,
+                    text = if (state.isLoading) "Saving…" else "Add Vaccine",
+                    onclick = { viewModel.submit { onclick() } }
                 )
-
             }
-
         }
     }
-
 }
 
 
@@ -108,6 +88,7 @@ fun AddVaccineFinalForm(
 fun AddVaccineFinalFormPreview(){
     AddVaccineFinalForm(
         onclick = {},
-        onBack = {}
+        onBack = {},
+        viewModel = AddVaccineViewModel()
     )
 }

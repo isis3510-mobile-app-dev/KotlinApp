@@ -1,6 +1,6 @@
 package com.example.petcare.data.network
 
-import com.example.petcare.data.auth.AuthRepository
+import com.example.petcare.data.repository.AuthRepository
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response

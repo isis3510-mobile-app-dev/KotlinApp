@@ -1,86 +1,72 @@
 package com.example.petcare.ui.screens.addVaccineForm
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.petcare.ui.components.ButtonDefault
-import com.example.petcare.ui.components.DateTextField
-import com.example.petcare.ui.components.Stepper
-import com.example.petcare.ui.components.TextFieldComponent
-import com.example.petcare.ui.components.TransparentTopBar
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.petcare.ui.components.*
 import com.example.petcare.ui.theme.PetCareTheme
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Step 1 — Basic Info
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun AddVaccineInitialForm(
     onclick: () -> Unit,
-    onBack: () -> Unit
-){
+    onBack: () -> Unit,
+    viewModel: AddVaccineViewModel
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
     PetCareTheme {
         Column(
-            modifier = Modifier.background(MaterialTheme.colorScheme.background)
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
                 .padding(24.dp)
         ) {
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(30.dp),
-                horizontalAlignment = Alignment.CenterHorizontally) {
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 TransparentTopBar(title = "Add New Vaccine", onBackClick = onBack)
-
-                Stepper(
-                    currentStep = 1,
-                    stepLabels = listOf("Basic Info", "Details", "Overview")
-                )
-
+                Stepper(currentStep = 1, stepLabels = listOf("Basic Info", "Details", "Overview"))
 
                 TextFieldComponent(
-                    name = "Vaccine Name * ",
-                    label = "e.g. Rabies"
-
+                    name = "Vaccine Name *", label = "e.g. Rabies",
+                    value = state.vaccineName, onValueChange = viewModel::setVaccineName
                 )
-
-                DateTextField(
-                    name = "Date *",
-                    onDateSelected = { date ->
-                        println("Selected date: $date")
-                    }
-                )
-
+                DateTextField(name = "Date *", onDateSelected = viewModel::setDateGiven)
                 TextFieldComponent(
-                    name = "Product Name",
-                    label = "e.g. Rabisin"
+                    name = "Product Name", label = "e.g. Rabisin",
+                    value = state.productName, onValueChange = viewModel::setProductName
                 )
-
                 TextFieldComponent(
-                    name = "Manufacturer",
-                    label = "e.g. Boehringer"
+                    name = "Manufacturer", label = "e.g. Boehringer",
+                    value = state.manufacturer, onValueChange = viewModel::setManufacturer
                 )
-
-
             }
             ButtonDefault(
                 bgColor = MaterialTheme.colorScheme.secondary,
                 textColor = Color.White,
-                width = 342.dp,
-                height = 56.dp,
-                text = "Continue",
-                onclick = onclick
+                width = 342.dp, height = 56.dp, text = "Continue",
+                onclick = {
+                    if (state.vaccineName.isNotBlank() && state.dateGiven.isNotBlank()) onclick()
+                }
             )
-
         }
     }
-
 }
+
 
 
 @Preview
@@ -88,6 +74,7 @@ fun AddVaccineInitialForm(
 fun AddVaccineInitialFormPreview(){
     AddVaccineInitialForm(
         onclick = {},
-        onBack = {}
+        onBack = {},
+        viewModel = AddVaccineViewModel()
     )
 }
