@@ -4,7 +4,6 @@ import android.nfc.Tag
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.Pet
-import com.example.petcare.data.network.ApiService
 import com.example.petcare.data.repository.NfcPetPayload
 import com.example.petcare.data.repository.NfcRepository
 import com.example.petcare.data.nfc.NfcManager
@@ -13,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import com.example.petcare.data.repository.INfcRepository
+import com.example.petcare.data.repository.RepositoryProvider
 
 // ── UI State ──────────────────────────────────────────────────────────────────
 
@@ -34,7 +35,7 @@ sealed interface NfcUiState {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class NfcViewModel(
-    private val repository: NfcRepository = NfcRepository(ApiService)
+    private val repository: INfcRepository = RepositoryProvider.nfcRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<NfcUiState>(NfcUiState.Idle)

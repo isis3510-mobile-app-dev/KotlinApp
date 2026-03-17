@@ -15,10 +15,16 @@ object RepositoryProvider {
     lateinit var eventRepository: EventRepository
         private set
 
+    lateinit var nfcRepository: NfcRepository
+        private set
+
     fun init(authRepository: AuthRepository) {
         _authRepository = authRepository
         apiService      = ApiClient.create(authRepository).create(ApiService::class.java)
         petRepository   = PetRepository(apiService)
         eventRepository = EventRepository(apiService)
+        nfcRepository   = NfcRepository(apiService)
     }
+
+
 }
