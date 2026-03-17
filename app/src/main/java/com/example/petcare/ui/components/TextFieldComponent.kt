@@ -2,6 +2,7 @@ package com.example.petcare.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RemoveRedEye
 import androidx.compose.material3.*
@@ -13,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.RobotoMedium
@@ -20,9 +22,11 @@ import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.GrayBorder
 
 @Composable
-fun TextFieldComponent(name: String, label: String = "",icon: (@Composable () -> Unit)? = null,
+fun TextFieldComponent(name: String, label: String = "", icon: (@Composable () -> Unit)? = null,
                        value: String? = null,
-                       onValueChange: ((String) -> Unit)? = null
+                       onValueChange: ((String) -> Unit)? = null,
+                       visualTransformation: VisualTransformation = VisualTransformation.None,
+                       keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ){
     var internalText by remember{ mutableStateOf("")}
     val text = value ?: internalText
@@ -79,7 +83,9 @@ fun TextFieldComponent(name: String, label: String = "",icon: (@Composable () ->
                             icon()
                         }
                     }
-                }
+                },
+                visualTransformation = visualTransformation,
+                keyboardOptions = keyboardOptions
 
             )
         }

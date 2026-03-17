@@ -1,6 +1,7 @@
 package com.example.petcare.ui.screens.profile
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -12,11 +13,13 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -39,14 +42,25 @@ fun ProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+
     LaunchedEffect(Unit) {
         viewModel.uiEvents.collect { event ->
             when (event) {
                 is UiEvent.NavigateToLogin -> onNavigateToLogin()
+                is UiEvent.SaveSuccess -> { /* show snackbar  */ }
             }
         }
     }
 
+    if (uiState.isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
 
     Column(
         modifier = Modifier
@@ -56,17 +70,20 @@ fun ProfileScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         ProfileHeader(
-            name = "Sarah Johnson",
-            email = "sarah.johnson@email.com",
-            petCount = 3,
-            initials = "SJ" // Replace with actual user details logic
+            name = uiState.user?.name ?: "---",
+            email = uiState.user?.email ?: "---",
+            petCount = uiState.user?.pet_ids?.size ?: 0,
+            initials = uiState.user?.initials ?: "?"
         )
 
         // Account Section
         AccountSection(
-            onEditProfileClick = { /* Navigate to edit profile */ },
-            onEmailClick = { /* Navigate to email */ },
-            onPhoneClick = { /* Navigate to phone */ }
+            userName = uiState.user?.name ?: "---",
+            userEmail = uiState.user?.email ?: "---",
+            userPhone = uiState.user?.phone ?: "",
+            onSaveName = { viewModel.updateField(ProfileViewModel.EditField.Name, it) },
+            onSavePhone = { viewModel.updateField(ProfileViewModel.EditField.Phone, it) },
+            onEmailClick = { /* Requires firebase management*/ }
         )
 
         // Preferences Section
@@ -120,11 +137,10 @@ fun ProfileScreenPreviewStub() {
                 )
 
                 // Account Section
-                AccountSection(
-                    onEditProfileClick = {},
-                    onEmailClick = {},
-                    onPhoneClick = {}
-                )
+                //AccountSection(
+                //    onEditProfileClick = {},
+                //    onEmailClick = {},
+                //    onPhoneClick = {} )
 
                 // Preferences Section
                 PreferencesSection(
