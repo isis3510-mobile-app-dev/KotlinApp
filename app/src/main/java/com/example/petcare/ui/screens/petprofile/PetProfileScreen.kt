@@ -163,14 +163,12 @@ fun PetProfileScreen(
                     uiState.vaccines
                 }
                 vaccineTabContent(
-                    vaccines       = displayedVaccines,
-                    onFilterClick  = viewModel::onVaccineFilterClick,
-                    onVaccineClick = { vaccine ->
-                        onNavigateToVaccineDetail(petId, vaccine.id)
-                    }
+                    vaccines = displayedVaccines,
+                    onFilterClick = viewModel::onVaccineFilterClick,
+                    onVaccineClick = viewModel::onVaccineClicked,
+                    onAddVaccineClick = onAddVaccine
                 )
             }
-
             2 -> eventTabContent(
                 events         = uiState.events,
                 onEventClick   = { eventId -> onNavigateToEventDetail(petId, eventId) },

@@ -48,7 +48,7 @@ fun EventListItem(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color.White)
+            .background(androidx.compose.material3.MaterialTheme.colorScheme.surface)
             .clickable { onClick(event.id) }
             .padding(16.dp)
     ) {
@@ -96,7 +96,7 @@ fun EventListItem(
                         text = event.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
                     )
                     if (event.price != null) {
                         Text(
@@ -129,7 +129,7 @@ fun EventListItem(
                 Text(
                     text = event.description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Black,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.W500 // Slightly bold
                 )
 

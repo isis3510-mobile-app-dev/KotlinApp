@@ -175,7 +175,7 @@ fun AddPetInitialForm(
             }
 
             ButtonDefault(
-                bgColor = MaterialTheme.colorScheme.secondary,
+                bgColor = com.example.petcare.ui.theme.GreenDark,
                 textColor = Color.White,
                 width = 342.dp,
                 height = 56.dp,

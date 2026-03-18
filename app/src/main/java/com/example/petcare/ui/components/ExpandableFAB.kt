@@ -58,7 +58,7 @@ fun FABMenuItem(
                 .background(GreenLight)
                 .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
-            Text(label, fontSize = 14.sp)
+            Text(label, fontSize = 14.sp, color = GreenAccentDark)
         }
 
         SmallFloatingActionButton(

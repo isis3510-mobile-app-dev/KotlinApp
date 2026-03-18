@@ -1,12 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <!-- Android Emulator → host machine -->
-        <domain includeSubdomains="false">10.0.2.2</domain>
-        <!-- Rango típico de redes domésticas/corporativas (ajusta según tu red) -->
-        <domain includeSubdomains="false">192.168.80.19</domain>
-        <!-- localhost explícito para tests de instrumentación -->
-        <domain includeSubdomains="false">localhost</domain>
-        <domain includeSubdomains="false">127.0.0.1</domain>
-    </domain-config>
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

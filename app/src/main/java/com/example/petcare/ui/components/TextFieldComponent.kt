@@ -64,7 +64,7 @@ fun TextFieldComponent(name: String, label: String = "", icon: (@Composable () -
                     )
                 },
                 textStyle = TextStyle(
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 15.sp,
                     fontFamily = RobotoMedium,
                     fontWeight = FontWeight.Normal
@@ -74,8 +74,8 @@ fun TextFieldComponent(name: String, label: String = "", icon: (@Composable () -
                     focusedBorderColor = MaterialTheme.colorScheme.secondary,
                     unfocusedBorderColor = GrayBorder,
 
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Gray
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
                 trailingIcon = {
                     if (icon != null) {
@@ -103,7 +103,7 @@ fun TextFieldPreview(){
             icon = { Icon(
                 imageVector = Icons.Default.RemoveRedEye,
                 contentDescription = "Call Owner Now",
-                tint = Color.LightGray
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             }
         )

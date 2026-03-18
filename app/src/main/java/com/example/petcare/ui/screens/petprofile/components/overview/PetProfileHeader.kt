@@ -28,7 +28,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.net.toUri
+import com.example.petcare.util.UrlUtils
 
 @Composable
 fun PetProfileHeader(
@@ -74,7 +74,7 @@ fun PetProfileHeader(
                     } else {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
-                                .data(photoPath.toUri())
+                                .data(UrlUtils.resolveUrl(photoPath))
                                 .crossfade(true)
                                 .build(),
                             contentDescription = "Pet Avatar",

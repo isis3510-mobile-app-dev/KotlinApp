@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -29,22 +30,23 @@ fun PreferencesSection(
             SettingsListItem(
                 icon = Icons.Default.DarkMode,
                 iconBackgroundColor = Color.LightGray.copy(alpha = 0.2f),
-                iconTintColor = Color.DarkGray,
-                title = "Dark Mode",
+                iconTintColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                title = "App Theme",
+                subtitle = "Mode: ${currentThemeMode.name}",
                 trailingContent = {
-                    Switch(
-                        checked = currentThemeMode == AppThemeMode.DARK,
-                        onCheckedChange = { isDark ->
-                            val mode = if (isDark) AppThemeMode.DARK else AppThemeMode.LIGHT
-                            onThemeModeChanged(mode)
-                        },
-                        colors = androidx.compose.material3.SwitchDefaults.colors(
-                            checkedTrackColor = GreenDark,
-                            uncheckedTrackColor = GrayBorder,
-                            checkedThumbColor = Color.White
-                        ),
-                        modifier = Modifier.semantics { contentDescription = "Toggle Dark Mode" }
-                    )
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            val nextMode = when (currentThemeMode) {
+                                AppThemeMode.SYSTEM -> AppThemeMode.LIGHT
+                                AppThemeMode.LIGHT -> AppThemeMode.DARK
+                                AppThemeMode.DARK -> AppThemeMode.ADAPTIVE
+                                AppThemeMode.ADAPTIVE -> AppThemeMode.SYSTEM
+                            }
+                            onThemeModeChanged(nextMode)
+                        }
+                    ) {
+                        androidx.compose.material3.Text("CHANGE", color = GreenDark)
+                    }
                 }
             )
         },
@@ -73,7 +75,7 @@ fun PreferencesSection(
             SettingsListItem(
                 icon = Icons.Default.WifiOff,
                 iconBackgroundColor = Color.LightGray.copy(alpha = 0.2f),
-                iconTintColor = Color.DarkGray,
+                iconTintColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                 title = "Offline Mode",
                 trailingContent = {
                     Switch(

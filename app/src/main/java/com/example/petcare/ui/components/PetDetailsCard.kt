@@ -29,6 +29,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -52,6 +53,7 @@ import com.example.petcare.ui.theme.WarningContent
 import com.example.petcare.ui.theme.ErrorContent
 import com.example.petcare.ui.theme.GrayBackground
 import androidx.compose.ui.platform.LocalContext
+import com.example.petcare.util.UrlUtils
 
 
 
@@ -87,13 +89,12 @@ fun PetAction(
 @Composable
 fun PetDetailsCard(
     petName: String, breed: String, age: Int, weight: Double,
-    gender: String, status: String, photoPath: String? = "", species: String,
+    gender: String, status: String, photoUrl: String?, species: String,
     onPetSelect: () -> Unit,
     onVaccineSelect: () -> Unit,
     onLostSelect: () -> Unit,
     onNFCSelect: () -> Unit
 ) {
-    Log.d("PetPhoto", "photoPath: $photoPath")
     val context = LocalContext.current
     val (statusColor, textStatusColor) = when (status.lowercase()) {
         "healthy" -> Pair(SuccessContainer, SuccessContent)
@@ -115,7 +116,7 @@ fun PetDetailsCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
 
@@ -126,18 +127,29 @@ fun PetDetailsCard(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(Uri.parse(photoPath))
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = petName,
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop,
-                    error = painterResource(R.drawable.pet)
-                )
+                if (photoUrl != null && photoUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(UrlUtils.resolveUrl(photoUrl))
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = petName,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop,
+                        error = painterResource(R.drawable.pet)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.pet),
+                        contentDescription = petName,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                }
 
                 Spacer(modifier = Modifier.width(16.dp))
                 
@@ -240,6 +252,7 @@ fun PetDetailsCardPreview () {
         weight = 20.0,
         gender = "Male",
         status = "Healthy",
+        photoUrl = null,
         species = "DOG",
         onPetSelect = {},
         onVaccineSelect = {},
@@ -257,6 +270,7 @@ fun PetDetailsCardPreview2 () {
         weight = 20.0,
         gender = "Male",
         status = "Vaccine due",
+        photoUrl = null,
         species = "CAT",
         onPetSelect = {},
         onVaccineSelect = {},

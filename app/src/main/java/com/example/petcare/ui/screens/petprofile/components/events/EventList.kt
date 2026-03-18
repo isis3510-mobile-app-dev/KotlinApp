@@ -14,11 +14,29 @@ import androidx.compose.ui.unit.dp
 import com.example.petcare.data.model.Event
 import com.example.petcare.ui.theme.GreenDark
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
+import com.example.petcare.ui.components.EmptyStateView
+
 fun LazyListScope.eventTabContent(
     events: List<Event>,
     onEventClick: (String) -> Unit,
     onAddEventClick: () -> Unit
 ) {
+    if (events.isEmpty()) {
+        item { 
+            Box(modifier = Modifier.fillMaxWidth().height(400.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                EmptyStateView(
+                    icon = Icons.Default.CalendarMonth,
+                    message = "No medical events yet",
+                    buttonText = "Add Medical Event",
+                    onButtonClick = onAddEventClick
+                )
+            }
+        }
+        return
+    }
+
     items(events) { event ->
         EventListItem(
             event = event,

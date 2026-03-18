@@ -9,9 +9,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Vaccines
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,10 +71,8 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text       = displayName,
-                    fontSize   = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color      = Color.Black
+                    text = displayName,
+                    fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     NfcButton(onClick = onNavigateToNfc)
@@ -104,7 +106,10 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment     = Alignment.CenterVertically
                 ) {
-                    Text("My Pets", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(
+                        "My Pets", fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
+                    )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier          = Modifier.clickable { onNavigateToPets() }
@@ -160,7 +165,7 @@ fun HomeScreen(
                             "Upcoming Vaccines",
                             fontSize   = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color      = Color.Black
+                            color      = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             "See all",
@@ -176,7 +181,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(Color.White)
+                                .background(MaterialTheme.colorScheme.surface)
                                 .clickable {
                                     // Navigate to pet profile vaccines tab
                                     onNavigateToPetProfile(vacc.petId)
@@ -247,10 +252,8 @@ fun HomeScreen(
                         verticalAlignment     = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Recent Events",
-                            fontSize   = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color      = Color.Black
+                            "Active Events", fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             "View all",

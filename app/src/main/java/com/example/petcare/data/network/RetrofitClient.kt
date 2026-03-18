@@ -7,7 +7,7 @@ object RetrofitClient {
 
     // Mismo valor que ApiClient.BASE_URL — cámbialo junto con ese cuando
     // pases a dispositivo físico.
-    private const val BASE_URL = "http://192.168.80.19/api/"
+    private val BASE_URL = com.example.petcare.BuildConfig.BASE_URL
 
     val apiService: ApiService by lazy {
         Retrofit.Builder()

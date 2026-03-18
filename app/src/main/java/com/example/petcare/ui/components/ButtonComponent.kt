@@ -106,7 +106,7 @@ fun ButtonSwitch(
 
     Box(
         modifier = Modifier
-            .background(GrayMedium, RoundedCornerShape(40.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(40.dp))
             .padding(4.dp).size( width= 342.dp, height= 48.dp)
     ) {
 
@@ -124,7 +124,7 @@ fun ButtonSwitch(
                         )
                         .clip(RoundedCornerShape(40.dp))
                         .background(
-                            if (isSelected) Color.White else Color.Transparent
+                            if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent
                         )
                         .clickable { onSelectionChange(index) }
                         .padding(vertical = 14.dp)
@@ -135,9 +135,9 @@ fun ButtonSwitch(
                     Text(
                         text = text,
                         color = if (isSelected)
-                            GreenTextDark
+                            MaterialTheme.colorScheme.primary
                         else
-                            Color.Gray,
+                            MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Medium
                     )
                 }

@@ -200,7 +200,7 @@ fun LoginScreen(
                         else
                             Icons.Default.VisibilityOff,
                         contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
-                        tint = Color.LightGray
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -220,7 +220,7 @@ fun LoginScreen(
         ButtonDefault(
             onclick = { viewModel.register(email, password, fullName) },
             bgColor = MaterialTheme.colorScheme.secondary,
-            textColor = Color.White,
+            textColor = MaterialTheme.colorScheme.onSecondary,
             width = 342.dp,
             height = 56.dp,
             text = if (authState is AuthViewModel.AuthState.Loading) "... Loading" else "Create Account"
@@ -238,19 +238,19 @@ fun LoginScreen(
             HorizontalDivider(
                 modifier = Modifier
                     .weight(1f)
-                    .height(1.dp), thickness = DividerDefaults.Thickness, color = Color.LightGray
+                    .height(1.dp), thickness = DividerDefaults.Thickness, color = MaterialTheme.colorScheme.outlineVariant
             )
 
             Text(
                 text = "or continue with",
                 modifier = Modifier.padding(horizontal = 12.dp),
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             HorizontalDivider(
                 modifier = Modifier
                     .weight(1f)
-                    .height(1.dp), thickness = DividerDefaults.Thickness, color = Color.LightGray
+                    .height(1.dp), thickness = DividerDefaults.Thickness, color = MaterialTheme.colorScheme.outlineVariant
             )
         }
 
@@ -264,7 +264,7 @@ fun LoginScreen(
                 }
             },
             bgColor = MaterialTheme.colorScheme.background,
-            outlineColor = GrayBorder,
+            outlineColor = MaterialTheme.colorScheme.outlineVariant,
             textColor = MaterialTheme.colorScheme.tertiary,
             width = 342.dp,
             height = 56.dp,
