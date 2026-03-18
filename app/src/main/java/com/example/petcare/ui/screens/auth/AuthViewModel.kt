@@ -19,6 +19,7 @@ class AuthViewModel(
 
     private val apiService = ApiClient.create(authRepository).create(ApiService::class.java)
     private val userRepository = UserRepository(apiService)
+
     sealed class AuthState {
         object Idle : AuthState()
         object Loading : AuthState()
@@ -31,15 +32,22 @@ class AuthViewModel(
 
     private val _userProfile = MutableStateFlow<User?>(null)
     val userProfile: StateFlow<User?> = _userProfile.asStateFlow()
+
     val isLoggedIn get() = authRepository.currentUser != null
 
+    // ── Auth methods ──────────────────────────────────────────────
 
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _state.value = AuthState.Loading
             authRepository.login(email, password).fold(
                 onSuccess = { firebaseUser ->
-                    fetchUserProfile()
+                    // Espera el perfil antes de emitir Success
+                    // así la UI tiene los datos listos al navegar
+                    userRepository.getMe().fold(
+                        onSuccess  = { _userProfile.value = it },
+                        onFailure  = { android.util.Log.e("AUTH", "Profile error: ${it.message}") }
+                    )
                     _state.value = AuthState.Success(firebaseUser)
                 },
                 onFailure = { _state.value = AuthState.Error(friendlyError(it)) }
@@ -52,7 +60,10 @@ class AuthViewModel(
             _state.value = AuthState.Loading
             authRepository.register(email, password, fullName).fold(
                 onSuccess = { firebaseUser ->
-                    fetchUserProfile()
+                    userRepository.getMe().fold(
+                        onSuccess  = { _userProfile.value = it },
+                        onFailure  = { android.util.Log.e("AUTH", "Profile error: ${it.message}") }
+                    )
                     _state.value = AuthState.Success(firebaseUser)
                 },
                 onFailure = { _state.value = AuthState.Error(friendlyError(it)) }
@@ -65,7 +76,10 @@ class AuthViewModel(
             _state.value = AuthState.Loading
             authRepository.loginWithGoogle(idToken).fold(
                 onSuccess = { firebaseUser ->
-                    fetchUserProfile()
+                    userRepository.getMe().fold(
+                        onSuccess  = { _userProfile.value = it },
+                        onFailure  = { android.util.Log.e("AUTH", "Profile error: ${it.message}") }
+                    )
                     _state.value = AuthState.Success(firebaseUser)
                 },
                 onFailure = { _state.value = AuthState.Error(friendlyError(it)) }
@@ -73,6 +87,10 @@ class AuthViewModel(
         }
     }
 
+    // ── Profile ───────────────────────────────────────────────────
+
+    // Llámalo desde MainActivity para refrescar el perfil
+    // en sesiones ya iniciadas (Firebase cachea la sesión)
     fun fetchUserProfile() {
         viewModelScope.launch {
             userRepository.getMe().fold(
@@ -81,6 +99,8 @@ class AuthViewModel(
             )
         }
     }
+
+    // ── Session ───────────────────────────────────────────────────
 
     fun logout() {
         authRepository.logout()
@@ -92,16 +112,7 @@ class AuthViewModel(
         _state.value = AuthState.Idle
     }
 
-
-    private fun launchAuth(block: suspend () -> Result<FirebaseUser>) {
-        viewModelScope.launch {
-            _state.value = AuthState.Loading
-            block().fold(
-                onSuccess = { _state.value = AuthState.Success(it) },
-                onFailure = { _state.value = AuthState.Error(friendlyError(it)) }
-            )
-        }
-    }
+    // ── Helpers ───────────────────────────────────────────────────
 
     private fun friendlyError(e: Throwable): String = when {
         e.message?.contains("no user record") == true           -> "No account record"
