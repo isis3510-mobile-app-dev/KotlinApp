@@ -115,14 +115,15 @@ fun PetProfileScreen(
         // ── Pet Header ────────────────────────────────────────────────────
         item {
             PetProfileHeader(
-                name         = uiState.name,
-                breed        = uiState.breed,
-                species      = uiState.species,
-                age          = uiState.age,
-                weight       = uiState.weight,
-                gender       = uiState.gender,
-                isHealthy    = uiState.isHealthy,
-                isNfcSynched = uiState.isNfcSynched
+                name = uiState.name,
+                breed = uiState.breed,
+                species = uiState.species,
+                age = uiState.age,
+                weight = uiState.weight,
+                gender = uiState.gender,
+                isHealthy = uiState.isHealthy,
+                isNfcSynched = uiState.isNfcSynched,
+                photoPath = uiState.photoUrl
             )
         }
 
@@ -182,11 +183,11 @@ fun PetProfileScreen(
 // ── Overview tab content ──────────────────────────────────────────────────
 
 private fun LazyListScope.overviewTabContent(
-    uiState:      PetProfileUiState,
-    viewModel:    PetProfileViewModel,
-    onAddEvent:   () -> Unit,
-    onNFCScan:    () -> Unit,
-    onAddVaccine: () -> Unit
+    uiState: PetProfileUiState,
+    viewModel: PetProfileViewModel,
+    onAddEvent: () -> Unit,
+    onNFCScan: () -> Unit,
+    onAddVaccine: () -> Unit,
 ) {
     item {
         Column(

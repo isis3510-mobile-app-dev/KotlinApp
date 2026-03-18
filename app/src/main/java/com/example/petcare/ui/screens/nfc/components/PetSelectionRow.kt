@@ -25,14 +25,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.petcare.R
 import com.example.petcare.ui.theme.GrayDark
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 
-data class PetOption(val id: String, val name: String, val imageRes: Int)
+data class PetOption(val id: String, val name: String, val photoUrl: String? = null)
 
 @Composable
 fun PetSelectionRow(
@@ -70,15 +74,33 @@ fun PetSelectionRow(
                         elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 0.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                     ) {
-                        Image(
-                            painter = painterResource(id = pet.imageRes),
-                            contentDescription = pet.name,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(72.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                        )
+                        val context = LocalContext.current
+
+                        if (pet.photoUrl.isNullOrBlank()) {
+                            Image(
+                                painter = painterResource(R.drawable.pet),
+                                contentDescription = pet.name,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(72.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                            )
+                        } else {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(Uri.parse(pet.photoUrl))
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = pet.name,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(72.dp)
+                                    .clip(RoundedCornerShape(16.dp)),
+                                error = painterResource(R.drawable.pet)
+                            )
+                        }
                     }
                     
                     Spacer(modifier = Modifier.height(8.dp))
@@ -99,11 +121,10 @@ fun PetSelectionRow(
 @Composable
 fun PetSelectionRowPreview() {
     val samplePets = listOf(
-        PetOption("1", "Max", R.drawable.pet),
-        PetOption("2", "Luna", R.drawable.pet),
-        PetOption("3", "Coco", R.drawable.pet)
+        PetOption("1", "Max"),   // sin foto → muestra drawable
+        PetOption("2", "Luna"),
+        PetOption("3", "Coco")
     )
-    
     PetCareTheme {
         PetSelectionRow(
             pets = samplePets,

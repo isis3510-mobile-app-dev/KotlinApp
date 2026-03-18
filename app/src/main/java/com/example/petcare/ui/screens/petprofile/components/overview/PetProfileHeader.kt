@@ -4,11 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cake
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Male
-import androidx.compose.material.icons.filled.MonitorWeight
-import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,6 +23,12 @@ import com.example.petcare.R
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.GreenLight
 import com.example.petcare.ui.theme.PetCareTheme
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.net.toUri
 
 @Composable
 fun PetProfileHeader(
@@ -37,6 +38,7 @@ fun PetProfileHeader(
     age: String,
     weight: String,
     gender: String,
+    photoPath: String? = null,
     isHealthy: Boolean = true,
     isNfcSynched: Boolean = false,
     modifier: Modifier = Modifier
@@ -60,12 +62,27 @@ fun PetProfileHeader(
                         .background(Color.White.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    androidx.compose.foundation.Image(
-                        painter = painterResource(id = R.drawable.pet),
-                        contentDescription = "Pet Avatar",
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    val context = LocalContext.current
+
+                    if (photoPath.isNullOrBlank()) {
+                        Image(
+                            painter = painterResource(id = R.drawable.pet),
+                            contentDescription = "Pet Avatar",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(photoPath.toUri())
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Pet Avatar",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                            error = painterResource(R.drawable.pet)
+                        )
+                    }
                 }
                 
                 // NFC Badge
