@@ -12,16 +12,21 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petcare.ui.components.ExpandableFAB
 import com.example.petcare.ui.components.OverdueWarningBanner
+import com.example.petcare.ui.components.SuggestionBanner
 import com.example.petcare.ui.screens.petprofile.components.events.eventTabContent
 import com.example.petcare.ui.screens.petprofile.components.overview.PetInformationCard
 import com.example.petcare.ui.screens.petprofile.components.overview.PetProfileHeader
@@ -40,7 +45,8 @@ fun PetProfileScreen(
     onBack: () -> Unit = {},
     onAddEvent: () -> Unit = {},
     onAddVaccine: () -> Unit = {},
-    onNFCScan: () -> Unit = {}
+    onNFCScan: () -> Unit = {},
+    onSeeAllNotifications: (petId: String, petName: String) -> Unit = { _, _ -> }
 ) {
     val viewModel: PetProfileViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -101,7 +107,28 @@ fun PetProfileScreen(
         }
 
         // Warning Banner
-        if (uiState.overdueVaccinesCount > 0) {
+        if (uiState.suggestions.isNotEmpty()) {
+            item {
+                Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
+                    SuggestionBanner(suggestions = uiState.suggestions.take(2))
+
+                    if (uiState.suggestions.size > 2) {
+                        Spacer(Modifier.height(6.dp))
+                        TextButton(
+                            onClick = {
+                                onSeeAllNotifications(petId, uiState.name)
+                            },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text(
+                                text     = "See all ${uiState.suggestions.size} alerts",
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+            }
+        } else if (uiState.overdueVaccinesCount > 0) {
             item {
                 Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
                     OverdueWarningBanner(overdueCount = uiState.overdueVaccinesCount)
@@ -211,7 +238,6 @@ fun PetProfileOverviewPreview() {
             PetProfileScreen(
                 petId = "preview_id",
                 contentPadding = innerPadding,
-                onBack = {}
             )
         }
     }
@@ -234,7 +260,6 @@ fun PetProfileVaccinesPreview() {
             PetProfileScreen(
                 petId = "preview_id",
                 contentPadding = innerPadding,
-                onBack = {}
             )
 
         }
@@ -250,7 +275,6 @@ fun PetProfileEventsPreview() {
             PetProfileScreen(
                 petId = "preview_id",
                 contentPadding = innerPadding,
-                onBack = {}
             )
         }
     }

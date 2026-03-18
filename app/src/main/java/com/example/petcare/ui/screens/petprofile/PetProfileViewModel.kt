@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.EventType
 import com.example.petcare.data.model.Pet
+import com.example.petcare.data.model.SuggestionDto
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
@@ -29,6 +30,7 @@ data class PetProfileUiState(
     val isNfcSynched: Boolean = false,
     val events: List<Event> = emptyList(),
     val vaccines: List<VaccineRecord> = emptyList(),
+    val suggestions: List<SuggestionDto> = emptyList(),
     val vaccineFilter: VaccineFilterStatus? = null,
     val isLoading: Boolean = false,
     val error: String? = null
@@ -75,8 +77,8 @@ class PetProfileViewModel : ViewModel() {
                 lotNumber   = v.lotNumber.ifBlank { null },
                 status      = status
             )
-        }
 
+        }
         // Load events from backend
         val events = mutableListOf<Event>()
         RepositoryProvider.eventRepository.getEvents(petId = petId).fold(
@@ -87,6 +89,13 @@ class PetProfileViewModel : ViewModel() {
             },
             onFailure = { /* non-fatal — show empty list */ }
         )
+
+        val suggestions = mutableListOf<SuggestionDto>()
+        RepositoryProvider.petRepository.getPetSmart(petId).fold(
+            onSuccess = { suggestions.addAll(it) },
+            onFailure = { /* non-fatal */ }
+        )
+
 
         _uiState.value = _uiState.value.copy(
             name                 = pet.name,
@@ -104,9 +113,11 @@ class PetProfileViewModel : ViewModel() {
             upcomingEventsCount  = events.size,
             vaccines             = vaccines,
             events               = events,
+            suggestions = suggestions,
             isLoading            = false,
             error                = null
         )
+
     }
 
     // ── Tab & filter logic (same as before) ──────────────────────────────────

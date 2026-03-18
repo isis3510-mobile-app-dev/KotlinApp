@@ -36,6 +36,7 @@ fun HomeScreen(
     onNavigateToVaccine: (String, String) -> Unit = { _, _ -> },
     onNavigateToRecords: () -> Unit = {},
     onNavigateToEvent: (String, String) -> Unit = { _, _ -> },
+    onNavigateToNotifications: () -> Unit = {},
     // Passed in from MainActivity so both screens share the same instance
     authViewModel: AuthViewModel,
     homeViewModel: HomeViewModel = viewModel()
@@ -76,7 +77,7 @@ fun HomeScreen(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     NfcButton(onClick = onNavigateToNfc)
-                    NotificationButton()
+                    NotificationButton(onClick = onNavigateToNotifications)
                 }
             }
         }

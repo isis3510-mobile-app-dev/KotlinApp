@@ -3,6 +3,7 @@ package com.example.petcare.data.repository
 import com.example.petcare.data.model.AddVaccinationRequest
 import com.example.petcare.data.model.CreatePetRequest
 import com.example.petcare.data.model.Pet
+import com.example.petcare.data.model.SuggestionDto
 import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.network.ApiService
 
@@ -35,5 +36,14 @@ class PetRepository(private val api: ApiService) {
     suspend fun addVaccination(petId: String, request: AddVaccinationRequest): Result<Pet> = runCatching {
         val response = api.addVaccination(petId, request)
         response.body() ?: error("Failed to add vaccination")
+    }
+
+    suspend fun getPetSmart(petId: String): Result<List<SuggestionDto>> = runCatching {
+        val response = api.getPetSmart(petId)
+        if (response.isSuccessful) {
+            response.body()?.suggestions ?: emptyList()
+        } else {
+            emptyList()
+        }
     }
 }
