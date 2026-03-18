@@ -13,12 +13,25 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.example.petcare.R
 
+// Extended data classes that carry the real IDs needed for navigation
+data class VaccineListItemWithIds(
+    val data: VaccineListItemData,
+    val petId: String,
+    val vaccinationId: String   // vaccination _id (embedded doc)
+)
+
+data class EventListItemWithIds(
+    val data: MedicalEventData,
+    val petId: String,
+    val eventId: String
+)
+
 data class HealthRecordsState(
-    val vaccines:       List<VaccineListItemData> = emptyList(),
-    val events:         List<MedicalEventData>    = emptyList(),
-    val selectedFilter: String                    = "All",
-    val isLoading:      Boolean                   = false,
-    val error:          String?                   = null
+    val vaccines:       List<VaccineListItemWithIds> = emptyList(),
+    val events:         List<EventListItemWithIds>   = emptyList(),
+    val selectedFilter: String                       = "All",
+    val isLoading:      Boolean                      = false,
+    val error:          String?                      = null
 )
 
 class HealthRecordsViewModel : ViewModel() {
@@ -45,36 +58,44 @@ class HealthRecordsViewModel : ViewModel() {
             }
             val pets = petsResult.getOrDefault(emptyList())
 
-            // 2. Build vaccine list from embedded vaccinations in each pet
+            // 2. Build vaccine list — include real petId and vaccination _id
             val vaccines = pets.flatMap { pet ->
                 pet.vaccinations.map { vacc ->
                     val daysText = computeDaysText(vacc.nextDueDate, vacc.dateGiven)
-                    VaccineListItemData(
-                        vaccineName = vacc.vaccineId.take(8), // until vaccine catalog is integrated
-                        petName     = pet.name,
-                        clinicName  = vacc.administeredBy.ifBlank { "—" },
-                        status      = vacc.status,
-                        daysText    = daysText,
-                        photoPath   = R.drawable.pet
+                    VaccineListItemWithIds(
+                        data = VaccineListItemData(
+                            vaccineName = vacc.vaccineId.take(8),
+                            petName     = pet.name,
+                            clinicName  = vacc.administeredBy.ifBlank { "—" },
+                            status      = vacc.status,
+                            daysText    = daysText,
+                            photoPath   = R.drawable.pet
+                        ),
+                        petId         = pet.id,
+                        vaccinationId = vacc.id   // vaccination _id for navigation
                     )
                 }
             }
 
-            // 3. Load events for all user's pets in parallel
+            // 3. Load events for all user's pets in parallel — include real petId and eventId
             val eventResults = pets.map { pet ->
                 async {
                     RepositoryProvider.eventRepository
                         .getEvents(petId = pet.id)
                         .getOrElse { emptyList() }
                         .map { event ->
-                            MedicalEventData(
-                                eventType  = event.eventType.name
-                                    .lowercase()
-                                    .replaceFirstChar { it.uppercase() },
-                                petName    = pet.name,
-                                clinicName = event.clinic.ifBlank { event.provider }.ifBlank { "—" },
-                                date       = event.date.take(10),
-                                cost       = event.price?.let { "$${"%.0f".format(it)}" } ?: ""
+                            EventListItemWithIds(
+                                data = MedicalEventData(
+                                    eventType  = event.eventType.name
+                                        .lowercase()
+                                        .replaceFirstChar { it.uppercase() },
+                                    petName    = pet.name,
+                                    clinicName = event.clinic.ifBlank { event.provider }.ifBlank { "—" },
+                                    date       = event.date.take(10),
+                                    cost       = event.price?.let { "$${"%.0f".format(it)}" } ?: ""
+                                ),
+                                petId   = pet.id,
+                                eventId = event.id
                             )
                         }
                 }
@@ -96,9 +117,9 @@ class HealthRecordsViewModel : ViewModel() {
             val now  = java.util.Date()
             val diff = (due.time - now.time) / (1000 * 60 * 60 * 24)
             when {
-                diff < 0  -> "${-diff}d ago"
+                diff < 0   -> "${-diff}d ago"
                 diff == 0L -> "today"
-                else      -> "in ${diff}d"
+                else       -> "in ${diff}d"
             }
         } catch (e: Exception) {
             nextDueDate.take(10)

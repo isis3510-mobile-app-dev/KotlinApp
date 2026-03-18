@@ -61,6 +61,7 @@ dependencies {
 
     // Google Sign-In
     implementation(libs.play.services.auth)
+    implementation(libs.androidx.runtime)
 
     // Tests
     testImplementation(libs.junit)

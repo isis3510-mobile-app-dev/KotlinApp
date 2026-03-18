@@ -247,9 +247,23 @@ class MainActivity : ComponentActivity() {
                             }
 
                             // ── Records / Calendar / Profile ─────────────────────────────────────
-                            composable(Routes.Records)  { HealthRecordsScreen() }
+                            composable(Routes.Records) {
+                                HealthRecordsScreen(
+                                    onNavigateToVaccineDetail = { petId, vaccinationId ->
+                                        navController.navigate("vaccineDetails/$petId/$vaccinationId")
+                                    },
+                                    onNavigateToEventDetail = { petId, eventId ->
+                                        navController.navigate("eventDetails/$petId/$eventId")
+                                    }
+                                )
+                            }
                             composable(Routes.Calendar) {
-                                CalendarScreen(onAddEvent = { navController.navigate(Routes.AddEvent1) })
+                                CalendarScreen(
+                                    onAddEvent = { navController.navigate(Routes.AddEvent1) },
+                                    onNavigateToEvent = { petId, eventId ->
+                                        navController.navigate("eventDetails/$petId/$eventId")
+                                    }
+                                )
                             }
                             composable(Routes.Profile) {
                                 LaunchedEffect(Unit) {
@@ -278,23 +292,28 @@ class MainActivity : ComponentActivity() {
                                 arguments = listOf(navArgument("petId") { type = NavType.StringType })
                             ) { entry ->
                                 val petId = entry.arguments?.getString("petId").orEmpty()
-                                val petProfileViewModel: PetProfileViewModel = viewModel()
-                                LaunchedEffect(petId) { petProfileViewModel.loadPet(petId) }
 
                                 PetProfileScreen(
-                                    petId       = petId,
-                                    onBack      = { navController.popBackStack() },
-                                    onAddEvent  = {
+                                    petId        = petId,
+                                    onBack       = { navController.popBackStack() },
+                                    onAddEvent   = {
                                         addEventViewModel.setPetId(petId)
                                         addEventViewModel.setOwnerId(
                                             authViewModel.userProfile.value?.id ?: ""
                                         )
                                         navController.navigate(Routes.AddEvent1)
                                     },
-                                    onNFCScan   = { navController.navigate(Routes.NfcScan) },
+                                    onNFCScan    = { navController.navigate(Routes.NfcScan) },
                                     onAddVaccine = {
                                         addVaccineViewModel.setPetId(petId)
                                         navController.navigate(Routes.AddVaccine1)
+                                    },
+                                    // ↓ These two are new
+                                    onNavigateToVaccineDetail = { pId, vaccineId ->
+                                        navController.navigate("vaccineDetails/$pId/$vaccineId")
+                                    },
+                                    onNavigateToEventDetail = { pId, eventId ->
+                                        navController.navigate("eventDetails/$pId/$eventId")
                                     }
                                 )
                             }
