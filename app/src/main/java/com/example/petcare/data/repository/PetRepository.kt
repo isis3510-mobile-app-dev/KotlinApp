@@ -50,11 +50,12 @@ class PetRepository(private val api: ApiService) {
 
     suspend fun deleteVaccination(
         petId: String,
-        vaccinationId: String      // now just the ID, no dateGiven needed
+        vaccinationId: String
     ): Result<Pet> = runCatching {
         val response = api.deleteVaccination(petId, vaccinationId)
         response.body() ?: error("Failed to delete vaccination — HTTP ${response.code()}")
     }
+
     suspend fun updateVaccination(
         petId: String,
         vaccinationId: String,
@@ -65,9 +66,43 @@ class PetRepository(private val api: ApiService) {
         val body = buildMap<String, Any?> {
             put("administeredBy", administeredBy)
             put("lotNumber", lotNumber)
-            if (nextDueDate != null) put("nextDueDate", nextDueDate)
+            // Convert dd/MM/yyyy → yyyy-MM-ddT00:00:00Z before sending to backend.
+            // The DateTextField returns dd/MM/yyyy; stored dates from the API are
+            // already in ISO format (yyyy-MM-dd...) — handle both.
+            if (nextDueDate != null) {
+                put("nextDueDate", toIso(nextDueDate))
+            }
         }
         val response = api.updateVaccination(petId, vaccinationId, body)
         response.body() ?: error("Failed to update vaccination — HTTP ${response.code()}")
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Converts a date string to ISO-8601 format expected by the backend.
+     *
+     * Handles two input formats:
+     *  - dd/MM/yyyy  (from DateTextField picker)  → yyyy-MM-ddT00:00:00Z
+     *  - yyyy-MM-dd  (already ISO, from API)       → yyyy-MM-ddT00:00:00Z
+     */
+    private fun toIso(date: String): String {
+        if (date.isBlank()) return date
+        return try {
+            when {
+                // dd/MM/yyyy
+                date.matches(Regex("""\d{2}/\d{2}/\d{4}""")) -> {
+                    val parts = date.split("/")
+                    "${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z"
+                }
+                // yyyy-MM-dd (with or without time suffix)
+                date.matches(Regex("""\d{4}-\d{2}-\d{2}.*""")) -> {
+                    "${date.take(10)}T00:00:00Z"
+                }
+                else -> date
+            }
+        } catch (_: Exception) {
+            date
+        }
     }
 }

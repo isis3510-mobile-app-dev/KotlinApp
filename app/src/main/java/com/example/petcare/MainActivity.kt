@@ -247,7 +247,16 @@ class MainActivity : ComponentActivity() {
                             }
 
                             // ── Records / Calendar / Profile ─────────────────────────────────────
-                            composable(Routes.Records)  { HealthRecordsScreen() }
+                            composable(Routes.Records) {
+                                HealthRecordsScreen(
+                                    onNavigateToVaccineDetail = { petId, vaccinationId ->
+                                        navController.navigate("vaccineDetails/$petId/$vaccinationId")
+                                    },
+                                    onNavigateToEventDetail = { petId, eventId ->
+                                        navController.navigate("eventDetails/$petId/$eventId")
+                                    }
+                                )
+                            }
                             composable(Routes.Calendar) {
                                 CalendarScreen(
                                     onAddEvent = { navController.navigate(Routes.AddEvent1) },
