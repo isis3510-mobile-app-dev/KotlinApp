@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.Pet
-import com.example.petcare.data.model.SuggestionDto
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
@@ -29,7 +28,6 @@ data class PetProfileUiState(
     val isNfcSynched: Boolean = false,
     val events: List<Event> = emptyList(),
     val vaccines: List<VaccineRecord> = emptyList(),
-    val suggestions: List<SuggestionDto> = emptyList(),
     val vaccineFilter: VaccineFilterStatus? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -69,16 +67,16 @@ class PetProfileViewModel : ViewModel() {
                 else        -> VaccineFilterStatus.COMPLETED
             }
             VaccineRecord(
-                id          = v.vaccineId,
-                name        = v.vaccineId.take(8),
+                id          = v.id,
+                name        = v.vaccineId.take(8),  // until catalog lookup is added
                 provider    = v.administeredBy,
                 dateGiven   = v.dateGiven.take(10),
                 nextDueDate = v.nextDueDate?.take(10),
                 lotNumber   = v.lotNumber.ifBlank { null },
                 status      = status
             )
-
         }
+
         // Load events from backend
         val events = mutableListOf<Event>()
         RepositoryProvider.eventRepository.getEvents(petId = petId).fold(
@@ -89,13 +87,6 @@ class PetProfileViewModel : ViewModel() {
             },
             onFailure = { /* non-fatal — show empty list */ }
         )
-
-        val suggestions = mutableListOf<SuggestionDto>()
-        RepositoryProvider.petRepository.getPetSmart(petId).fold(
-            onSuccess = { suggestions.addAll(it) },
-            onFailure = { /* non-fatal */ }
-        )
-
 
         _uiState.value = _uiState.value.copy(
             name                 = pet.name,
@@ -113,12 +104,10 @@ class PetProfileViewModel : ViewModel() {
             upcomingEventsCount  = events.size,
             vaccines             = vaccines,
             events               = events,
-            suggestions = suggestions,
             isLoading            = false,
             error                = null,
             photoUrl             = pet.photoUrl
         )
-
     }
 
     // ── Tab & filter logic (same as before) ──────────────────────────────────
@@ -154,6 +143,15 @@ class PetProfileViewModel : ViewModel() {
             if (nowMonth < birthMonth) years--
             "$years yrs"
         } catch (_: Exception) { "" }
+    }
+
+    fun deletePet(petId: String, onNavigatedBack: () -> Unit) {
+        viewModelScope.launch {
+            RepositoryProvider.petRepository.deletePet(petId).fold(
+                onSuccess = { onNavigatedBack() },
+                onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message) }
+            )
+        }
     }
 }
 

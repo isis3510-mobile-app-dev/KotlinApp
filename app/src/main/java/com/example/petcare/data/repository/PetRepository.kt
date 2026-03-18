@@ -1,11 +1,11 @@
 package com.example.petcare.data.repository
 
+import com.example.petcare.data.model.AddDocumentRequest
 import com.example.petcare.data.model.AddVaccinationRequest
 import com.example.petcare.data.model.CreatePetRequest
 import com.example.petcare.data.model.Pet
-import com.example.petcare.data.model.SuggestionDto
 import com.example.petcare.data.model.UpdatePetRequest
-import com.example.petcare.data.model.Vaccination
+import com.example.petcare.data.model.UpdateVaccinationRequest
 import com.example.petcare.data.network.ApiService
 
 class PetRepository(private val api: ApiService) {
@@ -39,14 +39,70 @@ class PetRepository(private val api: ApiService) {
         response.body() ?: error("Failed to add vaccination")
     }
 
-    suspend fun getPetSmart(petId: String): Result<List<SuggestionDto>> = runCatching {
-        val response = api.getPetSmart(petId)
-        if (response.isSuccessful) {
-            response.body()?.suggestions ?: emptyList()
-        } else {
-            emptyList()
-        }
+    suspend fun addVaccinationDocument(
+        petId: String,
+        vaccinationId: String,
+        request: AddDocumentRequest
+    ): Result<Pet> = runCatching {
+        val response = api.addVaccinationDocument(petId, vaccinationId, request)
+        response.body() ?: error("Failed to add document")
     }
 
+    suspend fun deleteVaccination(
+        petId: String,
+        vaccinationId: String
+    ): Result<Pet> = runCatching {
+        val response = api.deleteVaccination(petId, vaccinationId)
+        response.body() ?: error("Failed to delete vaccination — HTTP ${response.code()}")
+    }
 
+    suspend fun updateVaccination(
+        petId: String,
+        vaccinationId: String,
+        administeredBy: String,
+        nextDueDate: String?,
+        lotNumber: String
+    ): Result<Pet> = runCatching {
+        val body = buildMap<String, Any?> {
+            put("administeredBy", administeredBy)
+            put("lotNumber", lotNumber)
+            // Convert dd/MM/yyyy → yyyy-MM-ddT00:00:00Z before sending to backend.
+            // The DateTextField returns dd/MM/yyyy; stored dates from the API are
+            // already in ISO format (yyyy-MM-dd...) — handle both.
+            if (nextDueDate != null) {
+                put("nextDueDate", toIso(nextDueDate))
+            }
+        }
+        val response = api.updateVaccination(petId, vaccinationId, body)
+        response.body() ?: error("Failed to update vaccination — HTTP ${response.code()}")
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Converts a date string to ISO-8601 format expected by the backend.
+     *
+     * Handles two input formats:
+     *  - dd/MM/yyyy  (from DateTextField picker)  → yyyy-MM-ddT00:00:00Z
+     *  - yyyy-MM-dd  (already ISO, from API)       → yyyy-MM-ddT00:00:00Z
+     */
+    private fun toIso(date: String): String {
+        if (date.isBlank()) return date
+        return try {
+            when {
+                // dd/MM/yyyy
+                date.matches(Regex("""\d{2}/\d{2}/\d{4}""")) -> {
+                    val parts = date.split("/")
+                    "${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z"
+                }
+                // yyyy-MM-dd (with or without time suffix)
+                date.matches(Regex("""\d{4}-\d{2}-\d{2}.*""")) -> {
+                    "${date.take(10)}T00:00:00Z"
+                }
+                else -> date
+            }
+        } catch (_: Exception) {
+            date
+        }
+    }
 }
