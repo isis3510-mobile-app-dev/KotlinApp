@@ -88,7 +88,8 @@ fun PetProfileScreen(
                 weight = uiState.weight,
                 gender = uiState.gender,
                 isHealthy = uiState.isHealthy,
-                isNfcSynched = uiState.isNfcSynched
+                isNfcSynched = uiState.isNfcSynched,
+                photoPath = uiState.photoUrl
             )
         }
 
@@ -152,7 +153,7 @@ private fun LazyListScope.overviewTabContent(
     viewModel: PetProfileViewModel,
     onAddEvent: () -> Unit,
     onNFCScan: () -> Unit,
-    onAddVaccine: () -> Unit
+    onAddVaccine: () -> Unit,
 ) {
     item {
         Column(

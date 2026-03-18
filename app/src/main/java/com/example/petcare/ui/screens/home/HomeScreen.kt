@@ -15,13 +15,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.petcare.R
 import com.example.petcare.ui.components.*
 import com.example.petcare.ui.screens.auth.AuthViewModel
 import com.example.petcare.ui.theme.GreenDark
@@ -137,7 +135,7 @@ fun HomeScreen(
                         val pet = homeState.pets[i]
                         Box(modifier = Modifier.clickable { onNavigateToPetProfile(pet.id) }) {
                             PetCard(
-                                image  = painterResource(R.drawable.pet),
+                                photoUrl  = pet.photoUrl,
                                 text   = pet.name,
                                 status = when (pet.status.lowercase()) {
                                     "healthy" -> PetStatus.SUCCESS
