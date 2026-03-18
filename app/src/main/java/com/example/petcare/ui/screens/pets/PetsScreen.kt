@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,41 +25,53 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.petcare.R
+import com.example.petcare.data.model.Pet
 import com.example.petcare.ui.components.Filters
 import com.example.petcare.ui.components.PetDetailsCard
 import com.example.petcare.ui.components.SearchBar
 import com.example.petcare.ui.theme.GreenAccentDark
 import com.example.petcare.ui.theme.OffWhite
+import com.example.petcare.ui.theme.PetCareTheme
+import java.time.LocalDate
+import java.time.Period
 
-data class PetListItem(
-    val name: String,
-    val breed: String,
-    val age: Int,
-    val weight: Double,
-    val gender: String,
-    val status: String,
-    val photoPath: Int,
-    val species: String
-)
+private fun calculateAge(birthDate: String?): Int {
+    if (birthDate == null) return 0
+    return try {
+        val birth = java.time.LocalDate.parse(birthDate.take(10))
+        java.time.Period.between(birth, java.time.LocalDate.now()).years
+    } catch (e: Exception) { 0 }
+}
+
 @Composable
 fun PetsScreen(
-    onPetSelected: (String) -> Unit,
+    pets: List<Pet>,
+    isLoading: Boolean = false,
     paddingValues: PaddingValues = PaddingValues(0.dp),
+    onPetSelected: (String) -> Unit,
     onVaccineSelected: (String) -> Unit = {},
     onLostModeSelected: (String) -> Unit = {},
-    onNfcSelected: () -> Unit = {}
-
+    onNfcSelected: (String) -> Unit = {} // Added String parameter to know WHICH pet to write for
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All Pets") }
 
-    val pets = listOf(
-        PetListItem("Max", "Golden Retriever", 6, 28.5, "Male", "Healthy", R.drawable.pet, "DOG"),
-        PetListItem("Luna", "Tabby Mix", 5, 4.2, "Female", "Vaccine due", R.drawable.pet, "CAT"),
-        PetListItem("Coco", "Poodle", 4, 1.6, "Female", "Healthy", R.drawable.pet, "DOG")
-    )
+    // 1. Logic: Filter the list based on Search and Filter chips
+    val filteredPets = remember(searchQuery, selectedFilter, pets) {
+        pets.filter { pet ->
+            val matchesSearch = pet.name.contains(searchQuery, ignoreCase = true) ||
+                    pet.breed.contains(searchQuery, ignoreCase = true)
 
-    
+            val matchesFilter = when (selectedFilter) {
+                "Healthy" -> pet.status.equals("healthy", ignoreCase = true)
+                "Vaccine Due" -> pet.status.equals("vaccine due", ignoreCase = true)
+                "Lost" -> pet.status.equals("lost", ignoreCase = true)
+                else -> true
+            }
+            matchesSearch && matchesFilter
+        }
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -85,7 +98,7 @@ fun PetsScreen(
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "${pets.size} pets",
+                        text = "${filteredPets.size} pets",
                         color = GreenAccentDark,
                         fontSize = 12.sp
                     )
@@ -93,7 +106,7 @@ fun PetsScreen(
             }
         }
 
-        // Search
+        // Search Bar
         item {
             SearchBar(
                 query = searchQuery,
@@ -101,7 +114,7 @@ fun PetsScreen(
             )
         }
 
-        // Filters
+        // Filters Row
         item {
             Filters(
                 filters = listOf("All Pets", "Healthy", "Vaccine Due", "Lost"),
@@ -110,32 +123,33 @@ fun PetsScreen(
             )
         }
 
-        items(pets) { pet ->
+        // 2. Display filtered results
+        items(filteredPets, key = { it.id }) { pet ->
             PetDetailsCard(
                 petName = pet.name,
                 breed = pet.breed,
-                age = pet.age,
-                weight = pet.weight,
+                age = calculateAge(pet.birthDate),
+                weight = pet.weight ?: 0.0,
                 gender = pet.gender,
                 status = pet.status,
-                photoPath = pet.photoPath,
+                photoPath = R.drawable.pet,
                 species = pet.species,
-                onPetSelect = { onPetSelected(pet.name) },
-                onVaccineSelect = { onVaccineSelected(pet.name) },
-                onLostSelect = { onLostModeSelected(pet.name) },
-                onNFCSelect = { onNfcSelected() }
+                onPetSelect = { onPetSelected(pet.id) },
+                onVaccineSelect = { onVaccineSelected(pet.id) },
+                onLostSelect = { onLostModeSelected(pet.id) },
+                onNFCSelect = { onNfcSelected(pet.id) } // Pass the ID to the NFC flow
             )
         }
+
+        // Empty State (If no pets found)
+        if (filteredPets.isEmpty() && !isLoading) {
+            item {
+                Box(Modifier
+                    .fillMaxWidth()
+                    .padding(top = 40.dp)) {
+                    Text("No pets found matching your search.", modifier = Modifier.padding(16.dp))
+                }
+            }
+        }
     }
-}
-
-
-
-
-@Preview(showBackground = true)
-@Composable
-fun PetScreenPreview(){
-    PetsScreen(
-        onPetSelected = {}
-    )
 }

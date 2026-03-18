@@ -1,4 +1,4 @@
-package com.example.petcare.data.auth
+package com.example.petcare.data.repository
 
 import com.example.petcare.data.model.UpdateUserRequest
 import com.example.petcare.data.model.User

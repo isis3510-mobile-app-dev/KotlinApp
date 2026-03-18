@@ -1,5 +1,6 @@
 package com.example.petcare.ui.screens.nfc
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -15,6 +17,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,7 +28,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.petcare.R
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.petcare.MainActivity
 import com.example.petcare.ui.components.ButtonDefault
 import com.example.petcare.ui.screens.nfc.components.NFCHeader
 import com.example.petcare.ui.screens.nfc.components.NFCToggle
@@ -41,16 +45,39 @@ fun WriteNFCScreen(
     onDone: () -> Unit = {},
     onRead: () -> Unit = {}
 ) {
-    var isReadMode by remember { mutableStateOf(false) } // Default to false for Write Screen
-    var selectedPetId by remember { mutableStateOf("1") }
-    
-    val myPets = listOf(
-        PetOption("1", "Max", R.drawable.pet),
-        PetOption("2", "Luna", R.drawable.pet),
-        PetOption("3", "Coco", R.drawable.pet)
-    )
-    
-    val selectedPet = myPets.find { it.id == selectedPetId } ?: myPets.first()
+    val activity = LocalActivity.current as MainActivity
+    val nfcViewModel = activity.nfcViewModel
+    val uiState by nfcViewModel.uiState.collectAsStateWithLifecycle()
+
+    // ── Load pets from the shared PetsViewModel ────────────────────────────
+    val petsUiState by activity.petsViewModel.uiState.collectAsStateWithLifecycle()
+    val pets = petsUiState.pets
+
+    // Map domain Pet → PetOption used by the selection row
+    // We use a placeholder image (R.drawable.pet) until photo loading is added
+    val petOptions = pets.map { pet ->
+        PetOption(
+            id        = pet.id,
+            name      = pet.name,
+            imageRes  = com.example.petcare.R.drawable.pet
+        )
+    }
+
+    // Default to the first real pet (or empty when list is empty)
+    var selectedPetId by remember(petOptions) {
+        mutableStateOf(petOptions.firstOrNull()?.id ?: "")
+    }
+
+    val selectedPet = petOptions.find { it.id == selectedPetId } ?: petOptions.firstOrNull()
+
+    // Navigate to ScanningNFCScreen once the payload is ready
+    LaunchedEffect(uiState) {
+        when (uiState) {
+            is NfcUiState.WaitingForTag -> onDone()
+            is NfcUiState.Error         -> { /* handled in ScanningScreen */ }
+            else                        -> Unit
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -62,11 +89,11 @@ fun WriteNFCScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Unspecified,
+                    containerColor             = Color.Transparent,
+                    scrolledContainerColor     = Color.Unspecified,
                     navigationIconContentColor = Color.Unspecified,
-                    titleContentColor = Color.Unspecified,
-                    actionIconContentColor = Color.Unspecified
+                    titleContentColor          = Color.Unspecified,
+                    actionIconContentColor     = Color.Unspecified
                 )
             )
         }
@@ -78,34 +105,55 @@ fun WriteNFCScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(16.dp))
-            
-            NFCToggle(isReadMode = isReadMode, onModeChanged = { onRead() })
-            
+
+            NFCToggle(isReadMode = false, onModeChanged = { onRead() })
+
             Spacer(modifier = Modifier.height(24.dp))
-            
-            PetSelectionRow(
-                pets = myPets,
-                selectedPetId = selectedPetId,
-                onPetSelected = { selectedPetId = it }
-            )
-            
-            Spacer(modifier = Modifier.height(48.dp))
-            
-            NFCHeader(
-                title = "Write Tag for ${selectedPet.name}",
-                subtitle = "Hold your phone near a blank NFC tag to write ${selectedPet.name}'s emergency info"
-            )
-            
-            Spacer(modifier = Modifier.height(64.dp))
-            
-            ButtonDefault(
-                bgColor = GreenDark,
-                textColor = Color.White,
-                width = 342.dp,
-                height = 56.dp,
-                text = "Start Writing",
-                onclick = { onDone() }
-            )
+
+            when {
+                petsUiState.isLoading -> {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CircularProgressIndicator(color = GreenDark)
+                }
+
+                petOptions.isEmpty() -> {
+                    Spacer(modifier = Modifier.height(48.dp))
+                    NFCHeader(
+                        title    = "No pets found",
+                        subtitle = "Add a pet first before writing an NFC tag"
+                    )
+                }
+
+                else -> {
+                    PetSelectionRow(
+                        pets          = petOptions,
+                        selectedPetId = selectedPetId,
+                        onPetSelected = { selectedPetId = it }
+                    )
+
+                    Spacer(modifier = Modifier.height(48.dp))
+
+                    NFCHeader(
+                        title    = "Write Tag for ${selectedPet?.name ?: ""}",
+                        subtitle = "Hold your phone near a blank NFC tag to write ${selectedPet?.name ?: "your pet"}'s emergency info"
+                    )
+
+                    Spacer(modifier = Modifier.height(64.dp))
+
+                    ButtonDefault(
+                        bgColor   = GreenDark,
+                        textColor = Color.White,
+                        width     = 342.dp,
+                        height    = 56.dp,
+                        text      = "Start Writing",
+                        onclick   = {
+                            if (selectedPetId.isNotBlank()) {
+                                nfcViewModel.prepareWrite(selectedPetId, "")
+                            }
+                        }
+                    )
+                }
+            }
         }
     }
 }

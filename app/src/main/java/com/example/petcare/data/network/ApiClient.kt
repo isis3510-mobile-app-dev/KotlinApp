@@ -1,6 +1,6 @@
 package com.example.petcare.data.network
 
-import com.example.petcare.data.auth.AuthRepository
+import com.example.petcare.data.repository.AuthRepository
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -8,6 +8,12 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
+
+    // Cambia esta URL según dónde corra tu backend:
+    //   Emulador Android: "http://10.0.2.2:8000/api/"
+    //   Dispositivo físico: "http://192.168.x.x:8000/api/"
+    private const val BASE_URL = "http://192.168.80.19:8000/api/"
+
     fun create(authRepository: AuthRepository): Retrofit {
         val okHttpClient = OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(authRepository))
@@ -19,7 +25,7 @@ object ApiClient {
             .build()
 
         return Retrofit.Builder()
-            .baseUrl("http://10.0.2.2:8000/api/") // 10.0.2.2 = localhost from emulator
+            .baseUrl(BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

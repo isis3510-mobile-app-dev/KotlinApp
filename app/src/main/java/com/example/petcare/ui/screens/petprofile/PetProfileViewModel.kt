@@ -1,102 +1,163 @@
 package com.example.petcare.ui.screens.petprofile
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.model.Event
+import com.example.petcare.data.model.EventType
+import com.example.petcare.data.model.Pet
+import com.example.petcare.data.repository.RepositoryProvider
+import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
+import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-
-import com.example.petcare.data.model.EventType
-import com.example.petcare.data.model.MedicalEvent
-import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
-import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
+import kotlinx.coroutines.launch
 
 data class PetProfileUiState(
-    val name: String = "Max",
-    val breed: String = "Golden Retriever",
-    val species: String = "Dog",
-    val age: String = "6 yrs",
-    val weight: String = "28.5 kg",
-    val gender: String = "Male",
+    val name: String = "",
+    val breed: String = "",
+    val species: String = "",
+    val age: String = "",
+    val weight: String = "",
+    val gender: String = "",
     val isHealthy: Boolean = true,
-    val color: String = "Golden",
-    val microchip: String = "XR123456789",
-    val dateOfBirth: String = "Mar 14, 2020",
-    val overdueVaccinesCount: Int = 1, // Set > 0 to test the conditional banner
-    val upcomingEventsCount: Int = 2,
-    val isNfcSynched: Boolean = true, // Added for UI polish
-    val events: List<MedicalEvent> = emptyList(),
+    val color: String = "",
+    val microchip: String = "",
+    val dateOfBirth: String = "",
+    val overdueVaccinesCount: Int = 0,
+    val upcomingEventsCount: Int = 0,
+    val isNfcSynched: Boolean = false,
+    val events: List<Event> = emptyList(),
     val vaccines: List<VaccineRecord> = emptyList(),
-    val vaccineFilter: VaccineFilterStatus? = null // null means show all
+    val vaccineFilter: VaccineFilterStatus? = null,
+    val isLoading: Boolean = false,
+    val error: String? = null
 )
 
 class PetProfileViewModel : ViewModel() {
-    private val _uiState = MutableStateFlow(PetProfileUiState(
-        vaccines = listOf(
-            VaccineRecord("3", "Leptospirosis", "Dr. Johnson · City Vet Center", "Oct 1, 2023", null, null, VaccineFilterStatus.OVERDUE),
-            VaccineRecord("2", "Rabies", "Dr. Smith · Happy Paws Clinic", "Mar 14, 2024", "Mar 14, 2025", "LP2024-0315", VaccineFilterStatus.UPCOMING),
-            VaccineRecord("1", "Bordetella", "Dr. Smith · Happy Paws Clinic", "Sep 19, 2024", "Sep 19, 2025", null, VaccineFilterStatus.COMPLETED)
-        ),
-        events = listOf(
-            MedicalEvent(
-                id = "1",
-                petId = "1",
-                title = "Checkup",
-                eventType = EventType.CHECKUP,
-                price = 120.0,
-                provider = "Dr. Smith",
-                clinic = "Happy Paws Clinic",
-                date = "Nov 19, 2024",
-                description = "Annual wellness exam. All vitals normal. Weight stable at 28.5kg.",
-                followUpDate = "Nov 19, 2025"
-            ),
-            MedicalEvent(
-                id = "2",
-                petId = "1",
-                title = "Dental",
-                eventType = EventType.DENTAL,
-                price = 280.0,
-                provider = "Dr. Johnson",
-                clinic = "City Vet Center",
-                date = "Jun 4, 2024",
-                description = "Routine dental cleaning. No extractions needed."
-            )
-        )
-    ))
+
+    private val _uiState = MutableStateFlow(PetProfileUiState(isLoading = true))
     val uiState: StateFlow<PetProfileUiState> = _uiState.asStateFlow()
-    
+
     private val _selectedTabIndex = MutableStateFlow(0)
     val selectedTabIndex: StateFlow<Int> = _selectedTabIndex.asStateFlow()
 
-    fun onTabSelected(index: Int) {
-        _selectedTabIndex.value = index
+    fun loadPet(petId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+
+            RepositoryProvider.petRepository.getPet(petId).fold(
+                onSuccess = { pet -> applyPetToState(pet, petId) },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = e.message ?: "Failed to load pet"
+                    )
+                }
+            )
+        }
     }
-    
-    fun onVaccineFilterClick(status: VaccineFilterStatus) {
-        // Toggle the filter: if clicking the currently active one, clear it. Otherwise set it.
-        val currentFilter = _uiState.value.vaccineFilter
+
+    private suspend fun applyPetToState(pet: Pet, petId: String) {
+        // Map backend vaccinations → VaccineRecord UI model
+        val vaccines = pet.vaccinations.map { v ->
+            val status = when (v.status.lowercase()) {
+                "overdue"   -> VaccineFilterStatus.OVERDUE
+                "upcoming"  -> VaccineFilterStatus.UPCOMING
+                else        -> VaccineFilterStatus.COMPLETED
+            }
+            VaccineRecord(
+                id          = v.vaccineId,
+                name        = v.vaccineId.take(8),  // until catalog lookup is added
+                provider    = v.administeredBy,
+                dateGiven   = v.dateGiven.take(10),
+                nextDueDate = v.nextDueDate?.take(10),
+                lotNumber   = v.lotNumber.ifBlank { null },
+                status      = status
+            )
+        }
+
+        // Load events from backend
+        val events = mutableListOf<Event>()
+        RepositoryProvider.eventRepository.getEvents(petId = petId).fold(
+            onSuccess = { list ->
+                list.forEach { ev ->
+                    events.add(ev.toMedicalEvent())
+                }
+            },
+            onFailure = { /* non-fatal — show empty list */ }
+        )
+
         _uiState.value = _uiState.value.copy(
-            vaccineFilter = if (currentFilter == status) null else status
+            name                 = pet.name,
+            breed                = pet.breed,
+            species              = pet.species.replaceFirstChar { it.uppercase() },
+            age                  = computeAge(pet.birthDate),
+            weight               = if (pet.weight != null) "${pet.weight} kg" else "",
+            gender               = pet.gender.replaceFirstChar { it.uppercase() },
+            isHealthy            = pet.status.lowercase() == "healthy",
+            color                = pet.color,
+            microchip            = "",
+            dateOfBirth          = pet.birthDate?.take(10) ?: "",
+            isNfcSynched         = pet.isNfcSynced,
+            overdueVaccinesCount = vaccines.count { it.status == VaccineFilterStatus.OVERDUE },
+            upcomingEventsCount  = events.size,
+            vaccines             = vaccines,
+            events               = events,
+            isLoading            = false,
+            error                = null
         )
     }
 
-    fun onVaccineClicked(vaccineRecord: VaccineRecord) {
-        // In a real app, this would trigger navigation to the VaccineDetailsScreen
-        // using a NavController
+    // ── Tab & filter logic (same as before) ──────────────────────────────────
+
+    fun onTabSelected(index: Int) { _selectedTabIndex.value = index }
+
+    fun onVaccineFilterClick(status: VaccineFilterStatus) {
+        val current = _uiState.value.vaccineFilter
+        _uiState.value = _uiState.value.copy(
+            vaccineFilter = if (current == status) null else status
+        )
     }
 
-    fun onAddEventClicked() {
-        // Implementation
-    }
+    fun onVaccineClicked(vaccine: VaccineRecord) {}
+    fun onAddEventClicked()  {}
+    fun onAddVaccineClicked() {}
+    fun onLostModeClicked()  {}
+    fun onNfcActiveClicked() {}
 
-    fun onAddVaccineClicked() {
-        // Implementation
-    }
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
-    fun onLostModeClicked() {
-        // Implementation
+    private fun computeAge(birthDateIso: String?): String {
+        if (birthDateIso.isNullOrBlank()) return ""
+        return try {
+            val parts = birthDateIso.take(10).split("-")
+            if (parts.size != 3) return ""
+            val birthYear  = parts[0].toInt()
+            val birthMonth = parts[1].toInt()
+            val now        = java.util.Calendar.getInstance()
+            val nowYear    = now.get(java.util.Calendar.YEAR)
+            val nowMonth   = now.get(java.util.Calendar.MONTH) + 1
+            var years      = nowYear - birthYear
+            if (nowMonth < birthMonth) years--
+            "$years yrs"
+        } catch (_: Exception) { "" }
     }
+}
 
-    fun onNfcActiveClicked() {
-        // Implementation
-    }
+/** Maps the network Event model to the local MedicalEvent UI model. */
+private fun Event.toMedicalEvent(): Event {
+    return Event(
+        id          = id,
+        petId       = petId,
+        ownerId = ownerId,
+        title       = title,
+        eventType   = eventType,
+        price       = price,
+        provider    = provider,
+        clinic      = clinic,
+        date        = date.take(10),
+        description = description,
+        followUpDate = followUpDate?.take(10)
+    )
 }

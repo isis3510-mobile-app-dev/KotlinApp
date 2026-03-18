@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.petcare.R
 import com.example.petcare.data.model.EventType
-import com.example.petcare.data.model.MedicalEvent
+import com.example.petcare.data.model.Event
 import com.example.petcare.ui.theme.GrayDark
 import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.GreenDark
@@ -40,7 +40,7 @@ import com.example.petcare.ui.theme.InfoContainer
 
 @Composable
 fun EventListItem(
-    event: MedicalEvent,
+    event: Event,
     onClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -170,9 +170,10 @@ fun EventListItemPreview() {
         Box(modifier = Modifier.background(OffWhite).padding(16.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 EventListItem(
-                    event = MedicalEvent(
+                    event = Event(
                         id = "1",
                         petId = "1",
+                        ownerId = "owner123",
                         title = "Checkup",
                         eventType = EventType.CHECKUP,
                         price = 120.0,
@@ -186,9 +187,10 @@ fun EventListItemPreview() {
                 )
 
                 EventListItem(
-                    event = MedicalEvent(
+                    event = Event(
                         id = "2",
                         petId = "1",
+                        ownerId = "owner123",
                         title = "Dental",
                         eventType = EventType.DENTAL,
                         price = 280.0,

@@ -4,7 +4,6 @@ import com.example.petcare.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.RemoveRedEye
 import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,6 +23,10 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 
 @Composable
 fun SignInScreen(
@@ -35,6 +38,7 @@ fun SignInScreen(
     var password by remember { mutableStateOf("")}
     val authState by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var passwordVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(authState) {
         if (authState is AuthViewModel.AuthState.Success) {
@@ -89,16 +93,27 @@ fun SignInScreen(
 
         TextFieldComponent(
             name = "Password",
-            label = "........",
+            label = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
             value = password,
-            onValueChange = { password = it},
-            icon = { Icon(
-                imageVector = Icons.Default.RemoveRedEye,
-                contentDescription = "Password",
-                tint = Color.LightGray
-            )
+            onValueChange = { password = it },
+            visualTransformation = if (passwordVisible)
+                VisualTransformation.None
+            else
+                PasswordVisualTransformation(),
+            icon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        imageVector = if (passwordVisible)
+                            Icons.Default.Visibility
+                        else
+                            Icons.Default.VisibilityOff,
+                        contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
+                        tint = Color.LightGray
+                    )
+                }
             }
         )
+
         Spacer(modifier = Modifier.height(10.dp))
 
         Box(
@@ -129,7 +144,7 @@ fun SignInScreen(
             textColor = Color.White,
             width = 342.dp,
             height = 56.dp,
-            text = if (authState is AuthViewModel.AuthState.Loading) "..." else "Sign In"
+            text = if (authState is AuthViewModel.AuthState.Loading) "... Loading" else "Sign In"
         )
 
 
@@ -165,7 +180,9 @@ fun SignInScreen(
         ButtonOutline(
             onclick = {
                 val client = getGoogleSignInClient(context)
-                googleLauncher.launch(client.signInIntent)
+                client.signOut().addOnCompleteListener {
+                    googleLauncher.launch(client.signInIntent)
+                }
             },
             bgColor = MaterialTheme.colorScheme.background,
             outlineColor = GrayBorder,
