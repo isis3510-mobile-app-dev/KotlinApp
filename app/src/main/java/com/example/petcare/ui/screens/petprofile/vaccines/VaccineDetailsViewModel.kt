@@ -3,7 +3,6 @@ package com.example.petcare.ui.screens.petprofile.vaccines
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.AddDocumentRequest
-import com.example.petcare.data.model.AddVaccinationRequest
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
@@ -31,14 +30,23 @@ class VaccineDetailsViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(VaccineDetailsUiState(isLoading = true))
     val uiState: StateFlow<VaccineDetailsUiState> = _uiState.asStateFlow()
 
+    /**
+     * vaccineId here is the vaccination's _id (MongoDB ObjectId of the embedded
+     * Vaccination document), NOT the vaccine catalog vaccineId.
+     * This is the value stored in VaccineRecord.id and passed from the navigation.
+     */
     fun load(petId: String, vaccineId: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, petId = petId)
+            _uiState.value = _uiState.value.copy(isLoading = true, petId = petId, error = null)
             RepositoryProvider.petRepository.getPet(petId).fold(
                 onSuccess = { pet ->
-                    val vacc = pet.vaccinations.find { it.vaccineId == vaccineId }
+                    // Search by vaccination _id (the `id` field in the API response)
+                    val vacc = pet.vaccinations.find { it.id == vaccineId }
                     if (vacc == null) {
-                        _uiState.value = _uiState.value.copy(isLoading = false, error = "Vaccine not found")
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = "Vaccine record not found (id=$vaccineId)"
+                        )
                         return@fold
                     }
                     val status = when (vacc.status.lowercase()) {
@@ -47,8 +55,8 @@ class VaccineDetailsViewModel : ViewModel() {
                         else       -> VaccineFilterStatus.COMPLETED
                     }
                     val record = VaccineRecord(
-                        id                   = vacc.vaccineId,
-                        name                 = vacc.vaccineId.take(8),
+                        id                   = vacc.id,           // vaccination _id
+                        name                 = vacc.vaccineId,    // display name (catalog id for now)
                         provider             = vacc.administeredBy,
                         dateGiven            = vacc.dateGiven.take(10),
                         nextDueDate          = vacc.nextDueDate?.take(10),
@@ -57,11 +65,11 @@ class VaccineDetailsViewModel : ViewModel() {
                         attachedDocumentName = vacc.attachedDocuments.firstOrNull()?.fileName
                     )
                     _uiState.value = _uiState.value.copy(
-                        vaccine              = record,
-                        isLoading            = false,
-                        editAdministeredBy   = vacc.administeredBy,
-                        editNextDueDate      = vacc.nextDueDate?.take(10) ?: "",
-                        editLotNumber        = vacc.lotNumber
+                        vaccine            = record,
+                        isLoading          = false,
+                        editAdministeredBy = vacc.administeredBy,
+                        editNextDueDate    = vacc.nextDueDate?.take(10) ?: "",
+                        editLotNumber      = vacc.lotNumber
                     )
                 },
                 onFailure = { e ->
@@ -73,9 +81,9 @@ class VaccineDetailsViewModel : ViewModel() {
 
     fun deleteVaccine() {
         val petId         = _uiState.value.petId
-        val vaccinationId = _uiState.value.vaccine?.id ?: return   // ← use .id not vaccineId
+        val vaccinationId = _uiState.value.vaccine?.id ?: return   // vaccination _id
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isDeleting = true)
+            _uiState.value = _uiState.value.copy(isDeleting = true, error = null)
             RepositoryProvider.petRepository.deleteVaccination(
                 petId         = petId,
                 vaccinationId = vaccinationId
@@ -86,8 +94,8 @@ class VaccineDetailsViewModel : ViewModel() {
         }
     }
 
-    fun startEditing()  { _uiState.value = _uiState.value.copy(isEditing = true) }
-    fun cancelEditing() { _uiState.value = _uiState.value.copy(isEditing = false) }
+    fun startEditing()  { _uiState.value = _uiState.value.copy(isEditing = true,  error = null) }
+    fun cancelEditing() { _uiState.value = _uiState.value.copy(isEditing = false, error = null) }
 
     fun setAdministeredBy(v: String) { _uiState.value = _uiState.value.copy(editAdministeredBy = v) }
     fun setNextDueDate(v: String)    { _uiState.value = _uiState.value.copy(editNextDueDate = v) }
@@ -95,10 +103,10 @@ class VaccineDetailsViewModel : ViewModel() {
 
     fun saveEdits() {
         val petId         = _uiState.value.petId
-        val vaccinationId = _uiState.value.vaccine?.id ?: return   // ← use .id
+        val vaccinationId = _uiState.value.vaccine?.id ?: return   // vaccination _id
         val s             = _uiState.value
         viewModelScope.launch {
-            _uiState.value = s.copy(isSaving = true)
+            _uiState.value = s.copy(isSaving = true, error = null)
             RepositoryProvider.petRepository.updateVaccination(
                 petId          = petId,
                 vaccinationId  = vaccinationId,
@@ -106,8 +114,7 @@ class VaccineDetailsViewModel : ViewModel() {
                 nextDueDate    = s.editNextDueDate.takeIf { it.isNotBlank() },
                 lotNumber      = s.editLotNumber
             ).fold(
-                onSuccess = { pet ->
-                    val updatedVacc = pet.vaccinations.find { it.vaccineId == vaccinationId }
+                onSuccess = { _ ->
                     _uiState.value = _uiState.value.copy(
                         isSaving  = false,
                         isEditing = false,
@@ -127,7 +134,7 @@ class VaccineDetailsViewModel : ViewModel() {
 
     fun addDocument(fileName: String, fileUri: String?) {
         val petId     = _uiState.value.petId
-        val vaccineId = _uiState.value.vaccine?.id ?: return
+        val vaccineId = _uiState.value.vaccine?.id ?: return   // vaccination _id
         viewModelScope.launch {
             RepositoryProvider.petRepository.addVaccinationDocument(
                 petId, vaccineId, AddDocumentRequest(fileName = fileName, fileUri = fileUri)
