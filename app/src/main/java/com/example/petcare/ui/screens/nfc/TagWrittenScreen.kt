@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -41,19 +40,33 @@ import com.example.petcare.ui.screens.nfc.components.NFCWriteInfoCard
 import com.example.petcare.ui.theme.GrayDark
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
+import androidx.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TagWrittenScreen(
     onBack: () -> Unit = {},
     onDone: () -> Unit = {},
-    onAnother: () -> Unit = {}
+    onAnother: () -> Unit = {},
+    // Passed in from NavHost where authViewModel is already available
+    ownerName: String = "",
+    ownerPhone: String = ""
 ) {
     val activity     = LocalActivity.current as MainActivity
     val nfcViewModel = activity.nfcViewModel
-    val uiState by nfcViewModel.uiState.collectAsStateWithLifecycle()
+    val uiState      by nfcViewModel.uiState.collectAsStateWithLifecycle()
 
+    // petName comes from the WriteSuccess state produced by NfcViewModel
     val petName = (uiState as? NfcUiState.WriteSuccess)?.petName ?: "your pet"
+
+    // Find breed from petsViewModel — no need to access authViewModel here
+    val petsUiState by activity.petsViewModel.uiState.collectAsStateWithLifecycle()
+    val writtenPet  = petsUiState.pets.find { it.name == petName }
+    val breedLine   = if (writtenPet != null && writtenPet.breed.isNotBlank()) {
+        "${writtenPet.name} · ${writtenPet.breed}"
+    } else {
+        petName
+    }
 
     Scaffold(
         topBar = {
@@ -68,11 +81,7 @@ fun TagWrittenScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Unspecified,
-                    navigationIconContentColor = Color.Unspecified,
-                    titleContentColor = Color.Unspecified,
-                    actionIconContentColor = Color.Unspecified
+                    containerColor = Color.Transparent
                 )
             )
         }
@@ -86,71 +95,73 @@ fun TagWrittenScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             NFCCheckMark()
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             Text(
-                text = "Tag Written!",
-                style = MaterialTheme.typography.headlineMedium,
+                text      = "¡Etiqueta escrita!",
+                style     = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                color = MaterialTheme.colorScheme.onSurface
+                fontSize  = 24.sp,
+                color     = MaterialTheme.colorScheme.onSurface
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Text(
-                text = "$petName's information has been successfully written to the NFC tag. Anyone who scans it can contact you instantly.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = GrayDark,
-                textAlign = TextAlign.Center,
+                text       = "La información de $petName se guardó correctamente en la etiqueta NFC. Cualquier persona que la escanee podrá contactarte al instante.",
+                style      = MaterialTheme.typography.bodyLarge,
+                color      = GrayDark,
+                textAlign  = TextAlign.Center,
                 lineHeight = 24.sp
             )
-            
+
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             NFCWriteInfoCard(
-                petNameAndBreed = "$petName (Mock breed)",
-                ownerName = "Sarah Johnson",
-                ownerPhone = "+1 (555) 012-3456",
-                microchip = "XR123456789"
+                petNameAndBreed = breedLine,
+                ownerName       = ownerName.ifBlank { "—" },
+                ownerPhone      = ownerPhone.ifBlank { "—" },
+                microchip       = "—"
             )
-            
+
             Spacer(modifier = Modifier.height(48.dp))
-            
+
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier  = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Box(modifier = Modifier.weight(1f)) {
                     ButtonOutline(
-                        bgColor = MaterialTheme.colorScheme.surface,
+                        bgColor      = MaterialTheme.colorScheme.surface,
                         outlineColor = GreenDark,
-                        textColor = GreenDark,
-                        width = 200.dp,
-                        height = 56.dp,
-                        text = "Write Another",
-                        onclick = {nfcViewModel.reset()
-                                onAnother()}
+                        textColor    = GreenDark,
+                        width        = 200.dp,
+                        height       = 56.dp,
+                        text         = "Escribir otra",
+                        onclick      = {
+                            nfcViewModel.reset()
+                            onAnother()
+                        }
                     )
                 }
                 Box(modifier = Modifier.weight(1f)) {
                     ButtonDefault(
-                        bgColor = GreenDark,
+                        bgColor   = GreenDark,
                         textColor = Color.White,
-                        width = 200.dp,
-                        height = 56.dp,
-                        text = "Done",
-                        onclick = {
+                        width     = 200.dp,
+                        height    = 56.dp,
+                        text      = "Listo",
+                        onclick   = {
                             nfcViewModel.reset()
                             onDone()
                         }
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
@@ -160,6 +171,6 @@ fun TagWrittenScreen(
 @Composable
 fun TagWrittenScreenPreview() {
     PetCareTheme {
-        TagWrittenScreen()
+        TagWrittenScreen(ownerName = "Sarah Johnson", ownerPhone = "+57 300 000 0000")
     }
 }

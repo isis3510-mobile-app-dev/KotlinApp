@@ -2,7 +2,12 @@ package com.example.petcare.ui.components
 
 import com.example.petcare.ui.theme.*
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,14 +41,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.petcare.ui.theme.GreenLight
 
 @Composable
 fun FABMenuItem(
     label: String,
     icon: ImageVector,
     onClick: () -> Unit
-){
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -53,7 +57,7 @@ fun FABMenuItem(
                 .clip(RoundedCornerShape(50.dp))
                 .background(GreenLight)
                 .padding(horizontal = 12.dp, vertical = 6.dp)
-        ){
+        ) {
             Text(label, fontSize = 14.sp)
         }
 
@@ -79,42 +83,68 @@ fun ExpandableFAB(
     onAddVaccine: () -> Unit,
     onAddEvent: () -> Unit,
     onScanNFC: () -> Unit
-){
+) {
     var expanded by remember { mutableStateOf(false) }
 
     val fabItems = listOf(
-        Triple("Add Pet", Icons.Default.Pets, onAddPet),
-        Triple("Add Vaccine", Icons.Default.Vaccines, onAddVaccine) ,
-        Triple("Add Event", Icons.Default.CalendarMonth, onAddEvent),
-        Triple("Scan NFC", Icons.Outlined.Contactless, onScanNFC)
+        Triple("Add Pet",     Icons.Default.Pets,              onAddPet),
+        Triple("Add Vaccine", Icons.Default.Vaccines,          onAddVaccine),
+        Triple("Add Event",   Icons.Default.CalendarMonth,     onAddEvent),
+        Triple("Scan NFC",    Icons.Outlined.Contactless,      onScanNFC)
     )
 
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomEnd
-    ){
+    ) {
+        // ── Semi-transparent overlay ──────────────────────────────────────
+        AnimatedVisibility(
+            visible = expanded,
+            enter   = fadeIn(),
+            exit    = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    // Tapping the overlay closes the FAB without triggering navigation
+                    .clickable(
+                        indication            = null,
+                        interactionSource     = remember { MutableInteractionSource() }
+                    ) { expanded = false }
+            )
+        }
+
+        // ── FAB menu items + main button ──────────────────────────────────
         Column(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(16.dp)
         ) {
-            if (expanded){
+            if (expanded) {
                 fabItems.forEach { (label, icon, onClick) ->
-                    FABMenuItem(label=label, icon=icon, onClick=onClick)
+                    FABMenuItem(
+                        label   = label,
+                        icon    = icon,
+                        onClick = {
+                            expanded = false
+                            onClick()
+                        }
+                    )
                 }
             }
 
             FloatingActionButton(
-                onClick = { expanded = !expanded },
+                onClick        = { expanded = !expanded },
                 containerColor = GreenAccentDark,
-                contentColor = Color.White,
-                modifier = Modifier.size(56.dp),
-                shape = RoundedCornerShape(16.dp)
+                contentColor   = Color.White,
+                modifier       = Modifier.size(56.dp),
+                shape          = RoundedCornerShape(16.dp)
             ) {
                 Icon(
-                    imageVector = if (expanded) Icons.Default.Close else Icons.Default.Add,
+                    imageVector     = if (expanded) Icons.Default.Close else Icons.Default.Add,
                     contentDescription = "Expand",
-                    tint = Color.White
+                    tint            = Color.White
                 )
             }
         }
@@ -123,39 +153,11 @@ fun ExpandableFAB(
 
 @Preview(showBackground = false)
 @Composable
-fun ExpandableFabPreview(){
+fun ExpandableFabPreview() {
     ExpandableFAB(
-        onAddPet = {},
-        onAddEvent = {},
+        onAddPet     = {},
+        onAddEvent   = {},
         onAddVaccine = {},
-        onScanNFC = {}
+        onScanNFC    = {}
     )
-}
-
-@Preview(showBackground = false)
-@Composable
-fun ExpandableFABExpandedPreview() {
-    // expanded state forced to true for preview purposes
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.BottomEnd
-    ) {
-        Column(
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.padding(16.dp)
-        ) {
-            FABMenuItem("Add Pet", Icons.Default.Pets) {}
-            FABMenuItem("Add Vaccine", Icons.Default.Vaccines) {}
-            FABMenuItem("Add Event", Icons.Default.CalendarMonth) {}
-
-            FloatingActionButton(
-                onClick = {},
-                containerColor = GreenAccentDark,
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)
-            }
-        }
-    }
 }

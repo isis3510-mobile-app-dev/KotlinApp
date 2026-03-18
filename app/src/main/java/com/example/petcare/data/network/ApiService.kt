@@ -31,7 +31,7 @@ interface ApiService {
     suspend fun deleteMe(): Response<Unit>
 
     // Pets
-    @GET("pets/")
+    @GET("pets/mine/")
     suspend fun getPets(): Response<List<Pet>>
 
     @GET("pets/{petId}/")
