@@ -24,16 +24,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.petcare.R
 import com.example.petcare.data.model.Pet
 import com.example.petcare.ui.components.Filters
 import com.example.petcare.ui.components.PetDetailsCard
 import com.example.petcare.ui.components.SearchBar
 import com.example.petcare.ui.theme.GreenAccentDark
 import com.example.petcare.ui.theme.OffWhite
-import com.example.petcare.ui.theme.PetCareTheme
-import java.time.LocalDate
-import java.time.Period
 
 private fun calculateAge(birthDate: String?): Int {
     if (birthDate == null) return 0
@@ -132,7 +128,7 @@ fun PetsScreen(
                 weight = pet.weight ?: 0.0,
                 gender = pet.gender,
                 status = pet.status,
-                photoPath = R.drawable.pet,
+                photoPath = pet.photoUrl,
                 species = pet.species,
                 onPetSelect = { onPetSelected(pet.id) },
                 onVaccineSelect = { onVaccineSelected(pet.id) },

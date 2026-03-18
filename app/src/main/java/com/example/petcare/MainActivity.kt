@@ -108,7 +108,6 @@ class MainActivity : ComponentActivity() {
 
             // Fetch the logged-in user's profile once at startup
             LaunchedEffect(Unit) {
-                authViewModel.logout()
                 if (authViewModel.isLoggedIn) authViewModel.fetchUserProfile()
             }
 

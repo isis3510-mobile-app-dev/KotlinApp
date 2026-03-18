@@ -59,7 +59,7 @@ fun WriteNFCScreen(
         PetOption(
             id        = pet.id,
             name      = pet.name,
-            imageRes  = com.example.petcare.R.drawable.pet
+            photoUrl  = pet.photoUrl
         )
     }
 
