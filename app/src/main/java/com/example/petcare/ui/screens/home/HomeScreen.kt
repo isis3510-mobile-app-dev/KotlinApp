@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -72,7 +73,7 @@ fun HomeScreen(
             ) {
                 Text(
                     text = displayName,
-                    fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.Black
+                    fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     NfcButton(onClick = onNavigateToNfc)
@@ -111,7 +112,7 @@ fun HomeScreen(
                 ) {
                     Text(
                         "My Pets", fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold, color = Color.Black
+                        fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -167,7 +168,7 @@ fun HomeScreen(
                     ) {
                         Text(
                             "Active Events", fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold, color = Color.Black
+                            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             "View all", fontSize = 16.sp,

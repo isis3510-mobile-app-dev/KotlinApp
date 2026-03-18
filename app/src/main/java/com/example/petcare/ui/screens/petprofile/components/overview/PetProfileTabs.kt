@@ -37,7 +37,7 @@ fun PetProfileTabs(
 ) {
     TabRow(
         selectedTabIndex = selectedTabIndex,
-        containerColor = Color.White,
+        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
         contentColor = GreenDark,
         indicator = { tabPositions ->
             Box(

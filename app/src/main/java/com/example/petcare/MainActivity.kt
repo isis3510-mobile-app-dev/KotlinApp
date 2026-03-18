@@ -7,7 +7,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -115,17 +118,7 @@ class MainActivity : ComponentActivity() {
             CompositionLocalProvider(LocalAppThemeMode provides themeMode) {
                 PetCareTheme(themeMode = themeMode) {
                     Scaffold(
-                        containerColor = OffWhite,
-                        floatingActionButton = {
-                            if (currentRoute in bottomBarRoutes) {
-                                ExpandableFAB(
-                                    onAddPet     = { navController.navigate(Routes.AddPet1) },
-                                    onAddVaccine = { navController.navigate(Routes.AddVaccine1) },
-                                    onAddEvent   = { navController.navigate(Routes.AddEvent1) },
-                                    onScanNFC    = { navController.navigate(Routes.NfcScan) }
-                                )
-                            }
-                        },
+                        containerColor = MaterialTheme.colorScheme.background,
                         bottomBar = {
                             if (currentRoute in bottomBarRoutes) {
                                 NavBar(
@@ -143,11 +136,12 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     ) { innerPadding ->
-                        NavHost(
-                            navController    = navController,
-                            startDestination = if (authViewModel.isLoggedIn) Routes.Home else Routes.Onboarding1,
-                            modifier         = Modifier.padding(innerPadding)
-                        ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            NavHost(
+                                navController    = navController,
+                                startDestination = if (authViewModel.isLoggedIn) Routes.Home else Routes.Onboarding1,
+                                modifier         = Modifier.padding(innerPadding)
+                            ) {
 
                             // ── Onboarding ────────────────────────────────────────────────────────
                             composable(Routes.Onboarding1) {
@@ -467,11 +461,23 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         }
+                        
+                        if (currentRoute in bottomBarRoutes) {
+                            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                                ExpandableFAB(
+                                    onAddPet     = { navController.navigate(Routes.AddPet1) },
+                                    onAddVaccine = { navController.navigate(Routes.AddVaccine1) },
+                                    onAddEvent   = { navController.navigate(Routes.AddEvent1) },
+                                    onScanNFC    = { navController.navigate(Routes.NfcScan) }
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
     }
+}
 
     // ── NFC lifecycle ─────────────────────────────────────────────────────────
 

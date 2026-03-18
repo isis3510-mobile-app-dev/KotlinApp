@@ -60,7 +60,7 @@ fun CalendarScreen(
             style = MaterialTheme.typography.titleLarge,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Spacer(modifier = Modifier.height(24.dp))

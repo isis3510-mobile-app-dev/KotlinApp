@@ -64,7 +64,7 @@ fun PetCard(
 
             OutlinedCard(
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White,
+                    containerColor = MaterialTheme.colorScheme.surface,
                 ),
                 border = BorderStroke(1.dp, borderColor),
                 modifier = Modifier.size(61.33.dp)
@@ -80,7 +80,7 @@ fun PetCard(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
-                            tint = Color.Gray,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(28.dp)
                         )
 
@@ -133,7 +133,8 @@ fun PetCard(
                 .padding(2.dp)
                 .align(Alignment.BottomCenter),
             textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onBackground
         )
     }
 }

@@ -132,7 +132,8 @@ fun PetProfileScreen(
                 vaccineTabContent(
                     vaccines = displayedVaccines,
                     onFilterClick = viewModel::onVaccineFilterClick,
-                    onVaccineClick = viewModel::onVaccineClicked
+                    onVaccineClick = viewModel::onVaccineClicked,
+                    onAddVaccineClick = onAddVaccine
                 )
             }
             2 -> {

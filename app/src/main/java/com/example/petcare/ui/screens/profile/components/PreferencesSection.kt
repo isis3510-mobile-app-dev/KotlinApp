@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -29,7 +30,7 @@ fun PreferencesSection(
             SettingsListItem(
                 icon = Icons.Default.DarkMode,
                 iconBackgroundColor = Color.LightGray.copy(alpha = 0.2f),
-                iconTintColor = Color.DarkGray,
+                iconTintColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 title = "App Theme",
                 subtitle = "Mode: ${currentThemeMode.name}",
                 trailingContent = {
@@ -74,7 +75,7 @@ fun PreferencesSection(
             SettingsListItem(
                 icon = Icons.Default.WifiOff,
                 iconBackgroundColor = Color.LightGray.copy(alpha = 0.2f),
-                iconTintColor = Color.DarkGray,
+                iconTintColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                 title = "Offline Mode",
                 trailingContent = {
                     Switch(

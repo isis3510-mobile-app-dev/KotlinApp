@@ -40,14 +40,14 @@ fun EmptyStateView(
         Text(
             text = message,
             style = MaterialTheme.typography.labelMedium,
-            color = Color.DarkGray
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (buttonText != null) {
             Spacer(modifier = Modifier.height(24.dp))
             ButtonDefault(
                 bgColor = GreenDark,
                 textColor = Color.White,
-                width = 160.dp,
+                width = 200.dp,
                 height = 48.dp,
                 text = buttonText,
                 onclick = onButtonClick

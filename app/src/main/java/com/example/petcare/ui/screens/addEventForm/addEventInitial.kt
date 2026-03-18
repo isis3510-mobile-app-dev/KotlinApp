@@ -71,7 +71,7 @@ fun AddEventInitialForm(
                 )
             }
             ButtonDefault(
-                bgColor = MaterialTheme.colorScheme.secondary,
+                bgColor = com.example.petcare.ui.theme.GreenDark,
                 textColor = Color.White,
                 width = 342.dp, height = 56.dp, text = "Continue",
                 onclick = { if (state.title.isNotBlank() && state.date.isNotBlank()) onclick() }

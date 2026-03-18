@@ -27,8 +27,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.petcare.ui.theme.GreenDark
+import androidx.compose.material3.MaterialTheme
 import com.example.petcare.ui.theme.GreenLight
-import com.example.petcare.ui.theme.White
 
 @Composable
 fun CircularIconButton(
@@ -84,11 +84,11 @@ fun NfcButton(onClick: () -> Unit = {}) {
 }
 
 @Composable
-fun NotificationButton(hasNotifications: Boolean = true, onClick: () -> Unit = {}) {
+fun NotificationButton(hasNotifications: Boolean = false, onClick: () -> Unit = {}) {
     CircularIconButton(
         icon = Icons.Outlined.Notifications,
         contentDescription = "Notifications",
-        backgroundColor = White,
+        backgroundColor = MaterialTheme.colorScheme.surface,
         iconColor = GreenDark,
         onClick = onClick,
         hasNotificationDot = hasNotifications
