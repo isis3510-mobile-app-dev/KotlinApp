@@ -2,6 +2,7 @@ package com.example.petcare.ui.screens.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.model.UpdateUserRequest
 import com.example.petcare.data.repository.AuthRepository
 import com.example.petcare.data.repository.UserRepository
 import com.example.petcare.data.model.User
@@ -35,20 +36,14 @@ class AuthViewModel(
 
     val isLoggedIn get() = authRepository.currentUser != null
 
-    // ── Auth methods ──────────────────────────────────────────────
-
+    // Auth
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _state.value = AuthState.Loading
             authRepository.login(email, password).fold(
                 onSuccess = { firebaseUser ->
-                    // Espera el perfil antes de emitir Success
-                    // así la UI tiene los datos listos al navegar
-                    userRepository.getMe().fold(
-                        onSuccess  = { _userProfile.value = it },
-                        onFailure  = { android.util.Log.e("AUTH", "Profile error: ${it.message}") }
-                    )
                     _state.value = AuthState.Success(firebaseUser)
+                    fetchUserProfile()
                 },
                 onFailure = { _state.value = AuthState.Error(friendlyError(it)) }
             )
@@ -60,11 +55,8 @@ class AuthViewModel(
             _state.value = AuthState.Loading
             authRepository.register(email, password, fullName).fold(
                 onSuccess = { firebaseUser ->
-                    userRepository.getMe().fold(
-                        onSuccess  = { _userProfile.value = it },
-                        onFailure  = { android.util.Log.e("AUTH", "Profile error: ${it.message}") }
-                    )
-                    _state.value = AuthState.Success(firebaseUser)
+                   _state.value = AuthState.Success(firebaseUser)
+                    fetchUserProfile()
                 },
                 onFailure = { _state.value = AuthState.Error(friendlyError(it)) }
             )
@@ -76,21 +68,14 @@ class AuthViewModel(
             _state.value = AuthState.Loading
             authRepository.loginWithGoogle(idToken).fold(
                 onSuccess = { firebaseUser ->
-                    userRepository.getMe().fold(
-                        onSuccess  = { _userProfile.value = it },
-                        onFailure  = { android.util.Log.e("AUTH", "Profile error: ${it.message}") }
-                    )
                     _state.value = AuthState.Success(firebaseUser)
+                    fetchUserProfile()
                 },
                 onFailure = { _state.value = AuthState.Error(friendlyError(it)) }
             )
         }
     }
 
-    // ── Profile ───────────────────────────────────────────────────
-
-    // Llámalo desde MainActivity para refrescar el perfil
-    // en sesiones ya iniciadas (Firebase cachea la sesión)
     fun fetchUserProfile() {
         viewModelScope.launch {
             userRepository.getMe().fold(
@@ -100,8 +85,6 @@ class AuthViewModel(
         }
     }
 
-    // ── Session ───────────────────────────────────────────────────
-
     fun logout() {
         authRepository.logout()
         _userProfile.value = null
@@ -110,6 +93,26 @@ class AuthViewModel(
 
     fun resetState() {
         _state.value = AuthState.Idle
+    }
+
+    fun syncEmailWithBackend() {
+        viewModelScope.launch {
+            val currentFirebaseEmail = authRepository.currentUser?.email ?: return@launch
+            val mongoEmail = userRepository.getMe().getOrNull()?.email ?: return@launch
+
+            if (currentFirebaseEmail != mongoEmail) {
+                android.util.Log.d("EMAIL_SYNC",
+                    "Syncing email: Firebase=$currentFirebaseEmail, Mongo=$mongoEmail")
+                userRepository.updateMe(UpdateUserRequest(email = currentFirebaseEmail))
+                    .onSuccess { updatedUser ->
+                        _userProfile.value = updatedUser
+                        android.util.Log.d("EMAIL_SYNC", "MongoDB email updated successfully")
+                    }
+                    .onFailure {
+                        android.util.Log.e("EMAIL_SYNC", "Failed to sync: ${it.message}")
+                    }
+            }
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────

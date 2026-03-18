@@ -27,24 +27,28 @@ data class ProfileUiState(
     val offlineModeEnabled: Boolean = false,
     val currentThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val isSaving: Boolean = false,
-    val saveSuccess: Boolean = false
+    val saveSuccess: Boolean = false,
+
+    val emailUpdateSent: Boolean = false
     )
 
 sealed interface UiEvent {
     object NavigateToLogin : UiEvent
     object SaveSuccess : UiEvent
+    data class ShowMessage(val message: String) : UiEvent
 }
 
 class ProfileViewModel(
     private val repo: UserPreferencesRepository,
-    private val authRepository: AuthRepository = AuthRepository()
+    private val authRepository: AuthRepository = AuthRepository(),
+    private val initialUser: User? = null
 ) : ViewModel() {
 
     private val apiService = ApiClient.create(authRepository).create(ApiService::class.java)
     private val userRepository = UserRepository(apiService)
 
-    private val _userState = MutableStateFlow<Triple<User?, Boolean, String?>>(
-        Triple(null, false, null) // user, isLoading, error
+    private val _userState = MutableStateFlow(
+        Triple(initialUser, initialUser == null, null as String?)
     )
 
     val uiState: StateFlow<ProfileUiState> = combine(
@@ -67,7 +71,9 @@ class ProfileViewModel(
     val uiEvents = _uiEvents.receiveAsFlow()
 
     init {
-        loadUserProfile()
+        if (initialUser == null) {
+            loadUserProfile()
+        }
     }
 
     fun loadUserProfile() {
@@ -137,4 +143,59 @@ class ProfileViewModel(
                 }
         }
     }
+
+
+    // ProfileViewModel.kt
+    fun updateEmail(currentPassword: String, newEmail: String) {
+        val current = _userState.value.first ?: return
+        viewModelScope.launch {
+            _userState.value = Triple(current, true, null)
+            authRepository.updateEmail(currentPassword, newEmail)
+                .onSuccess { pendingEmail ->
+                    _userState.value = Triple(current, false, null)
+                    _uiEvents.send(UiEvent.ShowMessage(
+                        "Verification email sent to $pendingEmail. " +
+                                "MongoDB will update after you verify."
+                    ))
+                }
+                .onFailure { error ->
+                    _userState.value = Triple(current, false, null)
+                    val message = when {
+                        error.message?.contains("password") == true ||
+                                error.message?.contains("credential") == true ->
+                            "Incorrect password"
+                        error.message?.contains("already") == true ->
+                            "That email is already in use"
+                        error.message?.contains("formatted") == true ->
+                            "Invalid email format"
+                        error.message?.contains("Google") == true ->
+                            "Google accounts cannot change their email here"
+                        else -> error.message ?: "Error updating email"
+                    }
+                    _uiEvents.send(UiEvent.ShowMessage(message))
+                }
+        }
+    }
+
+    fun deleteAccount() {
+        val current = _userState.value.first ?: return
+        viewModelScope.launch {
+            _userState.value = Triple(current, true, null)
+
+            userRepository.deleteMe()
+                .onSuccess {
+                    authRepository.logout()
+                    _userState.value = Triple(null, false, null)
+                    _uiEvents.send(UiEvent.NavigateToLogin)
+                }
+                .onFailure { error ->
+                    _userState.value = Triple(current, false, null)
+                    _uiEvents.send(UiEvent.ShowMessage(
+                        error.message ?: "Error deleting account"
+                    ))
+                }
+        }
+    }
+
+
 }
