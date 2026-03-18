@@ -70,7 +70,7 @@ class PetProfileViewModel : ViewModel() {
             }
             VaccineRecord(
                 id          = v.vaccineId,
-                name        = v.vaccineId.take(8),  // until catalog lookup is added
+                name        = v.vaccineId.take(8),
                 provider    = v.administeredBy,
                 dateGiven   = v.dateGiven.take(10),
                 nextDueDate = v.nextDueDate?.take(10),

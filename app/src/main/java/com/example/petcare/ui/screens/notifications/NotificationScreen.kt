@@ -2,6 +2,7 @@ package com.example.petcare.ui.screens.notifications
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -37,7 +38,6 @@ fun NotificationsScreen(
         viewModel.load(filterPetId, filterPetName)
     }
 
-    val displayList = if (filterPetId != null) uiState.filteredByPet else uiState.grouped
     val title = if (filterPetName != null) "$filterPetName's alerts" else "All alerts"
 
     Scaffold(
@@ -60,25 +60,46 @@ fun NotificationsScreen(
                     contentAlignment = Alignment.Center
                 ) { CircularProgressIndicator() }
             }
-            displayList.isEmpty() -> {
-                Box(
-                    Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text  = "No alerts at the moment",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
             else -> {
                 LazyColumn(
-                    modifier            = Modifier.fillMaxSize().padding(padding),
-                    contentPadding      = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier              = Modifier.fillMaxSize().padding(padding),
+                    contentPadding        = PaddingValues(bottom = 24.dp, start = 16.dp, end = 16.dp),
+                    verticalArrangement   = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(displayList) { grouped ->
-                        GroupedSuggestionCard(grouped)
+
+                    if (uiState.availablePets.size > 1) {
+                        item {
+                            PetFilterRow(
+                                chips      = uiState.availablePets,
+                                selectedId = uiState.selectedPetId,
+                                onSelect   = viewModel::onPetFilterSelected
+                            )
+                        }
+                    }
+
+                    if (uiState.displayed.isEmpty()) {
+                        item {
+                            Box(
+                                modifier          = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 80.dp),
+                                contentAlignment  = Alignment.Center
+                            ) {
+                                Text(
+                                    text  = "No alerts for this pet",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    } else {
+                        items(
+                            items = uiState.displayed,
+                            key   = { it.vaccineTitle }
+                        ) { grouped ->
+                            GroupedSuggestionCard(
+                                grouped  = grouped
+                            )
+                        }
                     }
                 }
             }
@@ -87,7 +108,45 @@ fun NotificationsScreen(
 }
 
 @Composable
-private fun GroupedSuggestionCard(grouped: GroupedSuggestion) {
+private fun PetFilterRow(
+    chips: List<PetFilterChip>,
+    selectedId: String?,
+    onSelect: (String?) -> Unit
+) {
+    LazyRow(
+        contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Chip "All"
+        item {
+            FilterChip(
+                selected = selectedId == null,
+                onClick  = { onSelect(null) },
+                label    = {
+                    Text(
+                        text     = "All",
+                        fontSize = 13.sp
+                    )
+                }
+            )
+        }
+        items(chips) { chip ->
+            FilterChip(
+                selected = selectedId == chip.petId,
+                onClick  = { onSelect(chip.petId) },
+                label    = {
+                    Text(
+                        text     = "${chip.petName} (${chip.alertCount})",
+                        fontSize = 13.sp
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun GroupedSuggestionCard(grouped: GroupedSuggestion) {
     val (background, iconColor, icon) = grouped.uiConfig()
     val petsLabel = when (grouped.pets.size) {
         1    -> grouped.pets.first()

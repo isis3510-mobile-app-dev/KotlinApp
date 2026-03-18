@@ -24,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petcare.R
 import com.example.petcare.ui.components.*
 import com.example.petcare.ui.screens.auth.AuthViewModel
+import com.example.petcare.ui.screens.notifications.GroupedSuggestionCard
 import com.example.petcare.ui.theme.GreenDark
 
 @Composable
@@ -153,6 +154,46 @@ fun HomeScreen(
                             PetCard()
                         }
                     }
+                }
+            }
+        }
+
+        // ── Health Alerts ─────────────────────────────────────────────────────
+        if (homeState.topAlert != null) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text       = "Health Alerts",
+                            fontSize   = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color      = Color.Black
+                        )
+                        if (homeState.totalAlertCount >= 1) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier          = Modifier.clickable { onNavigateToNotifications() }
+                            ) {
+                                Text(
+                                    text       = "See all ${homeState.totalAlertCount}",
+                                    fontSize   = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color      = GreenDark
+                                )
+                                Icon(
+                                    imageVector        = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint               = GreenDark
+                                )
+                            }
+                        }
+                    }
+
+                    GroupedSuggestionCard(grouped = homeState.topAlert!!)
                 }
             }
         }

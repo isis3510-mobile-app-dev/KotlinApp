@@ -284,9 +284,9 @@ class MainActivity : ComponentActivity() {
                                 LaunchedEffect(petId) { petProfileViewModel.loadPet(petId) }
 
                                 PetProfileScreen(
-                                    petId       = petId,
-                                    onBack      = { navController.popBackStack() },
-                                    onAddEvent  = {
+                                    petId        = petId,
+                                    onBack       = { navController.popBackStack() },
+                                    onAddEvent   = {
                                         addEventViewModel.setPetId(petId)
                                         addEventViewModel.setOwnerId(
                                             authViewModel.userProfile.value?.id ?: ""
@@ -297,7 +297,10 @@ class MainActivity : ComponentActivity() {
                                         addVaccineViewModel.setPetId(petId)
                                         navController.navigate(Routes.AddVaccine1)
                                     },
-                                    onNFCScan = { navController.navigate(Routes.NfcScan) }
+                                    onNFCScan    = { navController.navigate(Routes.NfcScan) },
+                                    onSeeAllNotifications = { pid, petName ->
+                                        navController.navigate("notifications/$pid/$petName")
+                                    }
                                 )
                             }
 

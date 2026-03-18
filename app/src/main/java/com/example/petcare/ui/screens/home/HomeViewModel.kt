@@ -3,7 +3,9 @@ package com.example.petcare.ui.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.Event
+import com.example.petcare.data.model.GroupedSuggestion
 import com.example.petcare.data.model.Pet
+import com.example.petcare.data.model.PetSuggestion
 import com.example.petcare.data.repository.RepositoryProvider
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -18,7 +20,9 @@ data class HomeUiState(
     val pets: List<Pet> = emptyList(),
     val recentEvents: List<Event> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val topAlert: GroupedSuggestion? = null,
+    val totalAlertCount: Int = 0,
 )
 
 class HomeViewModel : ViewModel() {
@@ -46,10 +50,36 @@ class HomeViewModel : ViewModel() {
                         }
                     }.awaitAll().flatten()
 
+                    val allSuggestions: List<PetSuggestion> = pets.map { pet ->
+                        async {
+                            RepositoryProvider.petRepository
+                                .getPetSmart(pet.id)
+                                .getOrElse { emptyList() }
+                                .map { PetSuggestion(pet.id, pet.name, it) }
+                        }
+                    }.awaitAll().flatten()
+
+                    val criticalSuggestions = allSuggestions
+                        .filter { it.suggestion.type in listOf("danger", "warning") }
+
+                    val grouped = criticalSuggestions
+                        .groupBy { it.suggestion.title }
+                        .map { (title, items) ->
+                            GroupedSuggestion(
+                                vaccineTitle = title,
+                                type = if (items.any { it.suggestion.type == "danger" }) "danger" else "warning",
+                                pets = items.map { it.petName }.distinct(),
+                                message = items.first().suggestion.message
+                            )
+                        }
+                        .sortedBy { if (it.type == "danger") 0 else 1 }
+
                     _state.value = _state.value.copy(
-                        pets         = pets,
-                        recentEvents = eventResults.take(5),
-                        isLoading    = false
+                        pets            = pets,
+                        recentEvents    = eventResults.take(5),
+                        topAlert        = grouped.firstOrNull(),
+                        totalAlertCount = grouped.size,
+                        isLoading       = false
                     )
                 },
                 onFailure = { e ->

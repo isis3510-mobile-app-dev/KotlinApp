@@ -13,18 +13,27 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class NotificationsUiState(
-    val grouped: List<GroupedSuggestion> = emptyList(),
-    val filteredByPet: List<GroupedSuggestion> = emptyList(),
+    val allGrouped: List<GroupedSuggestion> = emptyList(),
+    val displayed: List<GroupedSuggestion> = emptyList(),
+    val availablePets: List<PetFilterChip> = emptyList(),
+    val selectedPetId: String? = null,
     val filterPetId: String? = null,
     val filterPetName: String? = null,
     val isLoading: Boolean = false,
     val error: String? = null
 )
 
+data class PetFilterChip(
+    val petId: String,
+    val petName: String,
+    val alertCount: Int
+)
+
 class NotificationsViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(NotificationsUiState(isLoading = true))
     val uiState: StateFlow<NotificationsUiState> = _uiState.asStateFlow()
+    private var allSuggestions: List<PetSuggestion> = emptyList()
 
     fun load(filterPetId: String? = null, filterPetName: String? = null) {
         viewModelScope.launch {
@@ -33,38 +42,59 @@ class NotificationsViewModel : ViewModel() {
             val pets = RepositoryProvider.petRepository.getPets()
                 .getOrElse { emptyList() }
 
-            val allSuggestions: List<PetSuggestion> = pets
+            allSuggestions = pets
                 .map { pet ->
                     async {
                         RepositoryProvider.petRepository
                             .getPetSmart(pet.id)
                             .getOrElse { emptyList() }
-                            .map { suggestion ->
-                                PetSuggestion(
-                                    petId      = pet.id,
-                                    petName    = pet.name,
-                                    suggestion = suggestion
-                                )
-                            }
+                            .map { PetSuggestion(pet.id, pet.name, it) }
                     }
                 }
                 .awaitAll()
                 .flatten()
 
-            val grouped = groupByVaccine(allSuggestions)
+            val chips = allSuggestions
+                .groupBy { it.petId }
+                .map { (petId, items) ->
+                    PetFilterChip(
+                        petId      = petId,
+                        petName    = items.first().petName,
+                        alertCount = items.size
+                    )
+                }
+                .sortedBy { it.petName }
 
-            val filtered = if (filterPetId != null) {
-                groupByVaccine(allSuggestions.filter { it.petId == filterPetId })
-            } else grouped
+            val initialFilter = filterPetId
+            val displayed = applyFilter(initialFilter)
 
             _uiState.value = NotificationsUiState(
-                grouped        = grouped,
-                filteredByPet  = filtered,
+                allGrouped     = groupByVaccine(allSuggestions),
+                displayed      = displayed,
+                availablePets  = chips,
+                selectedPetId  = initialFilter,
                 filterPetId    = filterPetId,
                 filterPetName  = filterPetName,
                 isLoading      = false
             )
+
         }
+    }
+
+    fun onPetFilterSelected(petId: String?) {
+        _uiState.value = _uiState.value.copy(
+            selectedPetId = petId,
+            displayed     = applyFilter(petId)
+        )
+    }
+
+    private fun applyFilter(petId: String?): List<GroupedSuggestion> {
+        val filtered = if (petId != null) {
+            allSuggestions.filter { it.petId == petId }
+        } else {
+            allSuggestions
+        }
+        return groupByVaccine(filtered)
     }
 
     private fun groupByVaccine(suggestions: List<PetSuggestion>): List<GroupedSuggestion> {
