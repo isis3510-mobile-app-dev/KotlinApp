@@ -41,6 +41,10 @@ object Routes {
     const val AddEvent1 = "addEvent1"
     const val AddEvent2 = "addEvent2"
     const val AddEvent3 = "addEvent3"
+
+    //Notifications
+    const val Notifications = "notifications"
+    const val NotficationPerPet = "notifications/{petId}/{petName}"
 }
 
 val bottomBarRoutes = setOf(
