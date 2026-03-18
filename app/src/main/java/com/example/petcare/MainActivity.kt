@@ -108,7 +108,10 @@ class MainActivity : ComponentActivity() {
 
             // Fetch the logged-in user's profile once at startup
             LaunchedEffect(Unit) {
-                if (authViewModel.isLoggedIn) authViewModel.fetchUserProfile()
+                if (authViewModel.isLoggedIn){
+                    authViewModel.fetchUserProfile()
+                    authViewModel.syncEmailWithBackend()
+                 }
             }
 
             CompositionLocalProvider(LocalAppThemeMode provides themeMode) {
@@ -249,9 +252,15 @@ class MainActivity : ComponentActivity() {
                                 CalendarScreen(onAddEvent = { navController.navigate(Routes.AddEvent1) })
                             }
                             composable(Routes.Profile) {
+                                LaunchedEffect(Unit) {
+                                    authViewModel.syncEmailWithBackend()
+                                }
+                                val userProfile by authViewModel.userProfile.collectAsStateWithLifecycle()
+
                                 val profileViewModel: ProfileViewModel = viewModel(
                                     factory = ViewModelFactory(
-                                        (applicationContext as PetCareApplication).userPreferencesRepository
+                                        repository = (applicationContext as PetCareApplication).userPreferencesRepository,
+                                        initialUser = userProfile
                                     )
                                 )
                                 ProfileScreen(

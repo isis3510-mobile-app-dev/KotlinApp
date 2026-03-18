@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.KeyboardType
+import com.example.petcare.ui.components.EditEmailBottomSheet
 import com.example.petcare.ui.components.EditFieldBottomSheet
 import com.example.petcare.ui.components.SettingsListItem
 import com.example.petcare.ui.components.SettingsSection
@@ -24,7 +25,7 @@ import com.example.petcare.ui.theme.SuccessContainer
 import com.example.petcare.ui.theme.SuccessContent
 
 
-private enum class ActiveSheet { NONE, NAME, PHONE }
+private enum class ActiveSheet { NONE, NAME, PHONE, EMAIL }
 
 @Composable
 fun AccountSection(
@@ -34,7 +35,8 @@ fun AccountSection(
     onSaveName: (String) -> Unit,
     onSavePhone: (String) -> Unit,
 
-    onEmailClick: () -> Unit,
+    onSaveEmail: (newEmail: String, currentPassword: String) -> Unit,
+    isLoading: Boolean = false,
 ) {
     var activeSheet by remember { mutableStateOf(ActiveSheet.NONE) }
 
@@ -70,7 +72,7 @@ fun AccountSection(
                         tint = GrayText
                     )
                 },
-                onClick = onEmailClick
+                onClick = {activeSheet = ActiveSheet.EMAIL}
             )
         },
         {
@@ -111,6 +113,15 @@ fun AccountSection(
             onDismiss = { activeSheet = ActiveSheet.NONE },
             onSave = {
                 onSavePhone(it)
+                activeSheet = ActiveSheet.NONE
+            }
+        )
+        ActiveSheet.EMAIL -> EditEmailBottomSheet(
+            currentEmail = userEmail,
+            isLoading = isLoading,
+            onDismiss = { activeSheet = ActiveSheet.NONE },
+            onSave = { newEmail, password ->
+                onSaveEmail(newEmail, password)
                 activeSheet = ActiveSheet.NONE
             }
         )
