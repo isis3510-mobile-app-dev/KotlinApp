@@ -37,6 +37,7 @@ fun CalendarWidget(
     currentMonth: YearMonth,
     startDate: LocalDate,
     endDate: LocalDate,
+    markedDates: Set<LocalDate> = emptySet(),
     onDateSelected: (LocalDate) -> Unit,
     onMonthChanged: (YearMonth) -> Unit
 ) {
@@ -105,6 +106,7 @@ fun CalendarWidget(
                                     date = date,
                                     startDate = startDate,
                                     endDate = endDate,
+                                    hasMarker = date in markedDates,
                                     onDateSelected = onDateSelected
                                 )
                                 currentDay++
@@ -150,6 +152,7 @@ private fun CalendarDay(
     date: LocalDate,
     startDate: LocalDate,
     endDate: LocalDate,
+    hasMarker: Boolean = false,
     onDateSelected: (LocalDate) -> Unit
 ) {
     val isStart = date == startDate
@@ -164,10 +167,8 @@ private fun CalendarDay(
             .background(
                 when {
                     isSingleSelection -> Color.Transparent
-                    isInRange -> GreenAccentLight // Light green for middle
-                    isStart -> GreenAccentLight.copy(alpha = 0f) // We'll handle this in the Box below to not overdraw if we want rounded edges
-                    isEnd -> GreenAccentLight.copy(alpha = 0f)
-                    else -> Color.Transparent
+                    isInRange         -> GreenAccentLight
+                    else              -> Color.Transparent
                 }
             )
     ) {
@@ -198,13 +199,25 @@ private fun CalendarDay(
             .clickable { onDateSelected(date) },
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = date.dayOfMonth.toString(),
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontWeight = if (isStart || isEnd) FontWeight.Bold else FontWeight.Normal
-            ),
-            color = if (isStart || isEnd) Color.White else Color.Black
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text  = date.dayOfMonth.toString(),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = if (isStart || isEnd) FontWeight.Bold else FontWeight.Normal
+                ),
+                color = if (isStart || isEnd) Color.White else Color.Black
+            )
+            // ↓ Dot marker for days with events or vaccines
+            if (hasMarker && !isStart && !isEnd) {
+                Spacer(modifier = Modifier.height(1.dp))
+                Box(
+                    modifier = Modifier
+                        .size(4.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(GreenDark)
+                )
+            }
+        }
     }
 }
 

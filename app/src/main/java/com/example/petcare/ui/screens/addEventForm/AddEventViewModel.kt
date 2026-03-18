@@ -5,19 +5,18 @@ import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.EventType
 import com.example.petcare.data.repository.RepositoryProvider
-import com.google.android.play.integrity.internal.v
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class AddEventFormState(
-    val petId: String   = "",   // set from navigation
-    val ownerId: String = "",   // set from AuthViewModel.userProfile.id
+    val petId: String   = "",
+    val ownerId: String = "",
     // Step 1
-    val title: String     = "",
-    val date: String      = "",  // dd/MM/yyyy
-    val time: String      = "",
+    val title: String        = "",
+    val date: String         = "",
+    val time: String         = "",
     val eventType: EventType = EventType.CHECKUP,
     // Step 2
     val description: String = "",
@@ -25,7 +24,7 @@ data class AddEventFormState(
     val provider: String    = "",
     val clinic: String      = "",
     // Step 3
-    val followUpDate: String    = "",
+    val followUpDate: String     = "",
     val reminderEnabled: Boolean = false,
     // UI
     val isLoading: Boolean = false,
@@ -42,7 +41,7 @@ class AddEventViewModel : ViewModel() {
     fun setTitle(v: String)            { _state.value = _state.value.copy(title = v) }
     fun setDate(v: String)             { _state.value = _state.value.copy(date = v) }
     fun setTime(v: String)             { _state.value = _state.value.copy(time = v) }
-    fun setEventType(v: EventType)        { _state.value = _state.value.copy(eventType = v) }
+    fun setEventType(v: EventType)     { _state.value = _state.value.copy(eventType = v) }
     fun setDescription(v: String)      { _state.value = _state.value.copy(description = v) }
     fun setPrice(v: String)            { _state.value = _state.value.copy(price = v) }
     fun setProvider(v: String)         { _state.value = _state.value.copy(provider = v) }
@@ -50,7 +49,6 @@ class AddEventViewModel : ViewModel() {
     fun setFollowUpDate(v: String)     { _state.value = _state.value.copy(followUpDate = v) }
     fun setReminderEnabled(v: Boolean) { _state.value = _state.value.copy(reminderEnabled = v) }
 
-    /** Calls POST /api/events/ and invokes [onSuccess] with the new eventId. */
     fun submit(onSuccess: (eventId: String) -> Unit) {
         val s = _state.value
         if (s.petId.isBlank() || s.title.isBlank() || s.date.isBlank()) {
@@ -63,13 +61,16 @@ class AddEventViewModel : ViewModel() {
                 petId       = s.petId,
                 ownerId     = s.ownerId,
                 title       = s.title.trim(),
-                eventType   = s.eventType,
+                // ↓ Send the serialized lowercase string the backend expects
+                eventType   = s.eventType.name.lowercase(),
                 date        = toIso(s.date),
                 price       = s.price.toDoubleOrNull(),
                 provider    = s.provider.trim(),
                 clinic      = s.clinic.trim(),
                 description = s.description.trim(),
-                followUpDate = s.followUpDate.takeIf { it.isNotBlank() }?.let { toIso(it) }
+                followUpDate = s.followUpDate
+                    .takeIf { it.isNotBlank() }
+                    ?.let { toIso(it) }
             )
             RepositoryProvider.eventRepository.createEvent(request).fold(
                 onSuccess = { event ->
@@ -77,7 +78,10 @@ class AddEventViewModel : ViewModel() {
                     onSuccess(event.id)
                 },
                 onFailure = { e ->
-                    _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Error")
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error     = e.message ?: "Error"
+                    )
                 }
             )
         }

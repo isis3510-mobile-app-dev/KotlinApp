@@ -67,7 +67,7 @@ class PetProfileViewModel : ViewModel() {
                 else        -> VaccineFilterStatus.COMPLETED
             }
             VaccineRecord(
-                id          = v.vaccineId,
+                id          = v.id,
                 name        = v.vaccineId.take(8),  // until catalog lookup is added
                 provider    = v.administeredBy,
                 dateGiven   = v.dateGiven.take(10),
@@ -142,6 +142,15 @@ class PetProfileViewModel : ViewModel() {
             if (nowMonth < birthMonth) years--
             "$years yrs"
         } catch (_: Exception) { "" }
+    }
+
+    fun deletePet(petId: String, onNavigatedBack: () -> Unit) {
+        viewModelScope.launch {
+            RepositoryProvider.petRepository.deletePet(petId).fold(
+                onSuccess = { onNavigatedBack() },
+                onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message) }
+            )
+        }
     }
 }
 
