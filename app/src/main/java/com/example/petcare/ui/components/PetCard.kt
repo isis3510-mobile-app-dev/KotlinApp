@@ -35,7 +35,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
-
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 
 enum class PetStatus {
     SUCCESS,
@@ -45,6 +48,7 @@ enum class PetStatus {
 
 @Composable
 fun PetCard(
+    photoUrl: String? = null,
     image: Painter? = null,
     text: String = "Add pet",
     status: PetStatus = PetStatus.DEFAULT
@@ -54,51 +58,65 @@ fun PetCard(
     else
         MaterialTheme.colorScheme.primary
 
-    Box(modifier = Modifier.size(85.dp)) {
+    val context = LocalContext.current
 
+    Box(modifier = Modifier.size(85.dp)) {
         Box(
             modifier = Modifier
                 .size(65.dp)
                 .align(Alignment.TopCenter)
         ) {
-
             OutlinedCard(
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White,
-                ),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
                 border = BorderStroke(1.dp, borderColor),
                 modifier = Modifier.size(61.33.dp)
             ) {
-
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-
-                    if (status == PetStatus.DEFAULT) {
-
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            tint = Color.Gray,
-                            modifier = Modifier.size(28.dp)
-                        )
-
-                    } else {
-
-                        Image(
-                            painter = image!!,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-
+                    when {
+                        status == PetStatus.DEFAULT -> {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        !photoUrl.isNullOrBlank() -> {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(Uri.parse(photoUrl))
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = text,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                                error = painterResource(R.drawable.pet)
+                            )
+                        }
+                        image != null -> {
+                            Image(
+                                painter = image,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        else -> {
+                            Image(
+                                painter = painterResource(R.drawable.pet),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
             }
 
             if (status != PetStatus.DEFAULT) {
-
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -108,7 +126,6 @@ fun PetCard(
                         .background(MaterialTheme.colorScheme.surface),
                     contentAlignment = Alignment.Center
                 ) {
-
                     Icon(
                         imageVector = when (status) {
                             PetStatus.SUCCESS -> Icons.Default.CheckCircle

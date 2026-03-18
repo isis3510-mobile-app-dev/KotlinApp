@@ -3,7 +3,6 @@ package com.example.petcare.ui.screens.petprofile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.Event
-import com.example.petcare.data.model.EventType
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.model.SuggestionDto
 import com.example.petcare.data.repository.RepositoryProvider
@@ -33,7 +32,8 @@ data class PetProfileUiState(
     val suggestions: List<SuggestionDto> = emptyList(),
     val vaccineFilter: VaccineFilterStatus? = null,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val photoUrl: String? = null
 )
 
 class PetProfileViewModel : ViewModel() {
@@ -115,7 +115,8 @@ class PetProfileViewModel : ViewModel() {
             events               = events,
             suggestions = suggestions,
             isLoading            = false,
-            error                = null
+            error                = null,
+            photoUrl             = pet.photoUrl
         )
 
     }
