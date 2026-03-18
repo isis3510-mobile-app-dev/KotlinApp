@@ -3,27 +3,21 @@ package com.example.petcare.ui.screens.addEventForm
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.petcare.data.model.EventType
 import com.example.petcare.ui.components.*
+import com.example.petcare.ui.theme.GrayBorder
+import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.PetCareTheme
-import com.example.petcare.ui.theme.RobotoBold
-import com.example.petcare.ui.theme.RobotoRegular
 
-
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEventInitialForm(
     onclick: () -> Unit,
@@ -31,6 +25,20 @@ fun AddEventInitialForm(
     viewModel: AddEventViewModel
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // Local dropdown state
+    var dropdownExpanded by remember { mutableStateOf(false) }
+
+    val eventTypeOptions = listOf(
+        "Checkup"  to EventType.CHECKUP,
+        "Dental"   to EventType.DENTAL,
+        "Surgery"  to EventType.SURGERY,
+        "Vaccine"  to EventType.VACCINE,
+        "Other"    to EventType.OTHER
+    )
+
+    val selectedLabel = eventTypeOptions
+        .find { it.second == state.eventType }?.first ?: "Checkup"
 
     PetCareTheme {
         Column(
@@ -48,45 +56,87 @@ fun AddEventInitialForm(
                 Stepper(currentStep = 1, stepLabels = listOf("Basic Info", "Details", "Overview"))
 
                 TextFieldComponent(
-                    name = "Event Name *", label = "e.g. Doctor's Appointment",
-                    value = state.title, onValueChange = viewModel::setTitle
+                    name          = "Event Name *",
+                    label         = "e.g. Doctor's Appointment",
+                    value         = state.title,
+                    onValueChange = viewModel::setTitle
                 )
+
                 DateTextField(name = "Date *", onDateSelected = viewModel::setDate)
+
                 TextFieldComponent(
-                    name = "Time", label = "e.g. 9:00 am",
-                    value = state.time, onValueChange = viewModel::setTime
+                    name          = "Time",
+                    label         = "e.g. 9:00 am",
+                    value         = state.time,
+                    onValueChange = viewModel::setTime
                 )
-                DropdownSelector(
-                    title = "Event Type",
-                    options = listOf("checkup", "dental", "surgery", "vaccine", "other"),
-                    onOptionSelected = { selectedString ->
-                        // Convert the String back to the EventType Enum safely
-                        val enumValue = try {
-                            com.example.petcare.data.model.EventType.valueOf(selectedString.uppercase())
-                        } catch (e: Exception) {
-                            com.example.petcare.data.model.EventType.OTHER
+
+                // ── Controlled EventType dropdown ────────────────────────
+                Column {
+                    Text(
+                        text  = "Event Type *",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+
+                    ExposedDropdownMenuBox(
+                        expanded          = dropdownExpanded,
+                        onExpandedChange  = { dropdownExpanded = !dropdownExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value         = selectedLabel,
+                            onValueChange = {},
+                            readOnly      = true,
+                            trailingIcon  = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded)
+                            },
+                            shape    = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
+                            colors   = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor   = MaterialTheme.colorScheme.secondary,
+                                unfocusedBorderColor = GrayBorder,
+                                focusedTextColor     = Color.Black,
+                                unfocusedTextColor   = Color.Black
+                            )
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded          = dropdownExpanded,
+                            onDismissRequest  = { dropdownExpanded = false }
+                        ) {
+                            eventTypeOptions.forEach { (label, type) ->
+                                DropdownMenuItem(
+                                    text    = { Text(label) },
+                                    onClick = {
+                                        viewModel.setEventType(type)
+                                        dropdownExpanded = false
+                                    }
+                                )
+                            }
                         }
-                        viewModel.setEventType(enumValue)
                     }
-                )
+                }
             }
+
             ButtonDefault(
-                bgColor = MaterialTheme.colorScheme.secondary,
+                bgColor   = MaterialTheme.colorScheme.secondary,
                 textColor = Color.White,
-                width = 342.dp, height = 56.dp, text = "Continue",
-                onclick = { if (state.title.isNotBlank() && state.date.isNotBlank()) onclick() }
+                width     = 342.dp,
+                height    = 56.dp,
+                text      = "Continue",
+                onclick   = {
+                    if (state.title.isNotBlank() && state.date.isNotBlank()) onclick()
+                }
             )
         }
     }
 }
 
-
 @Preview
 @Composable
-fun AddEventInitialFormPreview(){
-    AddEventInitialForm(
-        onclick = {},
-        onBack = {},
-        viewModel = AddEventViewModel()
-    )
+fun AddEventInitialFormPreview() {
+    AddEventInitialForm(onclick = {}, onBack = {}, viewModel = AddEventViewModel())
 }

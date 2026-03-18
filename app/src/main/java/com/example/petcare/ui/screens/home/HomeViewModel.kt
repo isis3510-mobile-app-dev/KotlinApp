@@ -6,6 +6,7 @@ import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.GroupedSuggestion
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.model.PetSuggestion
+import com.example.petcare.data.model.Vaccination
 import com.example.petcare.data.repository.RepositoryProvider
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -14,11 +15,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+data class UpcomingVaccine(
+    val vaccineName: String,
+    val petName: String,
+    val petId: String,
+    val dueDate: String,
+    val daysUntilDue: Long
+)
+
 data class HomeUiState(
     val userName: String = "",
     val userId: String = "",
     val pets: List<Pet> = emptyList(),
     val recentEvents: List<Event> = emptyList(),
+    val upcomingVaccines: List<UpcomingVaccine> = emptyList(),
+    val overdueVaccinesCount: Int = 0,
     val isLoading: Boolean = false,
     val error: String? = null,
     val topAlert: GroupedSuggestion? = null,
@@ -30,7 +41,6 @@ class HomeViewModel : ViewModel() {
     private val _state = MutableStateFlow(HomeUiState())
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
 
-    /** Set once the AuthViewModel resolves the logged-in user's profile. */
     fun setUserInfo(name: String, userId: String) {
         _state.value = _state.value.copy(userName = name, userId = userId)
     }
@@ -41,7 +51,7 @@ class HomeViewModel : ViewModel() {
 
             RepositoryProvider.petRepository.getPets().fold(
                 onSuccess = { pets ->
-                    // Fetch events for every pet in parallel
+                    // Events for all pets in parallel
                     val eventResults = pets.map { pet ->
                         async {
                             RepositoryProvider.eventRepository
