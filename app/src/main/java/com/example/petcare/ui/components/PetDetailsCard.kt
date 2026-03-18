@@ -28,6 +28,7 @@ import com.example.petcare.R
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -52,6 +53,7 @@ import com.example.petcare.ui.theme.WarningContent
 import com.example.petcare.ui.theme.ErrorContent
 import com.example.petcare.ui.theme.GrayBackground
 import androidx.compose.ui.platform.LocalContext
+import com.example.petcare.util.UrlUtils
 
 
 
@@ -93,7 +95,6 @@ fun PetDetailsCard(
     onLostSelect: () -> Unit,
     onNFCSelect: () -> Unit
 ) {
-    Log.d("PetPhoto", "photoPath: $photoUrl")
     val context = LocalContext.current
     val (statusColor, textStatusColor) = when (status.lowercase()) {
         "healthy" -> Pair(SuccessContainer, SuccessContent)
@@ -129,7 +130,7 @@ fun PetDetailsCard(
                 if (photoUrl != null && photoUrl.isNotBlank()) {
                     AsyncImage(
                         model = ImageRequest.Builder(context)
-                            .data(Uri.parse(photoUrl))
+                            .data(UrlUtils.resolveUrl(photoUrl))
                             .crossfade(true)
                             .build(),
                         contentDescription = petName,
@@ -251,6 +252,7 @@ fun PetDetailsCardPreview () {
         weight = 20.0,
         gender = "Male",
         status = "Healthy",
+        photoUrl = null,
         species = "DOG",
         onPetSelect = {},
         onVaccineSelect = {},
@@ -268,6 +270,7 @@ fun PetDetailsCardPreview2 () {
         weight = 20.0,
         gender = "Male",
         status = "Vaccine due",
+        photoUrl = null,
         species = "CAT",
         onPetSelect = {},
         onVaccineSelect = {},

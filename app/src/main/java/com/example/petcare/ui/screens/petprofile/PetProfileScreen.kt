@@ -169,14 +169,6 @@ fun PetProfileScreen(
                     onAddVaccineClick = onAddVaccine
                 )
             }
-            2 -> {
-                eventTabContent(
-                    events = uiState.events,
-                    onEventClick = { /* Navigate to event details */ },
-                    onAddEventClick = onAddEvent
-                )
-            }
-
             2 -> eventTabContent(
                 events         = uiState.events,
                 onEventClick   = { eventId -> onNavigateToEventDetail(petId, eventId) },

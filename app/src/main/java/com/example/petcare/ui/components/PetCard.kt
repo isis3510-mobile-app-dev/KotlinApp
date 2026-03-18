@@ -16,7 +16,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.example.petcare.R
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.WarningYellow
@@ -40,6 +39,7 @@ import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.petcare.util.UrlUtils
 
 enum class PetStatus {
     SUCCESS,
@@ -91,7 +91,7 @@ fun PetCard(
                     } else {
                         if (photoUrl != null) {
                             AsyncImage(
-                                model = photoUrl,
+                                model = UrlUtils.resolveUrl(photoUrl),
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()

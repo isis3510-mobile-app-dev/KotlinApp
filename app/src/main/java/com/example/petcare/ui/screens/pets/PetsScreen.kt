@@ -111,7 +111,7 @@ fun PetsScreen(
                 weight = pet.weight ?: 0.0,
                 gender = pet.gender,
                 status = pet.status,
-                photoPath = pet.photoUrl,
+                photoUrl = pet.photoUrl,
                 species = pet.species,
                 onPetSelect = { onPetSelected(pet.id) },
                 onVaccineSelect = { onVaccineSelected(pet.id) },

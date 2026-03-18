@@ -165,7 +165,7 @@ fun HomeScreen(
                             "Upcoming Vaccines",
                             fontSize   = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color      = Color.Black
+                            color      = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             "See all",
@@ -181,7 +181,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(Color.White)
+                                .background(MaterialTheme.colorScheme.surface)
                                 .clickable {
                                     // Navigate to pet profile vaccines tab
                                     onNavigateToPetProfile(vacc.petId)
