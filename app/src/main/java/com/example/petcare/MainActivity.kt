@@ -22,7 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.petcare.data.nfc.NfcManager
-import com.example.petcare.data.preferences.AppThemeViewModel
+import com.example.petcare.ui.preferences.AppThemeViewModel
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.components.ExpandableFAB
 import com.example.petcare.ui.components.NavBar
@@ -102,9 +102,9 @@ class MainActivity : ComponentActivity() {
             // ── ViewModels whose lifetime is tied to this Activity ─────────────
             val authViewModel: AuthViewModel = viewModel()
             val homeViewModel: HomeViewModel = viewModel()
-            val addPetViewModel:     AddPetViewModel     = viewModel()
+            val addPetViewModel: AddPetViewModel = viewModel()
             val addVaccineViewModel: AddVaccineViewModel = viewModel()
-            val addEventViewModel:   AddEventViewModel   = viewModel()
+            val addEventViewModel: AddEventViewModel = viewModel()
 
             // Fetch the logged-in user's profile once at startup
             LaunchedEffect(Unit) {
@@ -234,6 +234,10 @@ class MainActivity : ComponentActivity() {
                                 PetsScreen(
                                     pets      = uiState.pets,
                                     isLoading = uiState.isLoading,
+                                    searchQuery = uiState.searchQuery,
+                                    onSearchQueryChange = petsViewModel::updateSearchQuery,
+                                    selectedFilter = uiState.selectedFilter,
+                                    onFilterSelected = petsViewModel::updateSelectedFilter,
                                     onPetSelected = { petId ->
                                         navController.navigate("petProfile/$petId")
                                     },

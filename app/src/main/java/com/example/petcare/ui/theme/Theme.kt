@@ -53,6 +53,10 @@ fun PetCareTheme(
         AppThemeMode.DARK -> true
         AppThemeMode.LIGHT -> false
         AppThemeMode.SYSTEM -> isSystemInDarkTheme()
+        AppThemeMode.ADAPTIVE -> {
+            val hour = java.time.LocalTime.now().hour
+            hour < 6 || hour >= 18
+        }
     }
     
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme

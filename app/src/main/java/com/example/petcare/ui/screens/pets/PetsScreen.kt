@@ -14,10 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
@@ -31,7 +27,6 @@ import com.example.petcare.ui.components.PetDetailsCard
 import com.example.petcare.ui.components.SearchBar
 import com.example.petcare.ui.theme.GreenAccentDark
 import com.example.petcare.ui.theme.OffWhite
-import com.example.petcare.ui.theme.PetCareTheme
 import java.time.LocalDate
 import java.time.Period
 
@@ -48,30 +43,15 @@ fun PetsScreen(
     pets: List<Pet>,
     isLoading: Boolean = false,
     paddingValues: PaddingValues = PaddingValues(0.dp),
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
+    selectedFilter: String = "All Pets",
+    onFilterSelected: (String) -> Unit = {},
     onPetSelected: (String) -> Unit,
     onVaccineSelected: (String) -> Unit = {},
     onLostModeSelected: (String) -> Unit = {},
-    onNfcSelected: (String) -> Unit = {} // Added String parameter to know WHICH pet to write for
+    onNfcSelected: (String) -> Unit = {}
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedFilter by remember { mutableStateOf("All Pets") }
-
-    // 1. Logic: Filter the list based on Search and Filter chips
-    val filteredPets = remember(searchQuery, selectedFilter, pets) {
-        pets.filter { pet ->
-            val matchesSearch = pet.name.contains(searchQuery, ignoreCase = true) ||
-                    pet.breed.contains(searchQuery, ignoreCase = true)
-
-            val matchesFilter = when (selectedFilter) {
-                "Healthy" -> pet.status.equals("healthy", ignoreCase = true)
-                "Vaccine Due" -> pet.status.equals("vaccine due", ignoreCase = true)
-                "Lost" -> pet.status.equals("lost", ignoreCase = true)
-                else -> true
-            }
-            matchesSearch && matchesFilter
-        }
-    }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -98,7 +78,7 @@ fun PetsScreen(
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "${filteredPets.size} pets",
+                        text = "${pets.size} pets",
                         color = GreenAccentDark,
                         fontSize = 12.sp
                     )
@@ -110,7 +90,7 @@ fun PetsScreen(
         item {
             SearchBar(
                 query = searchQuery,
-                onQueryChange = { searchQuery = it }
+                onQueryChange = onSearchQueryChange
             )
         }
 
@@ -119,12 +99,12 @@ fun PetsScreen(
             Filters(
                 filters = listOf("All Pets", "Healthy", "Vaccine Due", "Lost"),
                 selectedFilter = selectedFilter,
-                onFilterSelected = { selectedFilter = it }
+                onFilterSelected = onFilterSelected
             )
         }
 
         // 2. Display filtered results
-        items(filteredPets, key = { it.id }) { pet ->
+        items(pets, key = { it.id }) { pet ->
             PetDetailsCard(
                 petName = pet.name,
                 breed = pet.breed,
@@ -137,12 +117,12 @@ fun PetsScreen(
                 onPetSelect = { onPetSelected(pet.id) },
                 onVaccineSelect = { onVaccineSelected(pet.id) },
                 onLostSelect = { onLostModeSelected(pet.id) },
-                onNFCSelect = { onNfcSelected(pet.id) } // Pass the ID to the NFC flow
+                onNFCSelect = { onNfcSelected(pet.id) }
             )
         }
 
-        // Empty State (If no pets found)
-        if (filteredPets.isEmpty() && !isLoading) {
+        // Empty State
+        if (pets.isEmpty() && !isLoading) {
             item {
                 Box(Modifier
                     .fillMaxWidth()

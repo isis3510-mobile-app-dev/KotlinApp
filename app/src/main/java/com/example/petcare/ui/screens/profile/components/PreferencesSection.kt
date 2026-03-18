@@ -30,21 +30,22 @@ fun PreferencesSection(
                 icon = Icons.Default.DarkMode,
                 iconBackgroundColor = Color.LightGray.copy(alpha = 0.2f),
                 iconTintColor = Color.DarkGray,
-                title = "Dark Mode",
+                title = "App Theme",
+                subtitle = "Mode: ${currentThemeMode.name}",
                 trailingContent = {
-                    Switch(
-                        checked = currentThemeMode == AppThemeMode.DARK,
-                        onCheckedChange = { isDark ->
-                            val mode = if (isDark) AppThemeMode.DARK else AppThemeMode.LIGHT
-                            onThemeModeChanged(mode)
-                        },
-                        colors = androidx.compose.material3.SwitchDefaults.colors(
-                            checkedTrackColor = GreenDark,
-                            uncheckedTrackColor = GrayBorder,
-                            checkedThumbColor = Color.White
-                        ),
-                        modifier = Modifier.semantics { contentDescription = "Toggle Dark Mode" }
-                    )
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            val nextMode = when (currentThemeMode) {
+                                AppThemeMode.SYSTEM -> AppThemeMode.LIGHT
+                                AppThemeMode.LIGHT -> AppThemeMode.DARK
+                                AppThemeMode.DARK -> AppThemeMode.ADAPTIVE
+                                AppThemeMode.ADAPTIVE -> AppThemeMode.SYSTEM
+                            }
+                            onThemeModeChanged(nextMode)
+                        }
+                    ) {
+                        androidx.compose.material3.Text("CHANGE", color = GreenDark)
+                    }
                 }
             )
         },
