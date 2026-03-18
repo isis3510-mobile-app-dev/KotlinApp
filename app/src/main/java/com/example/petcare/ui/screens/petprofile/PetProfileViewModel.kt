@@ -3,7 +3,6 @@ package com.example.petcare.ui.screens.petprofile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.Event
-import com.example.petcare.data.model.EventType
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
@@ -31,7 +30,8 @@ data class PetProfileUiState(
     val vaccines: List<VaccineRecord> = emptyList(),
     val vaccineFilter: VaccineFilterStatus? = null,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val photoUrl: String? = null
 )
 
 class PetProfileViewModel : ViewModel() {
@@ -67,7 +67,7 @@ class PetProfileViewModel : ViewModel() {
                 else        -> VaccineFilterStatus.COMPLETED
             }
             VaccineRecord(
-                id          = v.vaccineId,
+                id          = v.id,
                 name        = v.vaccineId.take(8),  // until catalog lookup is added
                 provider    = v.administeredBy,
                 dateGiven   = v.dateGiven.take(10),
@@ -105,7 +105,8 @@ class PetProfileViewModel : ViewModel() {
             vaccines             = vaccines,
             events               = events,
             isLoading            = false,
-            error                = null
+            error                = null,
+            photoUrl             = pet.photoUrl
         )
     }
 
@@ -142,6 +143,15 @@ class PetProfileViewModel : ViewModel() {
             if (nowMonth < birthMonth) years--
             "$years yrs"
         } catch (_: Exception) { "" }
+    }
+
+    fun deletePet(petId: String, onNavigatedBack: () -> Unit) {
+        viewModelScope.launch {
+            RepositoryProvider.petRepository.deletePet(petId).fold(
+                onSuccess = { onNavigatedBack() },
+                onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message) }
+            )
+        }
     }
 }
 

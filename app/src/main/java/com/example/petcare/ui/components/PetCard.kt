@@ -35,7 +35,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
-
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 
 enum class PetStatus {
     SUCCESS,
@@ -45,6 +48,7 @@ enum class PetStatus {
 
 @Composable
 fun PetCard(
+    photoUrl: String? = null,
     image: Painter? = null,
     text: String = "Add pet",
     status: PetStatus = PetStatus.DEFAULT
@@ -54,14 +58,14 @@ fun PetCard(
     else
         MaterialTheme.colorScheme.primary
 
-    Box(modifier = Modifier.size(85.dp)) {
+    val context = LocalContext.current
 
+    Box(modifier = Modifier.size(85.dp)) {
         Box(
             modifier = Modifier
                 .size(65.dp)
                 .align(Alignment.TopCenter)
         ) {
-
             OutlinedCard(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -69,7 +73,6 @@ fun PetCard(
                 border = BorderStroke(1.dp, borderColor),
                 modifier = Modifier.size(61.33.dp)
             ) {
-
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -98,7 +101,6 @@ fun PetCard(
             }
 
             if (status != PetStatus.DEFAULT) {
-
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -108,7 +110,6 @@ fun PetCard(
                         .background(MaterialTheme.colorScheme.surface),
                     contentAlignment = Alignment.Center
                 ) {
-
                     Icon(
                         imageVector = when (status) {
                             PetStatus.SUCCESS -> Icons.Default.CheckCircle

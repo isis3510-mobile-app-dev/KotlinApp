@@ -64,13 +64,3 @@ fun AddVaccineDetailsForm(
     }
 }
 
-
-@Preview
-@Composable
-fun AddVaccineDetailsFormPreview(){
-    AddVaccineDetailsForm(
-        onclick = {},
-        onBack = {},
-        viewModel = AddVaccineViewModel()
-    )
-}

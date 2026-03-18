@@ -37,6 +37,7 @@ fun CalendarWidget(
     currentMonth: YearMonth,
     startDate: LocalDate,
     endDate: LocalDate,
+    markedDates: Set<LocalDate> = emptySet(),
     onDateSelected: (LocalDate) -> Unit,
     onMonthChanged: (YearMonth) -> Unit
 ) {
@@ -105,6 +106,7 @@ fun CalendarWidget(
                                     date = date,
                                     startDate = startDate,
                                     endDate = endDate,
+                                    hasMarker = date in markedDates,
                                     onDateSelected = onDateSelected
                                 )
                                 currentDay++
@@ -150,6 +152,7 @@ private fun CalendarDay(
     date: LocalDate,
     startDate: LocalDate,
     endDate: LocalDate,
+    hasMarker: Boolean = false,
     onDateSelected: (LocalDate) -> Unit
 ) {
     val isStart = date == startDate
@@ -164,10 +167,8 @@ private fun CalendarDay(
             .background(
                 when {
                     isSingleSelection -> Color.Transparent
-                    isInRange -> GreenAccentLight // Light green for middle
-                    isStart -> GreenAccentLight.copy(alpha = 0f) // We'll handle this in the Box below to not overdraw if we want rounded edges
-                    isEnd -> GreenAccentLight.copy(alpha = 0f)
-                    else -> Color.Transparent
+                    isInRange         -> GreenAccentLight
+                    else              -> Color.Transparent
                 }
             )
     ) {

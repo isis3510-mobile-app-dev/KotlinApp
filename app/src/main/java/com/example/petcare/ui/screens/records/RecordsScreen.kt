@@ -51,7 +51,7 @@ import com.example.petcare.ui.theme.SuccessContent
 @Composable
 fun HealthRecordsScreen(
     paddingValues: PaddingValues = PaddingValues(0.dp),
-    onNavigateToVaccineDetail: (petId: String, vaccineId: String) -> Unit = { _, _ -> },
+    onNavigateToVaccineDetail: (petId: String, vaccinationId: String) -> Unit = { _, _ -> },
     onNavigateToEventDetail: (petId: String, eventId: String) -> Unit = { _, _ -> },
     onAddRecordClick: () -> Unit = {},
     onAddVaccineClick: () -> Unit = {},
@@ -118,8 +118,8 @@ private fun AllRecordsContent(
     onNavigateToEventDetail: (String, String) -> Unit,
     onAddRecordClick: () -> Unit
 ) {
-    val overdueCount  = state.vaccines.count { it.status == "overdue" }
-    val upcomingCount = state.vaccines.count { it.status == "upcoming" }
+    val overdueCount  = state.vaccines.count { it.data.status == "overdue" }
+    val upcomingCount = state.vaccines.count { it.data.status == "upcoming" }
 
     if (state.vaccines.isEmpty() && state.events.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -153,10 +153,10 @@ private fun AllRecordsContent(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
-            items(state.vaccines) { vaccine ->
+            items(state.vaccines) { item ->
                 VaccineListItem(
-                    vaccine = vaccine,
-                    onClick = { onNavigateToVaccineDetail(vaccine.petName, vaccine.vaccineName) }
+                    vaccine = item.data,
+                    onClick = { onNavigateToVaccineDetail(item.petId, item.vaccinationId) }
                 )
                 HorizontalDivider(color = GrayBackground)
             }
@@ -168,10 +168,10 @@ private fun AllRecordsContent(
                 Text("Medical Events", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(8.dp))
             }
-            items(state.events) { event ->
+            items(state.events) { item ->
                 MedicalEventItem(
-                    event   = event,
-                    onClick = { onNavigateToEventDetail(event.petName, event.eventType) }
+                    event   = item.data,
+                    onClick = { onNavigateToEventDetail(item.petId, item.eventId) }
                 )
             }
         }
@@ -191,7 +191,7 @@ private fun VaccinesContent(
         return
     }
 
-    val activeCount = state.vaccines.count { it.status != "overdue" }
+    val activeCount = state.vaccines.count { it.data.status != "overdue" }
 
     Column {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -204,10 +204,10 @@ private fun VaccinesContent(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding      = PaddingValues(bottom = 80.dp)
         ) {
-            items(state.vaccines) { vaccine ->
+            items(state.vaccines) { item ->
                 VaccineListItem(
-                    vaccine = vaccine,
-                    onClick = { onNavigateToVaccineDetail(vaccine.petName, vaccine.vaccineName) }
+                    vaccine = item.data,
+                    onClick = { onNavigateToVaccineDetail(item.petId, item.vaccinationId) }
                 )
             }
         }
@@ -234,10 +234,10 @@ private fun EventsContent(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding      = PaddingValues(bottom = 80.dp)
         ) {
-            items(state.events) { event ->
+            items(state.events) { item ->
                 MedicalEventItem(
-                    event   = event,
-                    onClick = { onNavigateToEventDetail(event.petName, event.eventType) }
+                    event   = item.data,
+                    onClick = { onNavigateToEventDetail(item.petId, item.eventId) }
                 )
             }
         }

@@ -1,20 +1,30 @@
 package com.example.petcare.ui.screens.addPetForm
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.example.petcare.ui.components.*
 import com.example.petcare.ui.theme.PetCareTheme
+import java.io.File
 
 @Composable
 fun AddPetInitialForm(
@@ -23,6 +33,37 @@ fun AddPetInitialForm(
     viewModel: AddPetViewModel
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var showPhotoOptions by remember { mutableStateOf(false) }
+
+    // URI temporal para la cámara
+    val cameraUri = remember {
+        val file = File(context.cacheDir, "photos/temp_${System.currentTimeMillis()}.jpg")
+            .also { it.parentFile?.mkdirs() }
+        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) viewModel.setPhotoUri(cameraUri)
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        viewModel.setPhotoUri(uri)
+        showPhotoOptions = false
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            showPhotoOptions = false
+            cameraLauncher.launch(cameraUri)
+        }
+    }
 
     PetCareTheme {
         Column(
@@ -40,19 +81,72 @@ fun AddPetInitialForm(
 
                 Stepper(currentStep = 1, stepLabels = listOf("Basic Info", "Details", "Medical"))
 
-                IconCardButton(
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.CameraAlt,
-                            contentDescription = "Photo",
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(40.dp)
+                if (state.photoUri != null) {
+                    Box {
+                        AsyncImage(
+                            model = state.photoUri,
+                            contentDescription = "Pet photo",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                                .clip(MaterialTheme.shapes.medium),
+                            contentScale = ContentScale.Crop
                         )
-                    },
-                    text = "Add Photo",
-                    textBottom = "Tap to upload or take a photo",
-                    onClick = {}
-                )
+                        IconButton(
+                            onClick = { viewModel.clearPhoto() },
+                            modifier = Modifier.align(Alignment.TopEnd)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Remove photo",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                } else {
+                    IconCardButton(
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = "Photo",
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        },
+                        text = "Add Photo",
+                        textBottom = "Tap to upload or take a photo",
+                        onClick = { showPhotoOptions = true }
+                    )
+                }
+
+                if (showPhotoOptions) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                showPhotoOptions = false
+                                permissionLauncher.launch(Manifest.permission.CAMERA)
+                                      },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Camera")
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                galleryLauncher.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Gallery")
+                        }
+                    }
+                }
 
                 TextFieldComponent(
                     name = "Pet Name *",
@@ -71,7 +165,6 @@ fun AddPetInitialForm(
                 SpeciesSelector(onOptionSelected = viewModel::setSpecies)
             }
 
-            // Show validation error
             state.error?.let {
                 Text(
                     text = it,
@@ -91,10 +184,8 @@ fun AddPetInitialForm(
                     if (state.name.isNotBlank() && state.species.isNotBlank()) {
                         onclick()
                     } else {
-                        // Trigger error message via ViewModel
-                        if (state.name.isBlank())    viewModel.setName("")
-                        if (state.species.isBlank())  viewModel.setSpecies("")
-                        // Force state update so error shows
+                        if (state.name.isBlank()) viewModel.setName("")
+                        if (state.species.isBlank()) viewModel.setSpecies("")
                         viewModel.clearError()
                     }
                 }
@@ -103,12 +194,15 @@ fun AddPetInitialForm(
     }
 }
 
+
+/**
 @Preview
 @Composable
-fun AddPetInitialFormPreview(){
+fun AddPetInitialFormPreview() {
     AddPetInitialForm(
         onclick = {},
         onBack = {},
         viewModel = AddPetViewModel()
     )
 }
+ **/

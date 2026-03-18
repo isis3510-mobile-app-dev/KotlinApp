@@ -146,8 +146,10 @@ fun AddPetFinalForm(
     }
 }
 
+/**
 @Preview
 @Composable
 fun AddPetFinalFormPreview() {
     AddPetFinalForm(onBack = {}, onclick = {}, viewModel = AddPetViewModel())
 }
+ **/

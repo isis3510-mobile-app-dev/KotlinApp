@@ -20,5 +20,6 @@ data class UpdateUserRequest(
     val phone: String? = null,
     val address: String? = null,
     val photo_url: String? = null,
-    val initials: String? = null
+    val initials: String? = null,
+    val email: String? = null
 )

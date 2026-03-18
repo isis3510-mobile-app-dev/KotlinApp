@@ -72,6 +72,7 @@ dependencies {
 
     // Google Sign-In
     implementation(libs.play.services.auth)
+    implementation(libs.androidx.runtime)
 
     // Tests
     testImplementation(libs.junit)
@@ -86,4 +87,7 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp.logging)
+
+    //Camera
+    implementation(libs.coil.compose)
 }

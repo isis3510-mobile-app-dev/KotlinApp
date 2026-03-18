@@ -74,8 +74,10 @@ fun AddPetDetailsForm(
     }
 }
 
+/*+
 @Preview
 @Composable
 fun AddPetDetailsFormPreview() {
     AddPetDetailsForm(onclick = {}, onBack = {}, viewModel = AddPetViewModel())
 }
+**/

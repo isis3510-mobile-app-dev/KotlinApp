@@ -1,5 +1,7 @@
 package com.example.petcare.ui.components
 
+import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,12 +44,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.petcare.ui.theme.SuccessContainer
 import com.example.petcare.ui.theme.SuccessContent
 import com.example.petcare.ui.theme.WarningContainer
 import com.example.petcare.ui.theme.WarningContent
 import com.example.petcare.ui.theme.ErrorContent
 import com.example.petcare.ui.theme.GrayBackground
+import androidx.compose.ui.platform.LocalContext
+
 
 
 @Composable
@@ -82,12 +88,14 @@ fun PetAction(
 @Composable
 fun PetDetailsCard(
     petName: String, breed: String, age: Int, weight: Double,
-    gender: String, status: String, photoPath: Int, species: String,
+    gender: String, status: String, photoPath: String? = "", species: String,
     onPetSelect: () -> Unit,
     onVaccineSelect: () -> Unit,
     onLostSelect: () -> Unit,
     onNFCSelect: () -> Unit
 ) {
+    Log.d("PetPhoto", "photoPath: $photoPath")
+    val context = LocalContext.current
     val (statusColor, textStatusColor) = when (status.lowercase()) {
         "healthy" -> Pair(SuccessContainer, SuccessContent)
         else -> Pair(WarningContainer, WarningContent)
@@ -119,13 +127,17 @@ fun PetDetailsCard(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(
-                    painter = painterResource(id = photoPath),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(Uri.parse(photoPath))
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = petName,
                     modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(R.drawable.pet)
                 )
 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -229,7 +241,6 @@ fun PetDetailsCardPreview () {
         weight = 20.0,
         gender = "Male",
         status = "Healthy",
-        photoPath = R.drawable.pet,
         species = "DOG",
         onPetSelect = {},
         onVaccineSelect = {},
@@ -247,7 +258,6 @@ fun PetDetailsCardPreview2 () {
         weight = 20.0,
         gender = "Male",
         status = "Vaccine due",
-        photoPath = R.drawable.pet,
         species = "CAT",
         onPetSelect = {},
         onVaccineSelect = {},
