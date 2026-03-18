@@ -28,7 +28,6 @@ import com.example.petcare.R
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -88,13 +87,13 @@ fun PetAction(
 @Composable
 fun PetDetailsCard(
     petName: String, breed: String, age: Int, weight: Double,
-    gender: String, status: String, photoPath: String? = "", species: String,
+    gender: String, status: String, photoUrl: String?, species: String,
     onPetSelect: () -> Unit,
     onVaccineSelect: () -> Unit,
     onLostSelect: () -> Unit,
     onNFCSelect: () -> Unit
 ) {
-    Log.d("PetPhoto", "photoPath: $photoPath")
+    Log.d("PetPhoto", "photoPath: $photoUrl")
     val context = LocalContext.current
     val (statusColor, textStatusColor) = when (status.lowercase()) {
         "healthy" -> Pair(SuccessContainer, SuccessContent)
@@ -127,18 +126,29 @@ fun PetDetailsCard(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(Uri.parse(photoPath))
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = petName,
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop,
-                    error = painterResource(R.drawable.pet)
-                )
+                if (photoUrl != null && photoUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(Uri.parse(photoUrl))
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = petName,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop,
+                        error = painterResource(R.drawable.pet)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.pet),
+                        contentDescription = petName,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                }
 
                 Spacer(modifier = Modifier.width(16.dp))
                 

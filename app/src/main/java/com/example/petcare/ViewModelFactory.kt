@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.petcare.ui.preferences.AppThemeViewModel
 import com.example.petcare.data.model.User
-import com.example.petcare.data.preferences.AppThemeViewModel
 import com.example.petcare.data.preferences.UserPreferencesRepository
 import com.example.petcare.ui.screens.profile.ProfileViewModel
 
