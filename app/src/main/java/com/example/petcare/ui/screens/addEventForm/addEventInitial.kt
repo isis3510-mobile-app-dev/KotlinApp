@@ -11,11 +11,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petcare.data.model.EventType
 import com.example.petcare.ui.components.*
 import com.example.petcare.ui.screens.pets.PetsViewModel
 import com.example.petcare.ui.theme.GrayBorder
-import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.PetCareTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -191,5 +191,10 @@ fun AddEventInitialForm(
 @Preview
 @Composable
 fun AddEventInitialFormPreview() {
-    // AddEventInitialForm(onclick = {}, onBack = {}, viewModel = AddEventViewModel(), petsViewModel = ...)
+    AddEventInitialForm(
+        onclick = {},
+        onBack = {},
+        viewModel = viewModel(),
+        petsViewModel = viewModel()
+    )
 }

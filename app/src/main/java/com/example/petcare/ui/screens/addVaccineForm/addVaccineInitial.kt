@@ -2,17 +2,16 @@ package com.example.petcare.ui.screens.addVaccineForm
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petcare.ui.components.*
 import com.example.petcare.ui.screens.pets.PetsViewModel
 import com.example.petcare.ui.theme.GrayBorder
@@ -131,12 +130,10 @@ fun AddVaccineInitialForm(
 @Preview
 @Composable
 fun AddVaccineInitialFormPreview(){
-    // This preview may not render correctly due to ViewModel dependencies
-    // but we add the parameter to fix the compilation error.
-    // AddVaccineInitialForm(
-    //     onclick = {},
-    //     onBack = {},
-    //     viewModel = AddVaccineViewModel(),
-    //     petsViewModel = ...
-    // )
+    AddVaccineInitialForm(
+        onclick = {},
+        onBack = {},
+        viewModel = AddVaccineViewModel(),
+        petsViewModel = viewModel()
+    )
 }
