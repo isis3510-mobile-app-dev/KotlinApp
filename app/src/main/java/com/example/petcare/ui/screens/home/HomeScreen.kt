@@ -98,7 +98,7 @@ fun HomeScreen(
 
         homeState.error?.let { err ->
             item {
-                Text("⚠ $err", color = Color.Red, modifier = Modifier.padding(horizontal = 8.dp))
+                Text("⚠ $err", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 8.dp))
             }
         }
 
@@ -163,7 +163,7 @@ fun HomeScreen(
                             text       = "Health Alerts",
                             fontSize   = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color      = Color.Black
+                            color      = MaterialTheme.colorScheme.onBackground
                         )
                         if (homeState.totalAlertCount >= 1) {
                             Row(
@@ -258,7 +258,7 @@ fun HomeScreen(
                                     Text(
                                         text     = "${vacc.petName} · Due ${vacc.dueDate}",
                                         fontSize = 12.sp,
-                                        color    = Color.Gray
+                                        color    = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }

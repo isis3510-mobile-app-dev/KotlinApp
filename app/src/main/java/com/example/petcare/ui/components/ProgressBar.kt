@@ -54,7 +54,7 @@ fun Stepper(currentStep: Int, totalSteps: Int = 3,
                     } else {
                         Text(
                             text = "$step",
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }

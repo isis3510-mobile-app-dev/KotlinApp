@@ -35,7 +35,7 @@ fun AddEventFinalForm(
     onBack: () -> Unit,
     viewModel: AddEventViewModel
 ) {
-    val state   by viewModel.state.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val fileLauncher = rememberLauncherForActivityResult(
@@ -46,7 +46,8 @@ fun AddEventFinalForm(
                 context.contentResolver.takePersistableUriPermission(
                     it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
 
             val mimeType = context.contentResolver.getType(it)
                 ?: "application/octet-stream"
@@ -58,138 +59,136 @@ fun AddEventFinalForm(
         }
     }
 
-    PetCareTheme {
+    Column(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.background)
+            .fillMaxSize()
+            .padding(24.dp)
+    ) {
         Column(
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.background)
-                .fillMaxSize()
-                .padding(24.dp)
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            TransparentTopBar(title = "Add New Event", onBackClick = onBack)
+            Stepper(currentStep = 3, stepLabels = listOf("Basic Info", "Details", "Overview"))
+
+            // ── Banner informativo ────────────────────────────────────
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.size(width = 350.dp, height = 88.dp),
+                shape = RoundedCornerShape(24.dp)
             ) {
-                TransparentTopBar(title = "Add New Event", onBackClick = onBack)
-                Stepper(currentStep = 3, stepLabels = listOf("Basic Info", "Details", "Overview"))
-
-                // ── Banner informativo ────────────────────────────────────
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ),
-                    modifier = Modifier.size(width = 350.dp, height = 88.dp),
-                    shape    = RoundedCornerShape(24.dp)
-                ) {
-                    Column {
-                        Text(
-                            text     = "Almost done!",
-                            modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp),
-                            fontFamily = RobotoBold,
-                            fontSize   = 14.sp,
-                            color      = MaterialTheme.colorScheme.tertiary
-                        )
-                        Text(
-                            text     = "Confirm your event's information and optionally attach documents.",
-                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, end = 16.dp),
-                            fontFamily = RobotoRegular,
-                            fontSize   = 12.sp,
-                            color      = MaterialTheme.colorScheme.tertiary,
-                            lineHeight = 16.sp
-                        )
-                    }
-                }
-
-                // ── Resumen read-only ────────────────────────────────────
-                TextFieldComponent(
-                    name  = "Event Name", label = state.title,
-                    value = state.title,  onValueChange = viewModel::setTitle
-                )
-                TextFieldComponent(
-                    name  = "Date", label = state.date,
-                    value = state.date,   onValueChange = {}
-                )
-                TextFieldComponent(
-                    name  = "Description", label = state.description,
-                    value = state.description, onValueChange = viewModel::setDescription
-                )
-
-                // ── Reminder toggle ──────────────────────────────────────
-                SettingsListItem(
-                    icon = Icons.Default.Notifications,
-                    iconBackgroundColor = Color(0x99FFECB3),
-                    iconTintColor       = Color(0xFFFBBC05),
-                    title = "Set a reminder",
-                    trailingContent = {
-                        Switch(
-                            checked         = state.reminderEnabled,
-                            onCheckedChange = viewModel::setReminderEnabled,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor   = com.example.petcare.ui.theme.GreenDark,
-                                uncheckedTrackColor = com.example.petcare.ui.theme.GrayBorder,
-                                checkedThumbColor   = Color.White
-                            ),
-                            modifier = Modifier.semantics {
-                                contentDescription = "Set a reminder"
-                            }
-                        )
-                    }
-                )
-
-                // ── Documentos adjuntos ──────────────────────────────────
-                AttachedDocumentsCard(
-                    documents = state.stagedDocuments.map { staged ->
-                        com.example.petcare.data.model.AttachedDocument(
-                            id       = staged.uri.toString(),
-                            fileName = staged.fileName,
-                            fileUri  = staged.downloadUrl
-                        )
-                    },
-                    isUploading      = state.stagedDocuments.any { it.isUploading },
-                    onDocumentPicked = { _, _, _ ->
-                        fileLauncher.launch(
-                            arrayOf(
-                                "image/*",
-                                "application/pdf",
-                                "application/msword",
-                                "application/vnd.openxmlformats-officedocument" +
-                                        ".wordprocessingml.document",
-                                "text/plain"
-                            )
-                        )
-                    }
-                )
-
-                // ── Error ────────────────────────────────────────────────
-                state.error?.let {
+                Column {
                     Text(
-                        text  = it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
+                        text = "Almost done!",
+                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp),
+                        fontFamily = RobotoBold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                    Text(
+                        text = "Confirm your event's information and optionally attach documents.",
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, end = 16.dp),
+                        fontFamily = RobotoRegular,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        lineHeight = 16.sp
                     )
                 }
             }
 
-            // ── Botones ──────────────────────────────────────────────────
-            Row {
-                ButtonOutline(
-                    bgColor      = MaterialTheme.colorScheme.background,
-                    outlineColor = MaterialTheme.colorScheme.secondary,
-                    textColor    = MaterialTheme.colorScheme.secondary,
-                    width = 169.dp, height = 50.57.dp,
-                    text = "Back", onclick = onBack
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                ButtonDefault(
-                    bgColor   = com.example.petcare.ui.theme.GreenDark,
-                    textColor = Color.White,
-                    width = 169.dp, height = 50.57.dp,
-                    text = if (state.isLoading) "Saving…" else "Add Event",
-                    onclick = { viewModel.submit { onclick() } }
+            // ── Resumen read-only ────────────────────────────────────
+            TextFieldComponent(
+                name = "Event Name", label = state.title,
+                value = state.title, onValueChange = viewModel::setTitle
+            )
+            TextFieldComponent(
+                name = "Date", label = state.date,
+                value = state.date, onValueChange = {}
+            )
+            TextFieldComponent(
+                name = "Description", label = state.description,
+                value = state.description, onValueChange = viewModel::setDescription
+            )
+
+            // ── Reminder toggle ──────────────────────────────────────
+            SettingsListItem(
+                icon = Icons.Default.Notifications,
+                iconBackgroundColor = Color(0x99FFECB3),
+                iconTintColor = Color(0xFFFBBC05),
+                title = "Set a reminder",
+                trailingContent = {
+                    Switch(
+                        checked = state.reminderEnabled,
+                        onCheckedChange = viewModel::setReminderEnabled,
+                        colors = SwitchDefaults.colors(
+                            checkedTrackColor = com.example.petcare.ui.theme.GreenDark,
+                            uncheckedTrackColor = com.example.petcare.ui.theme.GrayBorder,
+                            checkedThumbColor = Color.White
+                        ),
+                        modifier = Modifier.semantics {
+                            contentDescription = "Set a reminder"
+                        }
+                    )
+                }
+            )
+
+            // ── Documentos adjuntos ──────────────────────────────────
+            AttachedDocumentsCard(
+                documents = state.stagedDocuments.map { staged ->
+                    com.example.petcare.data.model.AttachedDocument(
+                        id = staged.uri.toString(),
+                        fileName = staged.fileName,
+                        fileUri = staged.downloadUrl
+                    )
+                },
+                isUploading = state.stagedDocuments.any { it.isUploading },
+                onDocumentPicked = { _, _, _ ->
+                    fileLauncher.launch(
+                        arrayOf(
+                            "image/*",
+                            "application/pdf",
+                            "application/msword",
+                            "application/vnd.openxmlformats-officedocument" +
+                                    ".wordprocessingml.document",
+                            "text/plain"
+                        )
+                    )
+                }
+            )
+
+            // ── Error ────────────────────────────────────────────────
+            state.error?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
+        }
+
+        // ── Botones ──────────────────────────────────────────────────
+        Row {
+            ButtonOutline(
+                bgColor = MaterialTheme.colorScheme.background,
+                outlineColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.secondary,
+                width = 169.dp, height = 50.57.dp,
+                text = "Back", onclick = onBack
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            ButtonDefault(
+                bgColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.onSecondary,
+                width = 169.dp, height = 50.57.dp,
+                text = if (state.isLoading) "Saving…" else "Add Event",
+                onclick = { viewModel.submit { onclick() } }
+            )
         }
     }
 }

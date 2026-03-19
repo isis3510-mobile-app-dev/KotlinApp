@@ -34,114 +34,112 @@ fun AddPetFinalForm(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    PetCareTheme {
+    Column(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.background)
+            .fillMaxSize()
+            .padding(24.dp)
+    ) {
         Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.background)
-                .fillMaxSize()
-                .padding(24.dp)
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(30.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(30.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            TransparentTopBar(title = "Add New Pet", onBackClick = onBack)
+
+            Stepper(currentStep = 3, stepLabels = listOf("Basic Info", "Details", "Medical"))
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+                modifier = Modifier.size(width = 350.dp, height = 88.dp),
+                shape = RoundedCornerShape(24.dp)
             ) {
-                TransparentTopBar(title = "Add New Pet", onBackClick = onBack)
+                Column {
+                    Text(
+                        text = "Almost done!",
+                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp),
+                        textAlign = TextAlign.Start, fontFamily = RobotoBold,
+                        fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary
+                    )
+                    Text(
+                        text = "Add optional medical info. You can always update this later from the pet's profile.",
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, end = 16.dp),
+                        textAlign = TextAlign.Start, fontFamily = RobotoRegular,
+                        fontSize = 12.sp, color = MaterialTheme.colorScheme.tertiary,
+                        lineHeight = 16.sp
+                    )
+                }
+            }
 
-                Stepper(currentStep = 3, stepLabels = listOf("Basic Info", "Details", "Medical"))
+            TextFieldComponent(
+                name = "Veterinarian", label = "e.g. Dr. Smith",
+                value = state.defaultVet, onValueChange = viewModel::setDefaultVet
+            )
+            TextFieldComponent(
+                name = "Clinic Name", label = "e.g. Happy Paw Clinic",
+                value = state.defaultClinic, onValueChange = viewModel::setDefaultClinic
+            )
+            TextFieldComponent(
+                name = "Known Allergies", label = "e.g. None",
+                value = state.knownAllergies, onValueChange = viewModel::setKnownAllergies
+            )
 
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.size(width = 350.dp, height = 88.dp),
-                    shape = RoundedCornerShape(24.dp)
+            state.error?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Card(
+                modifier = Modifier.size(width = 350.dp, height = 68.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Contactless,
+                        contentDescription = null, tint = GreenDark,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Almost done!",
-                            modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp),
+                            text = "Set up NFC tag later?",
                             textAlign = TextAlign.Start, fontFamily = RobotoBold,
                             fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary
                         )
                         Text(
-                            text = "Add optional medical info. You can always update this later from the pet's profile.",
-                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, end = 16.dp),
+                            text = "Write your pet's info to an NFC tag from their profile",
                             textAlign = TextAlign.Start, fontFamily = RobotoRegular,
-                            fontSize = 12.sp, color = MaterialTheme.colorScheme.tertiary,
+                            fontSize = 10.sp, color = MaterialTheme.colorScheme.tertiary,
                             lineHeight = 16.sp
                         )
                     }
                 }
-
-                TextFieldComponent(
-                    name = "Veterinarian", label = "e.g. Dr. Smith",
-                    value = state.defaultVet, onValueChange = viewModel::setDefaultVet
-                )
-                TextFieldComponent(
-                    name = "Clinic Name", label = "e.g. Happy Paw Clinic",
-                    value = state.defaultClinic, onValueChange = viewModel::setDefaultClinic
-                )
-                TextFieldComponent(
-                    name = "Known Allergies", label = "e.g. None",
-                    value = state.knownAllergies, onValueChange = viewModel::setKnownAllergies
-                )
-
-                state.error?.let {
-                    Text(
-                        text = it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-
-                Card(
-                    modifier = Modifier.size(width = 350.dp, height = 68.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA)),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Contactless,
-                            contentDescription = null, tint = GreenDark,
-                            modifier = Modifier.size(32.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Set up NFC tag later?",
-                                textAlign = TextAlign.Start, fontFamily = RobotoBold,
-                                fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary
-                            )
-                            Text(
-                                text = "Write your pet's info to an NFC tag from their profile",
-                                textAlign = TextAlign.Start, fontFamily = RobotoRegular,
-                                fontSize = 10.sp, color = MaterialTheme.colorScheme.tertiary,
-                                lineHeight = 16.sp
-                            )
-                        }
-                    }
-                }
             }
+        }
 
-            Row {
-                ButtonOutline(
-                    bgColor = MaterialTheme.colorScheme.background,
-                    outlineColor = MaterialTheme.colorScheme.secondary,
-                    textColor = MaterialTheme.colorScheme.secondary,
-                    width = 169.dp, height = 50.57.dp,
-                    text = "Back", onclick = onBack
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                ButtonDefault(
-                    bgColor = com.example.petcare.ui.theme.GreenDark,
-                    textColor = Color.White,
-                    width = 169.dp, height = 50.57.dp,
-                    text = if (state.isLoading) "Saving…" else "Add Pet",
-                    onclick = { viewModel.submit { petId -> onclick(petId) } }
-                )
-            }
+        Row {
+            ButtonOutline(
+                bgColor = MaterialTheme.colorScheme.background,
+                outlineColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.secondary,
+                width = 169.dp, height = 50.57.dp,
+                text = "Back", onclick = onBack
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            ButtonDefault(
+                bgColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.onSecondary,
+                width = 169.dp, height = 50.57.dp,
+                text = if (state.isLoading) "Saving…" else "Add Pet",
+                onclick = { viewModel.submit { petId -> onclick(petId) } }
+            )
         }
     }
 }

@@ -59,8 +59,8 @@ fun DropdownSelector(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.secondary,
                     unfocusedBorderColor = GrayBorder,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Gray
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
             )
 

@@ -33,55 +33,56 @@ fun AddEventDetailsForm(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    PetCareTheme {
+    Column(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.background)
+            .fillMaxSize()
+            .padding(24.dp)
+    ) {
         Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.background)
-                .fillMaxSize()
-                .padding(24.dp)
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(30.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(30.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                TransparentTopBar(title = "Add New Event", onBackClick = onBack)
-                Stepper(currentStep = 2, stepLabels = listOf("Basic Info", "Details", "Overview"))
+            TransparentTopBar(title = "Add New Event", onBackClick = onBack)
+            Stepper(currentStep = 2, stepLabels = listOf("Basic Info", "Details", "Overview"))
 
-                TextFieldComponent(
-                    name = "Description", label = "e.g. General Check-up",
-                    value = state.description, onValueChange = viewModel::setDescription
-                )
-                TextFieldComponent(
-                    name = "Provider / Doctor", label = "e.g. Dr. Smith",
-                    value = state.provider, onValueChange = viewModel::setProvider
-                )
-                TextFieldComponent(
-                    name = "Clinic", label = "e.g. Happy Paws Clinic",
-                    value = state.clinic, onValueChange = viewModel::setClinic
-                )
-                TextFieldComponent(
-                    name = "Price (optional)", label = "e.g. 50",
-                    value = state.price, onValueChange = viewModel::setPrice
-                )
-            }
-            Row {
-                ButtonOutline(
-                    bgColor = MaterialTheme.colorScheme.background,
-                    outlineColor = MaterialTheme.colorScheme.secondary,
-                    textColor = MaterialTheme.colorScheme.secondary,
-                    width = 169.dp, height = 50.57.dp, text = "Back", onclick = onBack
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                ButtonDefault(
-                    bgColor = com.example.petcare.ui.theme.GreenDark, textColor = Color.White,
-                    width = 169.dp, height = 50.57.dp, text = "Continue", onclick = onclick
-                )
-            }
+            TextFieldComponent(
+                name = "Description", label = "e.g. General Check-up",
+                value = state.description, onValueChange = viewModel::setDescription
+            )
+            TextFieldComponent(
+                name = "Provider / Doctor", label = "e.g. Dr. Smith",
+                value = state.provider, onValueChange = viewModel::setProvider
+            )
+            TextFieldComponent(
+                name = "Clinic", label = "e.g. Happy Paws Clinic",
+                value = state.clinic, onValueChange = viewModel::setClinic
+            )
+            TextFieldComponent(
+                name = "Price (optional)", label = "e.g. 50",
+                value = state.price, onValueChange = viewModel::setPrice
+            )
+        }
+        Row {
+            ButtonOutline(
+                bgColor = MaterialTheme.colorScheme.background,
+                outlineColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.secondary,
+                width = 169.dp, height = 50.57.dp, text = "Back", onclick = onBack
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            ButtonDefault(
+                bgColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.onSecondary,
+                width = 169.dp,
+                height = 50.57.dp,
+                text = "Continue",
+                onclick = onclick
+            )
         }
     }
 }
-
 
 @Preview
 @Composable

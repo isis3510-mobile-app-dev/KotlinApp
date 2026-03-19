@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -45,7 +46,7 @@ fun NextEventCard(name: String, pet: String, maxDate: String, daysOverdue: Int){
                 Icon(
                     imageVector = Icons.Default.Vaccines,
                     contentDescription = "Vaccine",
-                    tint = Color.Black
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
@@ -53,7 +54,7 @@ fun NextEventCard(name: String, pet: String, maxDate: String, daysOverdue: Int){
                 Text(
                     text = "NEXT VACCINE",
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = name,
@@ -64,13 +65,13 @@ fun NextEventCard(name: String, pet: String, maxDate: String, daysOverdue: Int){
                     Text (
                         text = "$pet - ",
                         fontSize = 14.sp,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Text (
                         text = maxDate,
                         fontSize = 14.sp,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 }
             }
