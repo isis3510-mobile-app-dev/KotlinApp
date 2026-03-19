@@ -79,21 +79,18 @@ fun PetCard(
                     contentAlignment = Alignment.Center
                 ) {
 
-                    when {
-                        status == PetStatus.DEFAULT -> {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                tint = Color.Gray,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-
+                    if (status == PetStatus.DEFAULT) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(28.dp)
+                        )
                     } else {
                         val resolvedUrl = UrlUtils.resolveUrl(photoUrl)
                         if (resolvedUrl != null || photoUrl != null) {
                             AsyncImage(
-                                model = UrlUtils.resolveUrl(photoUrl),
+                                model = resolvedUrl,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize(),
@@ -101,21 +98,9 @@ fun PetCard(
                                 error = painterResource(R.drawable.pet),
                                 fallback = painterResource(R.drawable.pet)
                             )
-                        }
-
-                        else -> {
+                        } else if (image != null) {
                             Image(
-                                painter = painterResource(R.drawable.pet),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize(),
-                                placeholder = painterResource(R.drawable.pet),
-                                error = painterResource(R.drawable.pet),
-                                fallback = painterResource(R.drawable.pet)
-                            )
-                        } else {
-                            Image(
-                                painter = painterResource(R.drawable.pet),
+                                painter = image,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
