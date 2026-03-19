@@ -33,7 +33,10 @@ class PetRepository(private val api: ApiService) {
     }
 
     suspend fun deletePet(petId: String): Result<Unit> = runCatching {
-        api.deletePet(petId)
+        val response = api.deletePet(petId)
+        if (!response.isSuccessful) {
+            error("Failed to delete pet — HTTP ${response.code()}")
+        }
     }
 
     suspend fun addVaccination(petId: String, request: AddVaccinationRequest): Result<Pet> = runCatching {
