@@ -106,17 +106,20 @@ class HomeViewModel : ViewModel() {
                     }
 
                     val criticalGrouped = allSuggestions
-                        .filter { it.suggestion.type in listOf("danger", "warning") }
                         .groupBy { it.suggestion.title }
                         .map { (title, items) ->
                             GroupedSuggestion(
                                 vaccineTitle = title,
-                                type         = if (items.any { it.suggestion.type == "danger" }) "danger" else "warning",
-                                pets         = items.map { it.petName }.distinct(),
-                                message      = items.first().suggestion.message
+                                type         = when {
+                                    items.any { it.suggestion.type == "danger" }  -> "danger"
+                                    items.any { it.suggestion.type == "warning" } -> "warning"
+                                    else                                          -> "info"
+                                },
+                                pets    = items.map { it.petName }.distinct(),
+                                message = items.first().suggestion.message
                             )
                         }
-                        .sortedBy { if (it.type == "danger") 0 else 1 }
+                        .sortedBy { when (it.type) { "danger" -> 0; "warning" -> 1; else -> 2 } }
 
                     _state.value = _state.value.copy(
                         pets                 = pets,
