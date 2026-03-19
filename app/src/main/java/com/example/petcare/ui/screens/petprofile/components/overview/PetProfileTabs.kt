@@ -38,13 +38,13 @@ fun PetProfileTabs(
     TabRow(
         selectedTabIndex = selectedTabIndex,
         containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
-        contentColor = GreenDark,
+        contentColor = androidx.compose.material3.MaterialTheme.colorScheme.secondary,
         indicator = { tabPositions ->
             Box(
                 modifier = Modifier
                     .tabIndicatorOffset(tabPositions[selectedTabIndex])
                     .height(3.dp)
-                    .background(GreenDark)
+                    .background( androidx.compose.material3.MaterialTheme.colorScheme.secondary)
             )
         }
     ) {
@@ -58,14 +58,14 @@ fun PetProfileTabs(
                         imageVector = tab.icon,
                         contentDescription = tab.title,
                         modifier = Modifier.size(18.dp),
-                        tint = if (isSelected) GreenDark else GrayText
+                        tint = if (isSelected)  androidx.compose.material3.MaterialTheme.colorScheme.secondary else GrayText
                     )
                 },
                 text = {
                     Text(
                         text = tab.title,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) GreenDark else GrayText
+                        color = if (isSelected)  androidx.compose.material3.MaterialTheme.colorScheme.secondary else GrayText
                     )
                 }
             )

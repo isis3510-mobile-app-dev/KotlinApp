@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.Contactless
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -136,7 +137,7 @@ fun ExpandableFAB(
 
             FloatingActionButton(
                 onClick        = { expanded = !expanded },
-                containerColor = GreenAccentDark,
+                containerColor = MaterialTheme.colorScheme.secondary,
                 contentColor   = Color.White,
                 modifier       = Modifier.size(56.dp),
                 shape          = RoundedCornerShape(16.dp)
@@ -144,7 +145,7 @@ fun ExpandableFAB(
                 Icon(
                     imageVector     = if (expanded) Icons.Default.Close else Icons.Default.Add,
                     contentDescription = "Expand",
-                    tint            = Color.White
+                    tint            = MaterialTheme.colorScheme.surface
                 )
             }
         }

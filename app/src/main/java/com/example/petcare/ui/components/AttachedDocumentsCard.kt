@@ -147,25 +147,25 @@ fun AttachedDocumentsCard(
                 enabled  = !isUploading,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape    = RoundedCornerShape(28.dp),
-                border   = androidx.compose.foundation.BorderStroke(1.dp, GreenDark)
+                border   = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary)
             ) {
                 if (isUploading) {
                     CircularProgressIndicator(
                         modifier    = Modifier.size(18.dp),
                         strokeWidth = 2.dp,
-                        color       = GreenDark
+                        color       = MaterialTheme.colorScheme.secondary
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Uploading...", color = GreenDark)
+                    Text("Uploading...", color = MaterialTheme.colorScheme.secondary)
                 } else {
                     Icon(
                         Icons.Default.AttachFile,
                         contentDescription = null,
-                        tint     = GreenDark,
+                        tint     = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Attach Document", color = GreenDark, fontWeight = FontWeight.Bold)
+                    Text("Attach Document", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
                 }
             }
 

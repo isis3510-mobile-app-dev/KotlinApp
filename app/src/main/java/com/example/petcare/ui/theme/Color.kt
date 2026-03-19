@@ -27,7 +27,7 @@ val DentalContainer = Color(0xFFF1F8E9)
 
 // Neutral Colors
 val GrayBorder = Color(0xFFBDBDBD)
-val GrayText = Color(0xFF9E9E9E)
+val GrayText = Color(0xFF797979)
 val GrayBackground = Color(0xFFF0F4F3)
 val GrayLight = Color(0xFFF5F5F5)
 val GrayMedium = Color(0xFFE5E5E5)

@@ -34,7 +34,7 @@ fun SettingsSection(
         Text(
             text = title.uppercase(),
             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-            color = GrayText,
+            color = MaterialTheme.colorScheme.onTertiary,
             modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
         )
 
