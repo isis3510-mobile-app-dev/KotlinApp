@@ -40,7 +40,8 @@ fun HomeScreen(
     onNavigateToRecords: () -> Unit = {},
     onNavigateToEvent: (String, String) -> Unit = { _, _ -> },
     authViewModel: AuthViewModel,
-    homeViewModel: HomeViewModel = viewModel()
+    homeViewModel: HomeViewModel = viewModel(),
+    onNavigateToNotifications: () -> Unit
 ) {
     val homeState   by homeViewModel.state.collectAsStateWithLifecycle()
     val userProfile by authViewModel.userProfile.collectAsStateWithLifecycle()
@@ -76,7 +77,7 @@ fun HomeScreen(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     NfcButton(onClick = onNavigateToNfc)
-                    NotificationButton()
+                    NotificationButton(onClick = onNavigateToNotifications)
                 }
             }
         }
@@ -145,10 +146,42 @@ fun HomeScreen(
             }
         }
 
-        // ── Overdue warning ───────────────────────────────────────────────
-        if (homeState.overdueVaccinesCount > 0) {
+        // ── Health Alerts ─────────────────────────────────────────────────────
+        if (homeState.topAlert != null) {
             item {
-                OverdueWarningBanner(overdueCount = homeState.overdueVaccinesCount)
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text       = "Health Alerts",
+                            fontSize   = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color      = Color.Black
+                        )
+                        if (homeState.totalAlertCount >= 1) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier          = Modifier.clickable { onNavigateToNotifications() }
+                            ) {
+                                Text(
+                                    text       = "See all ${homeState.totalAlertCount}",
+                                    fontSize   = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color      = GreenDark
+                                )
+                                Icon(
+                                    imageVector        = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint               = GreenDark
+                                )
+                            }
+                        }
+                    }
+                    GroupedSuggestionCard(grouped = homeState.topAlert!!)
+                }
             }
         }
 
