@@ -7,6 +7,7 @@ import com.example.petcare.data.model.Pet
 import com.example.petcare.data.model.SuggestionDto
 import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.model.UpdateVaccinationRequest
+import com.example.petcare.data.model.Vaccine
 import com.example.petcare.data.network.ApiService
 
 class PetRepository(private val api: ApiService) {
@@ -111,5 +112,10 @@ class PetRepository(private val api: ApiService) {
         } catch (_: Exception) {
             date
         }
+    }
+
+    suspend fun getVaccineCatalog(): Result<List<Vaccine>> = runCatching {
+        val response = api.getVaccines()
+        response.body() ?: emptyList()
     }
 }

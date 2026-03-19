@@ -14,6 +14,7 @@ import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.model.UpdateUserRequest
 import com.example.petcare.data.model.UpdateVaccinationRequest
 import com.example.petcare.data.model.User
+import com.example.petcare.data.model.Vaccine
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -79,6 +80,9 @@ interface ApiService {
         @Path("petId") petId: String,
         @Path("vaccinationId") vaccinationId: String
     ): Response<Pet>
+
+    @GET("vaccines/")
+    suspend fun getVaccines(): Response<List<Vaccine>>
 
     // ── Vaccination Documents ─────────────────────────────────────────────
 

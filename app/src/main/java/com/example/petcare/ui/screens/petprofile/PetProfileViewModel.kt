@@ -61,7 +61,12 @@ class PetProfileViewModel : ViewModel() {
     }
 
     private suspend fun applyPetToState(pet: Pet, petId: String) {
-        // Map backend vaccinations → VaccineRecord UI model
+        // Load catalog to resolve vaccineId → human name
+        val catalogMap = RepositoryProvider.petRepository
+            .getVaccineCatalog()
+            .getOrElse { emptyList() }
+            .associateBy { it.id }
+
         val vaccines = pet.vaccinations.map { v ->
             val status = when (v.status.lowercase()) {
                 "overdue"   -> VaccineFilterStatus.OVERDUE
@@ -70,7 +75,7 @@ class PetProfileViewModel : ViewModel() {
             }
             VaccineRecord(
                 id          = v.id,
-                name        = v.vaccineId.take(8),  // until catalog lookup is added
+                name        = catalogMap[v.vaccineId]?.name ?: v.vaccineId.take(8),
                 provider    = v.administeredBy,
                 dateGiven   = v.dateGiven.take(10),
                 nextDueDate = v.nextDueDate?.take(10),
@@ -79,16 +84,14 @@ class PetProfileViewModel : ViewModel() {
             )
         }
 
-        // Load events from backend
         val events = mutableListOf<Event>()
         RepositoryProvider.eventRepository.getEvents(petId = petId).fold(
             onSuccess = { list ->
-                list.forEach { ev ->
-                    events.add(ev.toMedicalEvent())
-                }
+                list.forEach { ev -> events.add(ev.toMedicalEvent()) }
             },
-            onFailure = { /* non-fatal — show empty list */ }
+            onFailure = { /* non-fatal */ }
         )
+
         val suggestions = mutableListOf<SuggestionDto>()
         RepositoryProvider.petRepository.getPetSmart(petId).fold(
             onSuccess = { suggestions.addAll(it) },
@@ -111,14 +114,12 @@ class PetProfileViewModel : ViewModel() {
             upcomingEventsCount  = events.size,
             vaccines             = vaccines,
             events               = events,
-            suggestions = suggestions,
+            suggestions          = suggestions,
             isLoading            = false,
             error                = null,
             photoUrl             = pet.photoUrl
         )
     }
-
-    // ── Tab & filter logic (same as before) ──────────────────────────────────
 
     fun onTabSelected(index: Int) { _selectedTabIndex.value = index }
 
@@ -130,17 +131,15 @@ class PetProfileViewModel : ViewModel() {
     }
 
     fun onVaccineClicked(vaccine: VaccineRecord) {}
-    fun onAddEventClicked()  {}
+    fun onAddEventClicked()   {}
     fun onAddVaccineClicked() {}
-    fun onLostModeClicked()  {}
-    fun onNfcActiveClicked() {}
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    fun onLostModeClicked()   {}
+    fun onNfcActiveClicked()  {}
 
     private fun computeAge(birthDateIso: String?): String {
         if (birthDateIso.isNullOrBlank()) return ""
         return try {
-            val parts = birthDateIso.take(10).split("-")
+            val parts      = birthDateIso.take(10).split("-")
             if (parts.size != 3) return ""
             val birthYear  = parts[0].toInt()
             val birthMonth = parts[1].toInt()
@@ -163,19 +162,16 @@ class PetProfileViewModel : ViewModel() {
     }
 }
 
-/** Maps the network Event model to the local MedicalEvent UI model. */
-private fun Event.toMedicalEvent(): Event {
-    return Event(
-        id          = id,
-        petId       = petId,
-        ownerId = ownerId,
-        title       = title,
-        eventType   = eventType,
-        price       = price,
-        provider    = provider,
-        clinic      = clinic,
-        date        = date.take(10),
-        description = description,
-        followUpDate = followUpDate?.take(10)
-    )
-}
+private fun Event.toMedicalEvent(): Event = Event(
+    id           = id,
+    petId        = petId,
+    ownerId      = ownerId,
+    title        = title,
+    eventType    = eventType,
+    price        = price,
+    provider     = provider,
+    clinic       = clinic,
+    date         = date.take(10),
+    description  = description,
+    followUpDate = followUpDate?.take(10)
+)
