@@ -13,3 +13,9 @@ data class GroupedSuggestion(
     val pets: List<String>,
     val message: String
 )
+
+data class PetFilterChip(
+    val petId: String,
+    val petName: String,
+    val alertCount: Int
+)

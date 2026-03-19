@@ -39,6 +39,7 @@ import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.petcare.util.UrlUtils
 
 enum class PetStatus {
     SUCCESS,
@@ -67,7 +68,9 @@ fun PetCard(
                 .align(Alignment.TopCenter)
         ) {
             OutlinedCard(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
                 border = BorderStroke(1.dp, borderColor),
                 modifier = Modifier.size(61.33.dp)
             ) {
@@ -75,6 +78,7 @@ fun PetCard(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
+
                     when {
                         status == PetStatus.DEFAULT -> {
                             Icon(
@@ -84,6 +88,7 @@ fun PetCard(
                                 modifier = Modifier.size(28.dp)
                             )
                         }
+
                         !photoUrl.isNullOrBlank() -> {
                             AsyncImage(
                                 model = ImageRequest.Builder(context)
@@ -96,6 +101,7 @@ fun PetCard(
                                 error = painterResource(R.drawable.pet)
                             )
                         }
+
                         image != null -> {
                             Image(
                                 painter = image,
@@ -104,6 +110,7 @@ fun PetCard(
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
+
                         else -> {
                             Image(
                                 painter = painterResource(R.drawable.pet),
@@ -150,7 +157,8 @@ fun PetCard(
                 .padding(2.dp)
                 .align(Alignment.BottomCenter),
             textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onBackground
         )
     }
 }
@@ -179,5 +187,3 @@ fun PetCardPreview() {
         }
     }
 }
-
-

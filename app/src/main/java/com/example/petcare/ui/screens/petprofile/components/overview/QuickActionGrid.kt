@@ -95,7 +95,7 @@ private fun GridButton(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
+            .background(androidx.compose.material3.MaterialTheme.colorScheme.surface)
             .clickable(onClick = onClick)
             .padding(vertical = 16.dp, horizontal = 12.dp)
     ) {

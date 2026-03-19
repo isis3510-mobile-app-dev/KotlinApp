@@ -7,7 +7,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -22,7 +25,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.petcare.data.nfc.NfcManager
-import com.example.petcare.data.preferences.AppThemeViewModel
+import com.example.petcare.ui.preferences.AppThemeViewModel
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.components.ExpandableFAB
 import com.example.petcare.ui.components.NavBar
@@ -52,6 +55,7 @@ import com.example.petcare.ui.screens.nfc.ScannedSuccessScreen
 import com.example.petcare.ui.screens.nfc.ScanningNFCScreen
 import com.example.petcare.ui.screens.nfc.TagWrittenScreen
 import com.example.petcare.ui.screens.nfc.WriteNFCScreen
+import com.example.petcare.ui.screens.notifications.NotificationsScreen
 import com.example.petcare.ui.screens.onboarding.OnBoardingScreen
 import com.example.petcare.ui.screens.petprofile.PetProfileScreen
 import com.example.petcare.ui.screens.petprofile.PetProfileViewModel
@@ -102,9 +106,9 @@ class MainActivity : ComponentActivity() {
             // ── ViewModels whose lifetime is tied to this Activity ─────────────
             val authViewModel: AuthViewModel = viewModel()
             val homeViewModel: HomeViewModel = viewModel()
-            val addPetViewModel:     AddPetViewModel     = viewModel()
+            val addPetViewModel: AddPetViewModel = viewModel()
             val addVaccineViewModel: AddVaccineViewModel = viewModel()
-            val addEventViewModel:   AddEventViewModel   = viewModel()
+            val addEventViewModel: AddEventViewModel = viewModel()
 
             // Fetch the logged-in user's profile once at startup
             LaunchedEffect(Unit) {
@@ -117,17 +121,7 @@ class MainActivity : ComponentActivity() {
             CompositionLocalProvider(LocalAppThemeMode provides themeMode) {
                 PetCareTheme(themeMode = themeMode) {
                     Scaffold(
-                        containerColor = OffWhite,
-                        floatingActionButton = {
-                            if (currentRoute in bottomBarRoutes) {
-                                ExpandableFAB(
-                                    onAddPet     = { navController.navigate(Routes.AddPet1) },
-                                    onAddVaccine = { navController.navigate(Routes.AddVaccine1) },
-                                    onAddEvent   = { navController.navigate(Routes.AddEvent1) },
-                                    onScanNFC    = { navController.navigate(Routes.NfcScan) }
-                                )
-                            }
-                        },
+                        containerColor = MaterialTheme.colorScheme.background,
                         bottomBar = {
                             if (currentRoute in bottomBarRoutes) {
                                 NavBar(
@@ -145,11 +139,12 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     ) { innerPadding ->
-                        NavHost(
-                            navController    = navController,
-                            startDestination = if (authViewModel.isLoggedIn) Routes.Home else Routes.Onboarding1,
-                            modifier         = Modifier.padding(innerPadding)
-                        ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            NavHost(
+                                navController    = navController,
+                                startDestination = if (authViewModel.isLoggedIn) Routes.Home else Routes.Onboarding1,
+                                modifier         = Modifier.padding(innerPadding)
+                            ) {
 
                             // ── Onboarding ────────────────────────────────────────────────────────
                             composable(Routes.Onboarding1) {
@@ -225,7 +220,8 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToAddPet      = { navController.navigate(Routes.AddPet1) },
                                     onNavigateToVaccine     = { petId, vaccineId -> navController.navigate("vaccineDetails/$petId/$vaccineId") },
                                     onNavigateToEvent       = { petId, eventId   -> navController.navigate("eventDetails/$petId/$eventId") },
-                                    onNavigateToRecords     = { navController.navigate(Routes.Records) }
+                                    onNavigateToRecords     = { navController.navigate(Routes.Records) },
+                                    onNavigateToNotifications = { navController.navigate(Routes.Notifications) }
                                 )
                             }
 
@@ -236,6 +232,10 @@ class MainActivity : ComponentActivity() {
                                 PetsScreen(
                                     pets      = uiState.pets,
                                     isLoading = uiState.isLoading,
+                                    searchQuery = uiState.searchQuery,
+                                    onSearchQueryChange = petsViewModel::updateSearchQuery,
+                                    selectedFilter = uiState.selectedFilter,
+                                    onFilterSelected = petsViewModel::updateSelectedFilter,
                                     onPetSelected = { petId ->
                                         navController.navigate("petProfile/$petId")
                                     },
@@ -249,11 +249,22 @@ class MainActivity : ComponentActivity() {
                             // ── Records / Calendar / Profile ─────────────────────────────────────
                             composable(Routes.Records) {
                                 HealthRecordsScreen(
-                                    onNavigateToVaccineDetail = { petId, vaccinationId ->
-                                        navController.navigate("vaccineDetails/$petId/$vaccinationId")
-                                    },
                                     onNavigateToEventDetail = { petId, eventId ->
                                         navController.navigate("eventDetails/$petId/$eventId")
+                                    },
+                                    onAddRecordClick = {
+                                        addEventViewModel.reset()
+                                        addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
+                                        navController.navigate(Routes.AddEvent1)
+                                    },
+                                    onAddVaccineClick = {
+                                        addVaccineViewModel.reset()
+                                        navController.navigate(Routes.AddVaccine1)
+                                    },
+                                    onAddEventClick = {
+                                        addEventViewModel.reset()
+                                        addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
+                                        navController.navigate(Routes.AddEvent1)
                                     }
                                 )
                             }
@@ -314,6 +325,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onNavigateToEventDetail = { pId, eventId ->
                                         navController.navigate("eventDetails/$pId/$eventId")
+                                    },
+                                    onSeeAllNotifications = { pid, petName ->
+                                        navController.navigate("notifications/$pid/$petName")
                                     }
                                 )
                             }
@@ -434,12 +448,13 @@ class MainActivity : ComponentActivity() {
 
                             // ── Add Vaccine ───────────────────────────────────────────────────────
                             composable(Routes.AddVaccine1) {
-                                AddVaccineInitialForm(
-                                    viewModel = addVaccineViewModel,
-                                    onBack    = { navController.popBackStack() },
-                                    onclick   = { navController.navigate(Routes.AddVaccine2) }
-                                )
-                            }
+                                        AddVaccineInitialForm(
+                                            viewModel = addVaccineViewModel,
+                                            petsViewModel = petsViewModel,
+                                            onBack    = { navController.popBackStack() },
+                                            onclick   = { navController.navigate(Routes.AddVaccine2) }
+                                        )
+                                    }
                             composable(Routes.AddVaccine2) {
                                 AddVaccineDetailsForm(
                                     viewModel = addVaccineViewModel,
@@ -465,6 +480,7 @@ class MainActivity : ComponentActivity() {
                             composable(Routes.AddEvent1) {
                                 AddEventInitialForm(
                                     viewModel = addEventViewModel,
+                                    petsViewModel = petsViewModel,
                                     onBack    = { navController.popBackStack() },
                                     onclick   = { navController.navigate(Routes.AddEvent2) }
                                 )
@@ -489,12 +505,51 @@ class MainActivity : ComponentActivity() {
                                     }
                                 )
                             }
+                            //Notifications route
+                            composable(Routes.Notifications) {
+                                NotificationsScreen(
+                                    onBack = { navController.popBackStack() }
+                                )
+
+                            }
+                            composable(
+                                route = Routes.NotficationPerPet,
+                                arguments = listOf(
+                                    navArgument("petId")   { type = NavType.StringType },
+                                    navArgument("petName") { type = NavType.StringType }
+                                )
+                            ) { backStackEntry ->
+                                NotificationsScreen(
+                                    filterPetId   = backStackEntry.arguments?.getString("petId"),
+                                    filterPetName = backStackEntry.arguments?.getString("petName"),
+                                    onBack        = { navController.popBackStack() }
+                                )
+                            }
+                        }
+                        
+                        if (currentRoute in bottomBarRoutes) {
+                            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                                ExpandableFAB(
+                                    onAddPet     = { navController.navigate(Routes.AddPet1) },
+                                    onAddVaccine = {
+                                        addVaccineViewModel.reset()
+                                        navController.navigate(Routes.AddVaccine1)
+                                    },
+                                    onAddEvent   = {
+                                        addEventViewModel.reset()
+                                        addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
+                                        navController.navigate(Routes.AddEvent1)
+                                    },
+                                    onScanNFC    = { navController.navigate(Routes.NfcScan) }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+}
 
     // ── NFC lifecycle ─────────────────────────────────────────────────────────
 

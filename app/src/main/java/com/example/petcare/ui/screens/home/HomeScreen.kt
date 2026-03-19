@@ -9,9 +9,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Vaccines
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,7 +40,8 @@ fun HomeScreen(
     onNavigateToRecords: () -> Unit = {},
     onNavigateToEvent: (String, String) -> Unit = { _, _ -> },
     authViewModel: AuthViewModel,
-    homeViewModel: HomeViewModel = viewModel()
+    homeViewModel: HomeViewModel = viewModel(),
+    onNavigateToNotifications: () -> Unit
 ) {
     val homeState   by homeViewModel.state.collectAsStateWithLifecycle()
     val userProfile by authViewModel.userProfile.collectAsStateWithLifecycle()
@@ -67,14 +72,12 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text       = displayName,
-                    fontSize   = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color      = Color.Black
+                    text = displayName,
+                    fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     NfcButton(onClick = onNavigateToNfc)
-                    NotificationButton()
+                    NotificationButton(onClick = onNavigateToNotifications)
                 }
             }
         }
@@ -104,7 +107,10 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment     = Alignment.CenterVertically
                 ) {
-                    Text("My Pets", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(
+                        "My Pets", fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
+                    )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier          = Modifier.clickable { onNavigateToPets() }
@@ -140,10 +146,42 @@ fun HomeScreen(
             }
         }
 
-        // ── Overdue warning ───────────────────────────────────────────────
-        if (homeState.overdueVaccinesCount > 0) {
+        // ── Health Alerts ─────────────────────────────────────────────────────
+        if (homeState.topAlert != null) {
             item {
-                OverdueWarningBanner(overdueCount = homeState.overdueVaccinesCount)
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text       = "Health Alerts",
+                            fontSize   = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color      = Color.Black
+                        )
+                        if (homeState.totalAlertCount >= 1) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier          = Modifier.clickable { onNavigateToNotifications() }
+                            ) {
+                                Text(
+                                    text       = "See all ${homeState.totalAlertCount}",
+                                    fontSize   = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color      = GreenDark
+                                )
+                                Icon(
+                                    imageVector        = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint               = GreenDark
+                                )
+                            }
+                        }
+                    }
+                    GroupedSuggestionCard(grouped = homeState.topAlert!!)
+                }
             }
         }
 
@@ -160,7 +198,7 @@ fun HomeScreen(
                             "Upcoming Vaccines",
                             fontSize   = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color      = Color.Black
+                            color      = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             "See all",
@@ -176,7 +214,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(Color.White)
+                                .background(MaterialTheme.colorScheme.surface)
                                 .clickable {
                                     // Navigate to pet profile vaccines tab
                                     onNavigateToPetProfile(vacc.petId)
@@ -247,10 +285,8 @@ fun HomeScreen(
                         verticalAlignment     = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Recent Events",
-                            fontSize   = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color      = Color.Black
+                            "Active Events", fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             "View all",

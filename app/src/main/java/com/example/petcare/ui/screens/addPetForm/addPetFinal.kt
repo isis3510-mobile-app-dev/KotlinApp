@@ -135,7 +135,7 @@ fun AddPetFinalForm(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 ButtonDefault(
-                    bgColor = MaterialTheme.colorScheme.secondary,
+                    bgColor = com.example.petcare.ui.theme.GreenDark,
                     textColor = Color.White,
                     width = 169.dp, height = 50.57.dp,
                     text = if (state.isLoading) "Saving…" else "Add Pet",

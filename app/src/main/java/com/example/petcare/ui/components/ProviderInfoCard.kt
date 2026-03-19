@@ -35,7 +35,7 @@ fun ProviderInfoCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(24.dp)
     ) {
         Text(
@@ -63,7 +63,7 @@ fun ProviderInfoCard(
                 Text(
                     text = veterinarian,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
@@ -85,7 +85,7 @@ fun ProviderInfoCard(
                 Text(
                     text = clinic,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }

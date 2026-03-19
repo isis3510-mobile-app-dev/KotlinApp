@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.Pet
+import com.example.petcare.data.model.SuggestionDto
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
@@ -29,6 +30,7 @@ data class PetProfileUiState(
     val events: List<Event> = emptyList(),
     val vaccines: List<VaccineRecord> = emptyList(),
     val vaccineFilter: VaccineFilterStatus? = null,
+    val suggestions: List<SuggestionDto> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val photoUrl: String? = null
@@ -87,6 +89,11 @@ class PetProfileViewModel : ViewModel() {
             },
             onFailure = { /* non-fatal — show empty list */ }
         )
+        val suggestions = mutableListOf<SuggestionDto>()
+        RepositoryProvider.petRepository.getPetSmart(petId).fold(
+            onSuccess = { suggestions.addAll(it) },
+            onFailure = { /* non-fatal */ }
+        )
 
         _uiState.value = _uiState.value.copy(
             name                 = pet.name,
@@ -104,6 +111,7 @@ class PetProfileViewModel : ViewModel() {
             upcomingEventsCount  = events.size,
             vaccines             = vaccines,
             events               = events,
+            suggestions = suggestions,
             isLoading            = false,
             error                = null,
             photoUrl             = pet.photoUrl

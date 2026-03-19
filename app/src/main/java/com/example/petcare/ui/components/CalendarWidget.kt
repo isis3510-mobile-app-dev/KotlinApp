@@ -43,7 +43,7 @@ fun CalendarWidget(
 ) {
     Card(
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -133,15 +133,15 @@ private fun CalendarHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = { onMonthChanged(currentMonth.minusMonths(1)) }) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = "Previous", tint = Color.Black)
+            Icon(Icons.Default.ChevronLeft, contentDescription = "Previous", tint = MaterialTheme.colorScheme.onSurface)
         }
         Text(
             text = currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
             style = MaterialTheme.typography.titleLarge,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onSurface
         )
         IconButton(onClick = { onMonthChanged(currentMonth.plusMonths(1)) }) {
-            Icon(Icons.Default.ChevronRight, contentDescription = "Next", tint = Color.Black)
+            Icon(Icons.Default.ChevronRight, contentDescription = "Next", tint = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -199,25 +199,13 @@ private fun CalendarDay(
             .clickable { onDateSelected(date) },
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text  = date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = if (isStart || isEnd) FontWeight.Bold else FontWeight.Normal
-                ),
-                color = if (isStart || isEnd) Color.White else Color.Black
-            )
-            // ↓ Dot marker for days with events or vaccines
-            if (hasMarker && !isStart && !isEnd) {
-                Spacer(modifier = Modifier.height(1.dp))
-                Box(
-                    modifier = Modifier
-                        .size(4.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(GreenDark)
-                )
-            }
-        }
+        Text(
+            text = date.dayOfMonth.toString(),
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = if (isStart || isEnd) FontWeight.Bold else FontWeight.Normal
+            ),
+            color = if (isStart || isEnd) Color.White else MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 

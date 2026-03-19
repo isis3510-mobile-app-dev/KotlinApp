@@ -52,7 +52,10 @@ import com.example.petcare.ui.theme.SuccessContent
 fun HealthRecordsScreen(
     paddingValues: PaddingValues = PaddingValues(0.dp),
     onNavigateToVaccineDetail: (petId: String, vaccinationId: String) -> Unit = { _, _ -> },
-    onNavigateToEventDetail: (petId: String, eventId: String) -> Unit = { _, _ -> }
+    onNavigateToEventDetail: (petId: String, eventId: String) -> Unit = { _, _ -> },
+    onAddRecordClick: () -> Unit = {},
+    onAddVaccineClick: () -> Unit = {},
+    onAddEventClick: () -> Unit = {}
 ) {
     val viewModel: HealthRecordsViewModel = viewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -99,9 +102,9 @@ fun HealthRecordsScreen(
 
             else -> {
                 when (state.selectedFilter) {
-                    "All"      -> AllRecordsContent(state, onNavigateToVaccineDetail, onNavigateToEventDetail)
-                    "Vaccines" -> VaccinesContent(state, onNavigateToVaccineDetail)
-                    "Events"   -> EventsContent(state, onNavigateToEventDetail)
+                    "All"      -> AllRecordsContent(state, onNavigateToVaccineDetail, onNavigateToEventDetail, onAddRecordClick)
+                    "Vaccines" -> VaccinesContent(state, onNavigateToVaccineDetail, onAddVaccineClick)
+                    "Events"   -> EventsContent(state, onNavigateToEventDetail, onAddEventClick)
                 }
             }
         }
@@ -112,14 +115,15 @@ fun HealthRecordsScreen(
 private fun AllRecordsContent(
     state: HealthRecordsState,
     onNavigateToVaccineDetail: (String, String) -> Unit,
-    onNavigateToEventDetail: (String, String) -> Unit
+    onNavigateToEventDetail: (String, String) -> Unit,
+    onAddRecordClick: () -> Unit
 ) {
     val overdueCount  = state.vaccines.count { it.data.status == "overdue" }
     val upcomingCount = state.vaccines.count { it.data.status == "upcoming" }
 
     if (state.vaccines.isEmpty() && state.events.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            EmptyStateView(icon = Icons.Default.Vaccines, message = "No health records yet")
+            EmptyStateView(icon = Icons.Default.Vaccines, message = "No health records yet", buttonText = "Add New Record", onButtonClick = onAddRecordClick)
         }
         return
     }
@@ -177,11 +181,12 @@ private fun AllRecordsContent(
 @Composable
 private fun VaccinesContent(
     state: HealthRecordsState,
-    onNavigateToVaccineDetail: (String, String) -> Unit
+    onNavigateToVaccineDetail: (String, String) -> Unit,
+    onAddVaccineClick: () -> Unit
 ) {
     if (state.vaccines.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            EmptyStateView(icon = Icons.Default.Vaccines, message = "No vaccines recorded yet")
+            EmptyStateView(icon = Icons.Default.Vaccines, message = "No vaccines recorded yet", buttonText = "Add Vaccine", onButtonClick = onAddVaccineClick)
         }
         return
     }
@@ -212,11 +217,12 @@ private fun VaccinesContent(
 @Composable
 private fun EventsContent(
     state: HealthRecordsState,
-    onNavigateToEventDetail: (String, String) -> Unit
+    onNavigateToEventDetail: (String, String) -> Unit,
+    onAddEventClick: () -> Unit
 ) {
     if (state.events.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            EmptyStateView(icon = Icons.Default.CalendarMonth, message = "No medical events yet")
+            EmptyStateView(icon = Icons.Default.CalendarMonth, message = "No medical events yet", buttonText = "Add Medical Event", onButtonClick = onAddEventClick)
         }
         return
     }

@@ -133,7 +133,7 @@ fun VaccineTimelineItem(
                 .weight(1f)
                 .padding(bottom = 16.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color.White)
+                .background(androidx.compose.material3.MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
             Column {

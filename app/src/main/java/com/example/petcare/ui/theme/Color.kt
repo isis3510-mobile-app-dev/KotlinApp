@@ -32,6 +32,8 @@ val GrayBackground = Color(0xFFF0F4F3)
 val GrayLight = Color(0xFFF5F5F5)
 val GrayMedium = Color(0xFFE5E5E5)
 val GrayDark = Color(0xFF424242)
+val DarkBackground = Color(0xFF191C1C)
+val DarkSurface = Color(0xFF232828)
 
 // Theme Accents
 val GreenAccentLight = Color(0xFFB2EBE0)

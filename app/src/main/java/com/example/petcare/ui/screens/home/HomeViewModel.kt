@@ -3,7 +3,9 @@ package com.example.petcare.ui.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.Event
+import com.example.petcare.data.model.GroupedSuggestion
 import com.example.petcare.data.model.Pet
+import com.example.petcare.data.model.PetSuggestion
 import com.example.petcare.data.model.Vaccination
 import com.example.petcare.data.repository.RepositoryProvider
 import kotlinx.coroutines.async
@@ -28,6 +30,8 @@ data class HomeUiState(
     val recentEvents: List<Event> = emptyList(),
     val upcomingVaccines: List<UpcomingVaccine> = emptyList(),
     val overdueVaccinesCount: Int = 0,
+    val topAlert: GroupedSuggestion? = null,
+    val totalAlertCount: Int = 0,
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -53,6 +57,15 @@ class HomeViewModel : ViewModel() {
                             RepositoryProvider.eventRepository
                                 .getEvents(petId = pet.id)
                                 .getOrElse { emptyList() }
+                        }
+                    }.awaitAll().flatten()
+
+                    val allSuggestions: List<PetSuggestion> = pets.map { pet ->
+                        async {
+                            RepositoryProvider.petRepository
+                                .getPetSmart(pet.id)
+                                .getOrElse { emptyList() }
+                                .map { PetSuggestion(pet.id, pet.name, it) }
                         }
                     }.awaitAll().flatten()
 
@@ -83,6 +96,19 @@ class HomeViewModel : ViewModel() {
                         }
                     }
 
+                    val criticalGrouped = allSuggestions
+                        .filter { it.suggestion.type in listOf("danger", "warning") }
+                        .groupBy { it.suggestion.title }
+                        .map { (title, items) ->
+                            GroupedSuggestion(
+                                vaccineTitle = title,
+                                type         = if (items.any { it.suggestion.type == "danger" }) "danger" else "warning",
+                                pets         = items.map { it.petName }.distinct(),
+                                message      = items.first().suggestion.message
+                            )
+                        }
+                        .sortedBy { if (it.type == "danger") 0 else 1 }
+
                     _state.value = _state.value.copy(
                         pets                 = pets,
                         recentEvents         = eventResults
@@ -90,6 +116,8 @@ class HomeViewModel : ViewModel() {
                             .take(5),
                         upcomingVaccines     = upcoming.sortedBy { it.daysUntilDue },
                         overdueVaccinesCount = overdueCount,
+                        topAlert             = criticalGrouped.firstOrNull(),
+                        totalAlertCount      = criticalGrouped.size,
                         isLoading            = false
                     )
                 },

@@ -25,8 +25,8 @@ data class GenderOption(val name: String, val icon: @Composable () -> Unit)
 fun GenderSelector(
     title: String = "Species",
     options: List<GenderOption> = listOf(
-        GenderOption("Male") { Icon(Icons.Filled.Male, contentDescription = "Male", tint = Color.Black) },
-        GenderOption("Female") { Icon(Icons.Filled.Female, contentDescription = "Female", tint = Color.Black) }
+        GenderOption("Male") { Icon(Icons.Filled.Male, contentDescription = "Male", tint = MaterialTheme.colorScheme.onSurface) },
+        GenderOption("Female") { Icon(Icons.Filled.Female, contentDescription = "Female", tint = MaterialTheme.colorScheme.onSurface) }
     ),
     onOptionSelected: (String) -> Unit
 ) {
@@ -39,7 +39,7 @@ fun GenderSelector(
         Text(
             text = title,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -57,7 +57,7 @@ fun GenderSelector(
                             shape = RoundedCornerShape(30.dp)
                         )
                         .background(
-                            color = if (isSelected) GreenDark else Color.White,
+                            color = if (isSelected) GreenDark else MaterialTheme.colorScheme.surface,
                             shape = RoundedCornerShape(30.dp)
                         )
                         .clickable {
@@ -78,7 +78,7 @@ fun GenderSelector(
 
                         Text(
                             text = option.name,
-                            color = if (isSelected) Color.White else Color.Black,
+                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
                             fontSize = 14.sp
                         )
                     }

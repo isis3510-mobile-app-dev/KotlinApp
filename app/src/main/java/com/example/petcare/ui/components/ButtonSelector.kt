@@ -39,7 +39,7 @@ fun SpeciesSelector(
         Text(
             text = title,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
@@ -53,11 +53,11 @@ fun SpeciesSelector(
                         .size(width = 111.33.dp, height = 42.67.dp)
                         .border(
                             width = 1.dp,
-                            color = if (isSelected) GreenDark else Color.LightGray,
+                            color = if (isSelected) GreenDark else MaterialTheme.colorScheme.outline,
                             shape = RoundedCornerShape(30.dp)
                         )
                         .background(
-                            color = if (isSelected) GreenDark else Color.White,
+                            color = if (isSelected) GreenDark else MaterialTheme.colorScheme.surface,
                             shape = RoundedCornerShape(12.dp)
                         )
                         .clickable {
@@ -74,14 +74,15 @@ fun SpeciesSelector(
                         Image(
                             painter = painterResource(id = option.iconResId),
                             contentDescription = option.name,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(24.dp),
+                            colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface)
                         )
 
                         Spacer(modifier = Modifier.width(8.dp))
 
                         Text(
                             text = option.name,
-                            color = if (isSelected) Color.White else Color.Black,
+                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
                             fontSize = 14.sp
                         )
                     }

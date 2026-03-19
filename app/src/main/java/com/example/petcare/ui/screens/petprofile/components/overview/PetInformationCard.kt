@@ -33,7 +33,7 @@ fun PetInformationCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color.White)
+            .background(androidx.compose.material3.MaterialTheme.colorScheme.surface)
             .padding(24.dp)
     ) {
         Column {

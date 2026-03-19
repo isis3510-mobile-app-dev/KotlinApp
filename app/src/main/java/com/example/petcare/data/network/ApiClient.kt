@@ -12,7 +12,7 @@ object ApiClient {
     // Cambia esta URL según dónde corra tu backend:
     //   Emulador Android: "http://10.0.2.2:8000/api/"
     //   Dispositivo físico: "http://192.168.x.x:8000/api/"
-    private const val BASE_URL = "http://10.0.2.2:8000/api/"
+    private val BASE_URL = com.example.petcare.BuildConfig.BASE_URL
 
     fun create(authRepository: AuthRepository): Retrofit {
         val okHttpClient = OkHttpClient.Builder()

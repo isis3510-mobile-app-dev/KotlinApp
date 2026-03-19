@@ -91,6 +91,11 @@ fun AddEventFinalForm(
                         Switch(
                             checked = state.reminderEnabled,
                             onCheckedChange = viewModel::setReminderEnabled,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = com.example.petcare.ui.theme.GreenDark,
+                                uncheckedTrackColor = com.example.petcare.ui.theme.GrayBorder,
+                                checkedThumbColor = Color.White
+                            ),
                             modifier = Modifier.semantics { contentDescription = "Set a reminder" }
                         )
                     }
@@ -112,7 +117,7 @@ fun AddEventFinalForm(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 ButtonDefault(
-                    bgColor = MaterialTheme.colorScheme.secondary, textColor = Color.White,
+                    bgColor = com.example.petcare.ui.theme.GreenDark, textColor = Color.White,
                     width = 169.dp, height = 50.57.dp,
                     text = if (state.isLoading) "Saving…" else "Add Event",
                     onclick = { viewModel.submit { onclick() } }
