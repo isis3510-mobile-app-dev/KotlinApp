@@ -28,7 +28,7 @@ fun AddVaccineFinalForm(
     onBack: () -> Unit,
     viewModel: AddVaccineViewModel
 ) {
-    val state   by viewModel.state.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val fileLauncher = rememberLauncherForActivityResult(
@@ -39,7 +39,8 @@ fun AddVaccineFinalForm(
                 context.contentResolver.takePersistableUriPermission(
                     it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
 
             val mimeType = context.contentResolver.getType(it)
                 ?: "application/octet-stream"
@@ -52,95 +53,96 @@ fun AddVaccineFinalForm(
     }
 
     Column(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.background)
+            .fillMaxSize()
+            .padding(24.dp)
+    ) {
+        Column(
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.background)
-                .fillMaxSize()
-                .padding(24.dp)
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                TransparentTopBar(title = "Add New Vaccine", onBackClick = onBack)
-                Stepper(currentStep = 3, stepLabels = listOf("Basic Info", "Details", "Overview"))
+            TransparentTopBar(title = "Add New Vaccine", onBackClick = onBack)
+            Stepper(currentStep = 3, stepLabels = listOf("Basic Info", "Details", "Overview"))
 
-                // ── Resumen read-only ────────────────────────────────────
-                TextFieldComponent(
-                    name          = "Vaccine",
-                    label         = state.selectedVaccine?.name ?: "",
-                    value         = state.selectedVaccine?.name ?: "",
-                    onValueChange = {}
-                )
-                TextFieldComponent(
-                    name          = "Date Given",
-                    label         = state.dateGiven,
-                    value         = state.dateGiven,
-                    onValueChange = {}
-                )
-                TextFieldComponent(
-                    name          = "Administered By",
-                    label         = state.administeredBy,
-                    value         = state.administeredBy,
-                    onValueChange = viewModel::setAdministeredBy
-                )
-                DateTextField(
-                    name           = "Next Due Date (optional)",
-                    onDateSelected = viewModel::setNextDueDate
-                )
+            // ── Resumen read-only ────────────────────────────────────
+            TextFieldComponent(
+                name = "Vaccine",
+                label = state.selectedVaccine?.name ?: "",
+                value = state.selectedVaccine?.name ?: "",
+                onValueChange = {}
+            )
+            TextFieldComponent(
+                name = "Date Given",
+                label = state.dateGiven,
+                value = state.dateGiven,
+                onValueChange = {}
+            )
+            TextFieldComponent(
+                name = "Administered By",
+                label = state.administeredBy,
+                value = state.administeredBy,
+                onValueChange = viewModel::setAdministeredBy
+            )
+            DateTextField(
+                name = "Next Due Date (optional)",
+                onDateSelected = viewModel::setNextDueDate
+            )
 
-                // ── Documentos adjuntos ──────────────────────────────────
-                AttachedDocumentsCard(
-                    documents = state.stagedDocuments.map { staged ->
-                        com.example.petcare.data.model.AttachedDocument(
-                            id       = staged.uri.toString(),
-                            fileName = staged.fileName,
-                            fileUri  = staged.downloadUrl
+            // ── Documentos adjuntos ──────────────────────────────────
+            AttachedDocumentsCard(
+                documents = state.stagedDocuments.map { staged ->
+                    com.example.petcare.data.model.AttachedDocument(
+                        id = staged.uri.toString(),
+                        fileName = staged.fileName,
+                        fileUri = staged.downloadUrl
+                    )
+                },
+                isUploading = state.stagedDocuments.any { it.isUploading },
+                onDocumentPicked = { _, _, _ ->
+                    fileLauncher.launch(
+                        arrayOf(
+                            "image/*",
+                            "application/pdf",
+                            "application/msword",
+                            "application/vnd.openxmlformats-officedocument" +
+                                    ".wordprocessingml.document",
+                            "text/plain"
                         )
-                    },
-                    isUploading      = state.stagedDocuments.any { it.isUploading },
-                    onDocumentPicked = { _, _, _ ->
-                        fileLauncher.launch(
-                            arrayOf(
-                                "image/*",
-                                "application/pdf",
-                                "application/msword",
-                                "application/vnd.openxmlformats-officedocument" +
-                                        ".wordprocessingml.document",
-                                "text/plain"
-                            )
-                        )
-                    }
-                )
-
-                // ── Error ────────────────────────────────────────────────
-                state.error?.let {
-                    Text(
-                        text  = it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
                     )
                 }
-            }
+            )
 
-            // ── Botones ──────────────────────────────────────────────────
-            Row {
-                ButtonOutline(
-                    bgColor      = MaterialTheme.colorScheme.background,
-                    outlineColor = MaterialTheme.colorScheme.secondary,
-                    textColor    = MaterialTheme.colorScheme.secondary,
-                    width = 169.dp, height = 50.57.dp,
-                    text = "Back", onclick = onBack
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                ButtonDefault(
-                    bgColor   = MaterialTheme.colorScheme.secondary,
-                textColor = MaterialTheme.colorScheme.onSecondary,
-                    width = 169.dp, height = 50.57.dp,
-                    text = if (state.isLoading) "Saving…" else "Add Vaccine",
-                    onclick = { viewModel.submit { onclick() } }
+            // ── Error ────────────────────────────────────────────────
+            state.error?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
+        }
+
+        // ── Botones ──────────────────────────────────────────────────
+        Row {
+            ButtonOutline(
+                bgColor = MaterialTheme.colorScheme.background,
+                outlineColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.secondary,
+                width = 169.dp, height = 50.57.dp,
+                text = "Back", onclick = onBack
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            ButtonDefault(
+                bgColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.onSecondary,
+                width = 169.dp, height = 50.57.dp,
+                text = if (state.isLoading) "Saving…" else "Add Vaccine",
+                onclick = { viewModel.submit { onclick() } }
+            )
+        }
     }
+}

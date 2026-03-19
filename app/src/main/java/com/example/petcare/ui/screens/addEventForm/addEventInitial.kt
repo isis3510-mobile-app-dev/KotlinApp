@@ -34,11 +34,11 @@ fun AddEventInitialForm(
     var petDropdownExpanded by remember { mutableStateOf(false) }
 
     val eventTypeOptions = listOf(
-        "Checkup"  to EventType.CHECKUP,
-        "Dental"   to EventType.DENTAL,
-        "Surgery"  to EventType.SURGERY,
-        "Vaccine"  to EventType.VACCINE,
-        "Other"    to EventType.OTHER
+        "Checkup" to EventType.CHECKUP,
+        "Dental" to EventType.DENTAL,
+        "Surgery" to EventType.SURGERY,
+        "Vaccine" to EventType.VACCINE,
+        "Other" to EventType.OTHER
     )
 
     val selectedLabel = eventTypeOptions
@@ -47,143 +47,144 @@ fun AddEventInitialForm(
     val selectedPetName = petsState.pets.find { it.id == state.petId }?.name ?: "Select a Pet"
 
     Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.background)
-                .fillMaxSize()
-                .padding(24.dp)
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.background)
+            .fillMaxSize()
+            .padding(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(30.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(30.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                TransparentTopBar(title = "Add New Event", onBackClick = onBack)
-                Stepper(currentStep = 1, stepLabels = listOf("Basic Info", "Details", "Overview"))
+            TransparentTopBar(title = "Add New Event", onBackClick = onBack)
+            Stepper(currentStep = 1, stepLabels = listOf("Basic Info", "Details", "Overview"))
 
-                // ── Pet Selection Dropdown ────────────────────────
-                Column {
-                    Text(
-                        text  = "Pet *",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
-
-                    ExposedDropdownMenuBox(
-                        expanded          = petDropdownExpanded,
-                        onExpandedChange  = { petDropdownExpanded = !petDropdownExpanded }
-                    ) {
-                        OutlinedTextField(
-                            value         = selectedPetName,
-                            onValueChange = {},
-                            readOnly      = true,
-                            trailingIcon  = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = petDropdownExpanded)
-                            },
-                            shape    = RoundedCornerShape(20.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(),
-                            colors   = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor   = MaterialTheme.colorScheme.secondary,
-                                unfocusedBorderColor = GrayBorder,
-                                focusedTextColor     = MaterialTheme.colorScheme.onBackground,
-                                unfocusedTextColor   = MaterialTheme.colorScheme.onBackground
-                            )
-                        )
-
-                        ExposedDropdownMenu(
-                            expanded          = petDropdownExpanded,
-                            onDismissRequest  = { petDropdownExpanded = false }
-                        ) {
-                            petsState.pets.forEach { pet ->
-                                DropdownMenuItem(
-                                    text    = { Text(pet.name) },
-                                    onClick = {
-                                        viewModel.setPetId(pet.id)
-                                        petDropdownExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                TextFieldComponent(
-                    name          = "Event Name *",
-                    label         = "e.g. Doctor's Appointment",
-                    value         = state.title,
-                    onValueChange = viewModel::setTitle
+            // ── Pet Selection Dropdown ────────────────────────
+            Column {
+                Text(
+                    text = "Pet *",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.padding(bottom = 6.dp)
                 )
 
-                DateTextField(name = "Date *", onDateSelected = viewModel::setDate)
-
-                TimeTextField(
-                    name          = "Time",
-                    onTimeSelected = viewModel::setTime
-                )
-
-                // ── Controlled EventType dropdown ────────────────────────
-                Column {
-                    Text(
-                        text  = "Event Type *",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.padding(bottom = 6.dp)
+                ExposedDropdownMenuBox(
+                    expanded = petDropdownExpanded,
+                    onExpandedChange = { petDropdownExpanded = !petDropdownExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedPetName,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = petDropdownExpanded)
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                            unfocusedBorderColor = GrayBorder,
+                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground
+                        )
                     )
 
-                    ExposedDropdownMenuBox(
-                        expanded          = dropdownExpanded,
-                        onExpandedChange  = { dropdownExpanded = !dropdownExpanded }
+                    ExposedDropdownMenu(
+                        expanded = petDropdownExpanded,
+                        onDismissRequest = { petDropdownExpanded = false }
                     ) {
-                        OutlinedTextField(
-                            value         = selectedLabel,
-                            onValueChange = {},
-                            readOnly      = true,
-                            trailingIcon  = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded)
-                            },
-                            shape    = RoundedCornerShape(20.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(),
-                            colors   = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor   = MaterialTheme.colorScheme.secondary,
-                                unfocusedBorderColor = GrayBorder,
-                                focusedTextColor     = MaterialTheme.colorScheme.onBackground,
-                                unfocusedTextColor   = MaterialTheme.colorScheme.onBackground
+                        petsState.pets.forEach { pet ->
+                            DropdownMenuItem(
+                                text = { Text(pet.name) },
+                                onClick = {
+                                    viewModel.setPetId(pet.id)
+                                    petDropdownExpanded = false
+                                }
                             )
-                        )
-
-                        ExposedDropdownMenu(
-                            expanded          = dropdownExpanded,
-                            onDismissRequest  = { dropdownExpanded = false }
-                        ) {
-                            eventTypeOptions.forEach { (label, type) ->
-                                DropdownMenuItem(
-                                    text    = { Text(label) },
-                                    onClick = {
-                                        viewModel.setEventType(type)
-                                        dropdownExpanded = false
-                                    }
-                                )
-                            }
                         }
                     }
                 }
             }
 
-            ButtonDefault(
-                bgColor = MaterialTheme.colorScheme.secondary,
-                textColor = MaterialTheme.colorScheme.onSecondary,
-                width     = 342.dp,
-                height    = 56.dp,
-                text      = "Continue",
-                onclick   = {
-                    if (state.petId.isNotBlank() && state.title.isNotBlank() && state.date.isNotBlank()) onclick()
-                }
+            TextFieldComponent(
+                name = "Event Name *",
+                label = "e.g. Doctor's Appointment",
+                value = state.title,
+                onValueChange = viewModel::setTitle
             )
+
+            DateTextField(name = "Date *", onDateSelected = viewModel::setDate)
+
+            TimeTextField(
+                name = "Time",
+                onTimeSelected = viewModel::setTime
+            )
+
+            // ── Controlled EventType dropdown ────────────────────────
+            Column {
+                Text(
+                    text = "Event Type *",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+
+                ExposedDropdownMenuBox(
+                    expanded = dropdownExpanded,
+                    onExpandedChange = { dropdownExpanded = !dropdownExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedLabel,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded)
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                            unfocusedBorderColor = GrayBorder,
+                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground
+                        )
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = dropdownExpanded,
+                        onDismissRequest = { dropdownExpanded = false }
+                    ) {
+                        eventTypeOptions.forEach { (label, type) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    viewModel.setEventType(type)
+                                    dropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        ButtonDefault(
+            bgColor = MaterialTheme.colorScheme.secondary,
+            textColor = MaterialTheme.colorScheme.onSecondary,
+            width = 342.dp,
+            height = 56.dp,
+            text = "Continue",
+            onclick = {
+                if (state.petId.isNotBlank() && state.title.isNotBlank() && state.date.isNotBlank()) onclick()
+            }
+        )
     }
+}
 
 @Preview
 @Composable

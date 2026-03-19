@@ -24,10 +24,10 @@ fun AddVaccineInitialForm(
     viewModel: AddVaccineViewModel,
     petsViewModel: PetsViewModel
 ) {
-    val state     by viewModel.state.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val petsState by petsViewModel.uiState.collectAsStateWithLifecycle()
 
-    var petDropdownExpanded     by remember { mutableStateOf(false) }
+    var petDropdownExpanded by remember { mutableStateOf(false) }
     var vaccineDropdownExpanded by remember { mutableStateOf(false) }
 
     val selectedPetName = petsState.pets.find { it.id == state.petId }?.name ?: "Select a Pet"
@@ -39,161 +39,171 @@ fun AddVaccineInitialForm(
     }
 
     Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.background)
-                .fillMaxSize()
-                .padding(24.dp)
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.background)
+            .fillMaxSize()
+            .padding(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(30.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(30.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                TransparentTopBar(title = "Add New Vaccine", onBackClick = onBack)
-                Stepper(currentStep = 1, stepLabels = listOf("Basic Info", "Details", "Overview"))
+            TransparentTopBar(title = "Add New Vaccine", onBackClick = onBack)
+            Stepper(currentStep = 1, stepLabels = listOf("Basic Info", "Details", "Overview"))
 
-                // ── Pet dropdown ─────────────────────────────────────────────
-                Column {
-                    Text(
-                        text     = "Pet *",
-                        style    = MaterialTheme.typography.bodySmall,
-                        color    = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
-                    ExposedDropdownMenuBox(
-                        expanded         = petDropdownExpanded,
-                        onExpandedChange = { petDropdownExpanded = !petDropdownExpanded }
-                    ) {
-                        OutlinedTextField(
-                            value         = selectedPetName,
-                            onValueChange = {},
-                            readOnly      = true,
-                            trailingIcon  = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = petDropdownExpanded)
-                            },
-                            shape    = RoundedCornerShape(20.dp),
-                            modifier = Modifier.fillMaxWidth().menuAnchor(),
-                            colors   = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor   = MaterialTheme.colorScheme.secondary,
-                                unfocusedBorderColor = GrayBorder,
-                                focusedTextColor     = MaterialTheme.colorScheme.onBackground,
-                                unfocusedTextColor   = MaterialTheme.colorScheme.onBackground
-                            )
+            // ── Pet dropdown ─────────────────────────────────────────────
+            Column {
+                Text(
+                    text = "Pet *",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+                ExposedDropdownMenuBox(
+                    expanded = petDropdownExpanded,
+                    onExpandedChange = { petDropdownExpanded = !petDropdownExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedPetName,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = petDropdownExpanded)
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                            unfocusedBorderColor = GrayBorder,
+                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground
                         )
-                        ExposedDropdownMenu(
-                            expanded         = petDropdownExpanded,
-                            onDismissRequest = { petDropdownExpanded = false }
-                        ) {
-                            petsState.pets.forEach { pet ->
-                                DropdownMenuItem(
-                                    text    = { Text(pet.name) },
-                                    onClick = {
-                                        viewModel.setPetId(pet.id)
-                                        viewModel.setSelectedVaccine(null) // reset vaccine when pet changes
-                                        petDropdownExpanded = false
-                                    }
-                                )
-                            }
+                    )
+                    ExposedDropdownMenu(
+                        expanded = petDropdownExpanded,
+                        onDismissRequest = { petDropdownExpanded = false }
+                    ) {
+                        petsState.pets.forEach { pet ->
+                            DropdownMenuItem(
+                                text = { Text(pet.name) },
+                                onClick = {
+                                    viewModel.setPetId(pet.id)
+                                    viewModel.setSelectedVaccine(null) // reset vaccine when pet changes
+                                    petDropdownExpanded = false
+                                }
+                            )
                         }
                     }
                 }
+            }
 
-                // ── Vaccine catalog dropdown ──────────────────────────────────
-                Column {
-                    Text(
-                        text     = "Vaccine *",
-                        style    = MaterialTheme.typography.bodySmall,
-                        color    = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
+            // ── Vaccine catalog dropdown ──────────────────────────────────
+            Column {
+                Text(
+                    text = "Vaccine *",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
 
-                    if (state.isCatalogLoading) {
-                        Box(
-                            modifier          = Modifier.fillMaxWidth().height(53.dp),
-                            contentAlignment  = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                modifier    = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
+                if (state.isCatalogLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(53.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                } else {
+                    ExposedDropdownMenuBox(
+                        expanded = vaccineDropdownExpanded,
+                        onExpandedChange = {
+                            // Only open if a pet is selected (so catalog is filtered)
+                            if (state.petId.isNotBlank()) vaccineDropdownExpanded =
+                                !vaccineDropdownExpanded
                         }
-                    } else {
-                        ExposedDropdownMenuBox(
-                            expanded         = vaccineDropdownExpanded,
-                            onExpandedChange = {
-                                // Only open if a pet is selected (so catalog is filtered)
-                                if (state.petId.isNotBlank()) vaccineDropdownExpanded = !vaccineDropdownExpanded
-                            }
-                        ) {
-                            OutlinedTextField(
-                                value         = state.selectedVaccine?.name ?: "Select a Vaccine",
-                                onValueChange = {},
-                                readOnly      = true,
-                                enabled       = state.petId.isNotBlank(),
-                                placeholder   = { Text("Select a pet first") },
-                                trailingIcon  = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = vaccineDropdownExpanded)
-                                },
-                                shape    = RoundedCornerShape(20.dp),
-                                modifier = Modifier.fillMaxWidth().menuAnchor(),
-                                colors   = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor   = MaterialTheme.colorScheme.secondary,
-                                    unfocusedBorderColor = GrayBorder,
-                                    focusedTextColor     = MaterialTheme.colorScheme.onBackground,
-                                    unfocusedTextColor   = MaterialTheme.colorScheme.onBackground
-                                )
+                    ) {
+                        OutlinedTextField(
+                            value = state.selectedVaccine?.name ?: "Select a Vaccine",
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = state.petId.isNotBlank(),
+                            placeholder = { Text("Select a pet first") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = vaccineDropdownExpanded)
+                            },
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                                unfocusedBorderColor = GrayBorder,
+                                focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onBackground
                             )
-                            ExposedDropdownMenu(
-                                expanded         = vaccineDropdownExpanded,
-                                onDismissRequest = { vaccineDropdownExpanded = false }
-                            ) {
-                                if (state.catalogVaccines.isEmpty()) {
-                                    DropdownMenuItem(
-                                        text    = { Text("No vaccines available", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                        onClick = { vaccineDropdownExpanded = false }
-                                    )
-                                } else {
-                                    state.catalogVaccines.forEach { vaccine ->
-                                        DropdownMenuItem(
-                                            text    = {
-                                                Column {
-                                                    Text(vaccine.name, style = MaterialTheme.typography.bodyMedium)
-                                                    if (vaccine.productName.isNotBlank()) {
-                                                        Text(
-                                                            vaccine.productName,
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                    }
-                                                }
-                                            },
-                                            onClick = {
-                                                viewModel.setSelectedVaccine(vaccine)
-                                                vaccineDropdownExpanded = false
-                                            }
+                        )
+                        ExposedDropdownMenu(
+                            expanded = vaccineDropdownExpanded,
+                            onDismissRequest = { vaccineDropdownExpanded = false }
+                        ) {
+                            if (state.catalogVaccines.isEmpty()) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            "No vaccines available",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
-                                    }
+                                    },
+                                    onClick = { vaccineDropdownExpanded = false }
+                                )
+                            } else {
+                                state.catalogVaccines.forEach { vaccine ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(
+                                                    vaccine.name,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                if (vaccine.productName.isNotBlank()) {
+                                                    Text(
+                                                        vaccine.productName,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        onClick = {
+                                            viewModel.setSelectedVaccine(vaccine)
+                                            vaccineDropdownExpanded = false
+                                        }
+                                    )
                                 }
                             }
                         }
                     }
                 }
-
-                // ── Date ─────────────────────────────────────────────────────
-                DateTextField(name = "Date *", onDateSelected = viewModel::setDateGiven)
             }
 
-            ButtonDefault(
-                bgColor   = MaterialTheme.colorScheme.secondary,
-                textColor = MaterialTheme.colorScheme.onSecondary,
-                width     = 342.dp,
-                height    = 56.dp,
-                text      = "Continue",
-                onclick   = {
-                    if (state.petId.isNotBlank()
-                        && state.selectedVaccine != null
-                        && state.dateGiven.isNotBlank()
-                    ) onclick()
-                }
-            )
+            // ── Date ─────────────────────────────────────────────────────
+            DateTextField(name = "Date *", onDateSelected = viewModel::setDateGiven)
+        }
+
+        ButtonDefault(
+            bgColor = MaterialTheme.colorScheme.secondary,
+            textColor = MaterialTheme.colorScheme.onSecondary,
+            width = 342.dp,
+            height = 56.dp,
+            text = "Continue",
+            onclick = {
+                if (state.petId.isNotBlank()
+                    && state.selectedVaccine != null
+                    && state.dateGiven.isNotBlank()
+                ) onclick()
+            }
+        )
     }
+}

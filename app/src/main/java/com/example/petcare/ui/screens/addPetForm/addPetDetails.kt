@@ -34,56 +34,57 @@ fun AddPetDetailsForm(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.background)
-                .fillMaxSize()
-                .padding(24.dp)
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.background)
+            .fillMaxSize()
+            .padding(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                TransparentTopBar(title = "Add New Pet", onBackClick = onBack)
+            TransparentTopBar(title = "Add New Pet", onBackClick = onBack)
 
-                Stepper(currentStep = 2, stepLabels = listOf("Basic Info", "Details", "Medical"))
+            Stepper(currentStep = 2, stepLabels = listOf("Basic Info", "Details", "Medical"))
 
-                GenderSelector(onOptionSelected = viewModel::setGender)
+            GenderSelector(onOptionSelected = viewModel::setGender)
 
-                TextFieldComponent(
-                    name = "Weight (Kg)",
-                    label = "e.g. 4.5",
-                    value = state.weight,
-                    onValueChange = viewModel::setWeight
-                )
+            TextFieldComponent(
+                name = "Weight (Kg)",
+                label = "e.g. 4.5",
+                value = state.weight,
+                onValueChange = viewModel::setWeight
+            )
 
-                TextFieldComponent(
-                    name = "Color / Markings",
-                    label = "e.g. Golden, White Chest",
-                    value = state.color,
-                    onValueChange = viewModel::setColor
-                )
+            TextFieldComponent(
+                name = "Color / Markings",
+                label = "e.g. Golden, White Chest",
+                value = state.color,
+                onValueChange = viewModel::setColor
+            )
 
-                // NEW: Birth Date field — matches the event form pattern
-                DateTextField(
-                    name = "Date of Birth",
-                    onDateSelected = viewModel::setBirthDate
-                )
-            }
-            Row {
-                ButtonOutline(
-                    bgColor = MaterialTheme.colorScheme.background,
-                    outlineColor = MaterialTheme.colorScheme.secondary,
-                    textColor = MaterialTheme.colorScheme.secondary,
-                    width = 169.dp, height = 50.57.dp,
-                    text = "Back", onclick = onBack
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                ButtonDefault(
-                    bgColor = MaterialTheme.colorScheme.secondary,
-                    textColor = MaterialTheme.colorScheme.onSecondary,
-                    width = 169.dp, height = 50.57.dp,
-                    text = "Continue", onclick = onclick
-                )
-            }
+            // NEW: Birth Date field — matches the event form pattern
+            DateTextField(
+                name = "Date of Birth",
+                onDateSelected = viewModel::setBirthDate
+            )
+        }
+        Row {
+            ButtonOutline(
+                bgColor = MaterialTheme.colorScheme.background,
+                outlineColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.secondary,
+                width = 169.dp, height = 50.57.dp,
+                text = "Back", onclick = onBack
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            ButtonDefault(
+                bgColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.onSecondary,
+                width = 169.dp, height = 50.57.dp,
+                text = "Continue", onclick = onclick
+            )
+        }
     }
+}
