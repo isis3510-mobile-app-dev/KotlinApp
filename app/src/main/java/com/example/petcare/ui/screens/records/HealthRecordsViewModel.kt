@@ -56,7 +56,6 @@ class HealthRecordsViewModel : ViewModel() {
             }
             val pets = petsResult.getOrDefault(emptyList())
 
-            // Load catalog to resolve names
             val catalogMap = RepositoryProvider.petRepository
                 .getVaccineCatalog()
                 .getOrElse { emptyList() }
@@ -74,6 +73,7 @@ class HealthRecordsViewModel : ViewModel() {
                             photoPath   = R.drawable.pet
                         ),
                         petId         = pet.id,
+                        // ← vacc.id es el _id del subdocumento (no el vaccineId del catálogo)
                         vaccinationId = vacc.id
                     )
                 }

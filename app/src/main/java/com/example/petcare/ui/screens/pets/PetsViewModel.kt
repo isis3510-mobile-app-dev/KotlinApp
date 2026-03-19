@@ -32,6 +32,9 @@ class PetsViewModel(
         loadPets()
     }
 
+    /** Llamado desde MainActivity cuando regresa de AddPet o PetProfile */
+    fun refresh() = loadPets()
+
     fun loadPets() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
@@ -41,10 +44,10 @@ class PetsViewModel(
                     applyFilters()
                 },
                 onFailure = { e ->
-                    _uiState.update { 
+                    _uiState.update {
                         it.copy(
                             isLoading = false,
-                            error = e.message ?: "Error loading pets"
+                            error     = e.message ?: "Error loading pets"
                         )
                     }
                 }
@@ -63,17 +66,16 @@ class PetsViewModel(
     }
 
     private fun applyFilters() {
-        val query = _uiState.value.searchQuery
+        val query  = _uiState.value.searchQuery
         val filter = _uiState.value.selectedFilter
         val filtered = allPets.filter { pet ->
             val matchesSearch = pet.name.contains(query, ignoreCase = true) ||
                     pet.breed.contains(query, ignoreCase = true)
-
             val matchesFilter = when (filter) {
-                "Healthy" -> pet.status.equals("healthy", ignoreCase = true)
+                "Healthy"     -> pet.status.equals("healthy", ignoreCase = true)
                 "Vaccine Due" -> pet.status.equals("vaccine due", ignoreCase = true)
-                "Lost" -> pet.status.equals("lost", ignoreCase = true)
-                else -> true
+                "Lost"        -> pet.status.equals("lost", ignoreCase = true)
+                else          -> true
             }
             matchesSearch && matchesFilter
         }
@@ -88,9 +90,7 @@ class PetsViewModel(
                     onSuccess()
                 },
                 onFailure = { e ->
-                    _uiState.update {
-                        it.copy(error = e.message ?: "Error creating pet")
-                    }
+                    _uiState.update { it.copy(error = e.message ?: "Error creating pet") }
                 }
             )
         }
@@ -101,9 +101,7 @@ class PetsViewModel(
             petRepository.deletePet(petId).fold(
                 onSuccess = { loadPets() },
                 onFailure = { e ->
-                    _uiState.update {
-                        it.copy(error = e.message ?: "Error deleting pet")
-                    }
+                    _uiState.update { it.copy(error = e.message ?: "Error deleting pet") }
                 }
             )
         }

@@ -14,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -49,10 +48,10 @@ fun PetProfileScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedTabIndex by viewModel.selectedTabIndex.collectAsStateWithLifecycle()
 
-    // ── Load pet data once ────────────────────────────────────────────────
+    // Carga inicial
     LaunchedEffect(petId) { viewModel.loadPet(petId) }
 
-    // ── Delete dialog state ───────────────────────────────────────────────
+    // ── Delete dialog ─────────────────────────────────────────────────────────
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
@@ -85,7 +84,7 @@ fun PetProfileScreen(
             .padding(contentPadding)
     ) {
 
-        // ── Top App Bar ───────────────────────────────────────────────────
+        // ── Top App Bar ───────────────────────────────────────────────────────
         item {
             Row(
                 modifier = Modifier
@@ -102,13 +101,12 @@ fun PetProfileScreen(
                     )
                 }
                 Row {
-                    IconButton(onClick = { /* Share — future feature */ }) {
+                    IconButton(onClick = { /* Share */ }) {
                         Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
                     }
-                    IconButton(onClick = { /* Edit pet info — future feature */ }) {
+                    IconButton(onClick = { /* Edit */ }) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
                     }
-                    // MoreVert opens delete dialog
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "More options", tint = Color.White)
                     }
@@ -116,22 +114,22 @@ fun PetProfileScreen(
             }
         }
 
-        // ── Pet Header ────────────────────────────────────────────────────
+        // ── Pet Header ────────────────────────────────────────────────────────
         item {
             PetProfileHeader(
-                name = uiState.name,
-                breed = uiState.breed,
-                species = uiState.species,
-                age = uiState.age,
-                weight = uiState.weight,
-                gender = uiState.gender,
-                isHealthy = uiState.isHealthy,
+                name         = uiState.name,
+                breed        = uiState.breed,
+                species      = uiState.species,
+                age          = uiState.age,
+                weight       = uiState.weight,
+                gender       = uiState.gender,
+                isHealthy    = uiState.isHealthy,
                 isNfcSynched = uiState.isNfcSynched,
-                photoPath = uiState.photoUrl
+                photoPath    = uiState.photoUrl
             )
         }
 
-        // ── Tabs ──────────────────────────────────────────────────────────
+        // ── Tabs ──────────────────────────────────────────────────────────────
         item {
             PetProfileTabs(
                 selectedTabIndex = selectedTabIndex,
@@ -139,24 +137,21 @@ fun PetProfileScreen(
             )
         }
 
-        // Warning Banner
+        // ── Alertas de salud ──────────────────────────────────────────────────
         if (uiState.suggestions.isNotEmpty()) {
             item {
                 Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
                     SuggestionBanner(suggestions = uiState.suggestions.take(2))
-
                     if (uiState.suggestions.size > 2) {
                         Spacer(Modifier.height(6.dp))
                         TextButton(
-                            onClick = {
-                                onSeeAllNotifications(petId, uiState.name)
-                            },
+                            onClick = { onSeeAllNotifications(petId, uiState.name) },
                             modifier = Modifier.align(Alignment.End)
                         ) {
                             Text(
-                                text     = "See all ${uiState.suggestions.size} alerts",
+                                text  = "See all ${uiState.suggestions.size} alerts",
                                 fontSize = 13.sp,
-                                color    = GreenDark
+                                color = GreenDark
                             )
                         }
                     }
@@ -172,7 +167,7 @@ fun PetProfileScreen(
             item { Spacer(modifier = Modifier.height(16.dp)) }
         }
 
-        // ── Tab content ───────────────────────────────────────────────────
+        // ── Contenido de cada tab ─────────────────────────────────────────────
         when (selectedTabIndex) {
             0 -> overviewTabContent(
                 uiState      = uiState,
@@ -191,20 +186,24 @@ fun PetProfileScreen(
                 vaccineTabContent(
                     vaccines = displayedVaccines,
                     onFilterClick = viewModel::onVaccineFilterClick,
-                    onVaccineClick = viewModel::onVaccineClicked,
+                    onVaccineClick = { vaccine ->
+                        // Navegar al detalle; al volver se recargará el perfil
+                        onNavigateToVaccineDetail(petId, vaccine.id)
+                    },
                     onAddVaccineClick = onAddVaccine
                 )
             }
+
             2 -> eventTabContent(
-                events         = uiState.events,
-                onEventClick   = { eventId -> onNavigateToEventDetail(petId, eventId) },
+                events          = uiState.events,
+                onEventClick    = { eventId -> onNavigateToEventDetail(petId, eventId) },
                 onAddEventClick = onAddEvent
             )
         }
     }
 }
 
-// ── Overview tab content ──────────────────────────────────────────────────
+// ── Overview tab ──────────────────────────────────────────────────────────────
 
 private fun LazyListScope.overviewTabContent(
     uiState: PetProfileUiState,
@@ -246,23 +245,6 @@ private fun LazyListScope.overviewTabContent(
             )
 
             Spacer(modifier = Modifier.height(32.dp))
-        }
-    }
-}
-
-// ── Previews ──────────────────────────────────────────────────────────────
-
-@Preview(showBackground = true, showSystemUi = true, name = "PetProfile - Overview")
-@Composable
-fun PetProfileOverviewPreview() {
-    PetCareTheme {
-        Scaffold(
-            floatingActionButton = {
-                ExpandableFAB(onAddPet = {}, onAddEvent = {}, onAddVaccine = {}, onScanNFC = {})
-            },
-            containerColor = OffWhite
-        ) { innerPadding ->
-            PetProfileScreen(petId = "preview_id", contentPadding = innerPadding, onBack = {})
         }
     }
 }

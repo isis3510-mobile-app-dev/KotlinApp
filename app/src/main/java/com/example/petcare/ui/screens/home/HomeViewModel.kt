@@ -6,7 +6,6 @@ import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.GroupedSuggestion
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.model.PetSuggestion
-import com.example.petcare.data.model.Vaccination
 import com.example.petcare.data.repository.RepositoryProvider
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -19,6 +18,7 @@ data class UpcomingVaccine(
     val vaccineName: String,
     val petName: String,
     val petId: String,
+    val vaccinationId: String,   // ← NUEVO: _id del embedded Vaccination
     val dueDate: String,
     val daysUntilDue: Long
 )
@@ -52,13 +52,11 @@ class HomeViewModel : ViewModel() {
             RepositoryProvider.petRepository.getPets().fold(
                 onSuccess = { pets ->
 
-                    // Load catalog to resolve vaccineId → name for upcoming vaccines list
                     val catalogMap = RepositoryProvider.petRepository
                         .getVaccineCatalog()
                         .getOrElse { emptyList() }
                         .associateBy { it.id }
 
-                    // Events for all pets in parallel
                     val eventResults = pets.map { pet ->
                         async {
                             RepositoryProvider.eventRepository
@@ -76,7 +74,6 @@ class HomeViewModel : ViewModel() {
                         }
                     }.awaitAll().flatten()
 
-                    // Upcoming vaccines — next 30 days + overdue count
                     val today    = java.time.LocalDate.now()
                     val upcoming = mutableListOf<UpcomingVaccine>()
                     var overdueCount = 0
@@ -91,13 +88,13 @@ class HomeViewModel : ViewModel() {
                                     days < 0   -> overdueCount++
                                     days <= 30 -> upcoming.add(
                                         UpcomingVaccine(
-                                            // ← CHANGED: was vacc.vaccineId.take(8)
-                                            vaccineName  = catalogMap[vacc.vaccineId]?.name
+                                            vaccineName   = catalogMap[vacc.vaccineId]?.name
                                                 ?: vacc.vaccineId.take(8),
-                                            petName      = pet.name,
-                                            petId        = pet.id,
-                                            dueDate      = dueDateStr.take(10),
-                                            daysUntilDue = days
+                                            petName       = pet.name,
+                                            petId         = pet.id,
+                                            vaccinationId = vacc.id,   // ← el _id embebido
+                                            dueDate       = dueDateStr.take(10),
+                                            daysUntilDue  = days
                                         )
                                     )
                                 }
@@ -110,10 +107,10 @@ class HomeViewModel : ViewModel() {
                         .map { (title, items) ->
                             GroupedSuggestion(
                                 vaccineTitle = title,
-                                type         = when {
+                                type = when {
                                     items.any { it.suggestion.type == "danger" }  -> "danger"
                                     items.any { it.suggestion.type == "warning" } -> "warning"
-                                    else                                          -> "info"
+                                    else -> "info"
                                 },
                                 pets    = items.map { it.petName }.distinct(),
                                 message = items.first().suggestion.message
