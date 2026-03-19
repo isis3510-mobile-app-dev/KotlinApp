@@ -9,7 +9,7 @@ data class User(
     val address: String?,
     val photo_url: String?,
     val initials: String,
-    val pet_ids: List<String> = emptyList(),
+    val pets: List<String> = emptyList(),
     val family_group: List<String> = emptyList(),
     val created_at: String,
     val updated_at: String

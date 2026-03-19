@@ -22,8 +22,8 @@ fun PreferencesSection(
     onThemeModeChanged: (AppThemeMode) -> Unit,
     notificationsEnabled: Boolean,
     onNotificationsToggled: (Boolean) -> Unit,
-    offlineModeEnabled: Boolean,
-    onOfflineModeToggled: (Boolean) -> Unit
+    // offlineModeEnabled: Boolean,
+    // onOfflineModeToggled: (Boolean) -> Unit
 ) {
     SettingsSection(title = "Preferences", items = listOf(
         {
@@ -71,6 +71,7 @@ fun PreferencesSection(
                 }
             )
         },
+        /**
         {
             SettingsListItem(
                 icon = Icons.Default.WifiOff,
@@ -91,5 +92,6 @@ fun PreferencesSection(
                 }
             )
         }
+        **/
     ))
 }
