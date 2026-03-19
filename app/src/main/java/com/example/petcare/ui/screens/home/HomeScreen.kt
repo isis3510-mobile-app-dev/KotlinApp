@@ -36,6 +36,7 @@ fun HomeScreen(
     onNavigateToNfc: () -> Unit,
     onNavigateToPetProfile: (String) -> Unit,
     onNavigateToAddPet: () -> Unit,
+    // petId + vaccinationId (embedded _id)
     onNavigateToVaccine: (String, String) -> Unit = { _, _ -> },
     onNavigateToRecords: () -> Unit = {},
     onNavigateToEvent: (String, String) -> Unit = { _, _ -> },
@@ -64,16 +65,18 @@ fun HomeScreen(
         modifier            = Modifier.fillMaxSize().padding(contentPadding),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // ── Header ────────────────────────────────────────────────────────
+        // ── Header ────────────────────────────────────────────────────────────
         item {
             Row(
-                modifier            = Modifier.fillMaxWidth(),
-                verticalAlignment   = Alignment.CenterVertically,
+                modifier              = Modifier.fillMaxWidth(),
+                verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = displayName,
-                    fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
+                    text       = displayName,
+                    fontSize   = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color      = MaterialTheme.colorScheme.onBackground
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     NfcButton(onClick = onNavigateToNfc)
@@ -82,7 +85,7 @@ fun HomeScreen(
             }
         }
 
-        // ── Loading / Error ───────────────────────────────────────────────
+        // ── Loading / Error ───────────────────────────────────────────────────
         if (homeState.isLoading) {
             item {
                 Box(
@@ -99,7 +102,7 @@ fun HomeScreen(
             }
         }
 
-        // ── My Pets ───────────────────────────────────────────────────────
+        // ── My Pets ───────────────────────────────────────────────────────────
         item {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(
@@ -109,7 +112,8 @@ fun HomeScreen(
                 ) {
                     Text(
                         "My Pets", fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
+                        fontWeight = FontWeight.Bold,
+                        color      = MaterialTheme.colorScheme.onBackground
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -128,9 +132,9 @@ fun HomeScreen(
                         val pet = homeState.pets[i]
                         Box(modifier = Modifier.clickable { onNavigateToPetProfile(pet.id) }) {
                             PetCard(
-                                photoUrl  = pet.photoUrl,
-                                text   = pet.name,
-                                status = when (pet.status.lowercase()) {
+                                photoUrl = pet.photoUrl,
+                                text     = pet.name,
+                                status   = when (pet.status.lowercase()) {
                                     "healthy" -> PetStatus.SUCCESS
                                     else      -> PetStatus.WARNING
                                 }
@@ -185,7 +189,7 @@ fun HomeScreen(
             }
         }
 
-        // ── Upcoming Vaccines (next 30 days) ──────────────────────────────
+        // ── Upcoming Vaccines ─────────────────────────────────────────────────
         if (homeState.upcomingVaccines.isNotEmpty()) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -215,9 +219,13 @@ fun HomeScreen(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(MaterialTheme.colorScheme.surface)
+                                // ← Ahora navega a VaccineDetails con vaccinationId real
                                 .clickable {
-                                    // Navigate to pet profile vaccines tab
-                                    onNavigateToPetProfile(vacc.petId)
+                                    if (vacc.vaccinationId.isNotBlank()) {
+                                        onNavigateToVaccine(vacc.petId, vacc.vaccinationId)
+                                    } else {
+                                        onNavigateToPetProfile(vacc.petId)
+                                    }
                                 }
                                 .padding(16.dp),
                             verticalAlignment     = Alignment.CenterVertically,
@@ -235,10 +243,10 @@ fun HomeScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector     = Icons.Default.Vaccines,
+                                        imageVector        = Icons.Default.Vaccines,
                                         contentDescription = null,
-                                        tint            = if (vacc.daysUntilDue <= 7) ErrorContent else InfoContent,
-                                        modifier        = Modifier.size(24.dp)
+                                        tint               = if (vacc.daysUntilDue <= 7) ErrorContent else InfoContent,
+                                        modifier           = Modifier.size(24.dp)
                                     )
                                 }
                                 Column {
@@ -254,7 +262,6 @@ fun HomeScreen(
                                     )
                                 }
                             }
-                            // Days badge
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(50.dp))
@@ -275,7 +282,7 @@ fun HomeScreen(
             }
         }
 
-        // ── Recent Events ─────────────────────────────────────────────────
+        // ── Recent Events ─────────────────────────────────────────────────────
         if (homeState.recentEvents.isNotEmpty()) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -286,7 +293,8 @@ fun HomeScreen(
                     ) {
                         Text(
                             "Active Events", fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
+                            fontWeight = FontWeight.Bold,
+                            color      = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             "View all",

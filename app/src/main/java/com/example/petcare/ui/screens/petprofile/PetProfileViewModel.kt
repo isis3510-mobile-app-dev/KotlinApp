@@ -44,10 +44,15 @@ class PetProfileViewModel : ViewModel() {
     private val _selectedTabIndex = MutableStateFlow(0)
     val selectedTabIndex: StateFlow<Int> = _selectedTabIndex.asStateFlow()
 
+    // Guardamos el petId para poder recargar
+    private var currentPetId: String = ""
+
+    // ── Carga ─────────────────────────────────────────────────────────────────
+
     fun loadPet(petId: String) {
+        currentPetId = petId
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-
             RepositoryProvider.petRepository.getPet(petId).fold(
                 onSuccess = { pet -> applyPetToState(pet, petId) },
                 onFailure = { e ->
@@ -60,8 +65,18 @@ class PetProfileViewModel : ViewModel() {
         }
     }
 
+    /** Recarga silenciosa (sin spinner) — útil tras editar/borrar vacuna o evento */
+    fun reloadPet() {
+        if (currentPetId.isBlank()) return
+        viewModelScope.launch {
+            RepositoryProvider.petRepository.getPet(currentPetId).fold(
+                onSuccess = { pet -> applyPetToState(pet, currentPetId) },
+                onFailure = { /* ignorar errores silenciosos */ }
+            )
+        }
+    }
+
     private suspend fun applyPetToState(pet: Pet, petId: String) {
-        // Load catalog to resolve vaccineId → human name
         val catalogMap = RepositoryProvider.petRepository
             .getVaccineCatalog()
             .getOrElse { emptyList() }
@@ -86,9 +101,7 @@ class PetProfileViewModel : ViewModel() {
 
         val events = mutableListOf<Event>()
         RepositoryProvider.eventRepository.getEvents(petId = petId).fold(
-            onSuccess = { list ->
-                list.forEach { ev -> events.add(ev.toMedicalEvent()) }
-            },
+            onSuccess = { list -> list.forEach { ev -> events.add(ev.toMedicalEvent()) } },
             onFailure = { /* non-fatal */ }
         )
 
@@ -121,6 +134,8 @@ class PetProfileViewModel : ViewModel() {
         )
     }
 
+    // ── Tabs ──────────────────────────────────────────────────────────────────
+
     fun onTabSelected(index: Int) { _selectedTabIndex.value = index }
 
     fun onVaccineFilterClick(status: VaccineFilterStatus) {
@@ -136,6 +151,19 @@ class PetProfileViewModel : ViewModel() {
     fun onLostModeClicked()   {}
     fun onNfcActiveClicked()  {}
 
+    // ── Eliminar mascota ──────────────────────────────────────────────────────
+
+    fun deletePet(petId: String, onNavigatedBack: () -> Unit) {
+        viewModelScope.launch {
+            RepositoryProvider.petRepository.deletePet(petId).fold(
+                onSuccess = { onNavigatedBack() },
+                onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message) }
+            )
+        }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     private fun computeAge(birthDateIso: String?): String {
         if (birthDateIso.isNullOrBlank()) return ""
         return try {
@@ -150,15 +178,6 @@ class PetProfileViewModel : ViewModel() {
             if (nowMonth < birthMonth) years--
             "$years yrs"
         } catch (_: Exception) { "" }
-    }
-
-    fun deletePet(petId: String, onNavigatedBack: () -> Unit) {
-        viewModelScope.launch {
-            RepositoryProvider.petRepository.deletePet(petId).fold(
-                onSuccess = { onNavigatedBack() },
-                onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message) }
-            )
-        }
     }
 }
 

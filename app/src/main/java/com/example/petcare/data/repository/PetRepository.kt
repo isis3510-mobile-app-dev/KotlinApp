@@ -64,9 +64,6 @@ class PetRepository(private val api: ApiService) {
         val body = buildMap<String, Any?> {
             put("administeredBy", administeredBy)
             put("lotNumber", lotNumber)
-            // Convert dd/MM/yyyy → yyyy-MM-ddT00:00:00Z before sending to backend.
-            // The DateTextField returns dd/MM/yyyy; stored dates from the API are
-            // already in ISO format (yyyy-MM-dd...) — handle both.
             if (nextDueDate != null) {
                 put("nextDueDate", toIso(nextDueDate))
             }

@@ -28,9 +28,8 @@ data class ProfileUiState(
     val currentThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
-
     val emailUpdateSent: Boolean = false
-    )
+)
 
 sealed interface UiEvent {
     object NavigateToLogin : UiEvent
@@ -58,12 +57,12 @@ class ProfileViewModel(
         _userState
     ) { notifications, offlineMode, theme, (user, isLoading, error) ->
         ProfileUiState(
-            user = user,
-            isLoading = isLoading,
-            error = error,
+            user                 = user,
+            isLoading            = isLoading,
+            error                = error,
             notificationsEnabled = notifications,
-            offlineModeEnabled = offlineMode,
-            currentThemeMode = theme
+            offlineModeEnabled   = offlineMode,
+            currentThemeMode     = theme
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ProfileUiState())
 
@@ -71,20 +70,23 @@ class ProfileViewModel(
     val uiEvents = _uiEvents.receiveAsFlow()
 
     init {
-        if (initialUser == null) {
-            loadUserProfile()
-        }
+        // Si no se inyectó un usuario inicial, cargamos desde la API
+        // (siempre cargamos para tener el pet_ids actualizado)
+        loadUserProfile()
     }
 
+    /** Recarga el perfil desde la API — llamar cuando el pet count puede haber cambiado */
     fun loadUserProfile() {
         viewModelScope.launch {
-            _userState.value = Triple(null, true, null)
+            _userState.value = Triple(_userState.value.first, true, null)
             userRepository.getMe()
                 .onSuccess { user ->
                     _userState.value = Triple(user, false, null)
                 }
                 .onFailure { error ->
-                    _userState.value = Triple(null, false, error.message)
+                    // Si falla y ya teníamos un usuario, lo mantenemos (no mostramos error)
+                    val existing = _userState.value.first
+                    _userState.value = Triple(existing, false, if (existing == null) error.message else null)
                 }
         }
     }
@@ -108,22 +110,20 @@ class ProfileViewModel(
         }
     }
 
-
     sealed class EditField {
-        object Name : EditField()
-        object Phone : EditField()
+        object Name    : EditField()
+        object Phone   : EditField()
         object Address : EditField()
     }
-
 
     fun updateField(field: EditField, value: String) {
         val current = _userState.value.first ?: return
         viewModelScope.launch {
-            _userState.value = Triple(current, true, null) // isLoading = true
+            _userState.value = Triple(current, true, null)
 
             val request = when (field) {
-                is EditField.Name    -> UpdateUserRequest(
-                    name = value,
+                is EditField.Name -> UpdateUserRequest(
+                    name     = value,
                     initials = value.split(" ")
                         .mapNotNull { it.firstOrNull()?.uppercaseChar() }
                         .take(2)
@@ -144,8 +144,6 @@ class ProfileViewModel(
         }
     }
 
-
-    // ProfileViewModel.kt
     fun updateEmail(currentPassword: String, newEmail: String) {
         val current = _userState.value.first ?: return
         viewModelScope.launch {
@@ -155,7 +153,7 @@ class ProfileViewModel(
                     _userState.value = Triple(current, false, null)
                     _uiEvents.send(UiEvent.ShowMessage(
                         "Verification email sent to $pendingEmail. " +
-                                "MongoDB will update after you verify."
+                                "The change takes effect after verification."
                     ))
                 }
                 .onFailure { error ->
@@ -181,7 +179,6 @@ class ProfileViewModel(
         val current = _userState.value.first ?: return
         viewModelScope.launch {
             _userState.value = Triple(current, true, null)
-
             userRepository.deleteMe()
                 .onSuccess {
                     authRepository.logout()
@@ -196,6 +193,4 @@ class ProfileViewModel(
                 }
         }
     }
-
-
 }
