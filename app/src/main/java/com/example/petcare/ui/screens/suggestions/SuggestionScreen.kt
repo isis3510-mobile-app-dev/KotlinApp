@@ -1,4 +1,4 @@
-package com.example.petcare.ui.screens.notifications
+package com.example.petcare.ui.screens.suggestions
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,11 +19,11 @@ import com.example.petcare.ui.components.GroupedSuggestionCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen(
+fun SuggestionScreen(
     filterPetId: String? = null,
     filterPetName: String? = null,
     onBack: () -> Unit = {},
-    viewModel: NotificationsViewModel = viewModel()
+    viewModel: SuggestionViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

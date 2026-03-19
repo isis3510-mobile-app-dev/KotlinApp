@@ -55,10 +55,8 @@ import com.example.petcare.ui.screens.nfc.ScannedSuccessScreen
 import com.example.petcare.ui.screens.nfc.ScanningNFCScreen
 import com.example.petcare.ui.screens.nfc.TagWrittenScreen
 import com.example.petcare.ui.screens.nfc.WriteNFCScreen
-import com.example.petcare.ui.screens.notifications.NotificationsScreen
 import com.example.petcare.ui.screens.onboarding.OnBoardingScreen
 import com.example.petcare.ui.screens.petprofile.PetProfileScreen
-import com.example.petcare.ui.screens.petprofile.PetProfileViewModel
 import com.example.petcare.ui.screens.petprofile.events.EventDetailsScreen
 import com.example.petcare.ui.screens.petprofile.vaccines.VaccineDetailsScreen
 import com.example.petcare.ui.screens.pets.PetsScreen
@@ -67,10 +65,10 @@ import com.example.petcare.ui.screens.pets.PetsViewModelFactory
 import com.example.petcare.ui.screens.profile.ProfileScreen
 import com.example.petcare.ui.screens.profile.ProfileViewModel
 import com.example.petcare.ui.screens.records.HealthRecordsScreen
+import com.example.petcare.ui.screens.suggestions.SuggestionScreen
 import com.example.petcare.ui.theme.GreenAccentDark
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.LocalAppThemeMode
-import com.example.petcare.ui.theme.OffWhite
 import com.example.petcare.ui.theme.OnboardingBlueEnd
 import com.example.petcare.ui.theme.OnboardingBlueStart
 import com.example.petcare.ui.theme.OnboardingPurpleEnd
@@ -221,7 +219,7 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToVaccine     = { petId, vaccineId -> navController.navigate("vaccineDetails/$petId/$vaccineId") },
                                     onNavigateToEvent       = { petId, eventId   -> navController.navigate("eventDetails/$petId/$eventId") },
                                     onNavigateToRecords     = { navController.navigate(Routes.Records) },
-                                    onNavigateToNotifications = { navController.navigate(Routes.Notifications) }
+                                    onNavigateToSuggestions = { navController.navigate(Routes.Suggestions) }
                                 )
                             }
 
@@ -327,7 +325,7 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate("eventDetails/$pId/$eventId")
                                     },
                                     onSeeAllNotifications = { pid, petName ->
-                                        navController.navigate("notifications/$pid/$petName")
+                                        navController.navigate("suggestions/$pid/$petName")
                                     }
                                 )
                             }
@@ -506,20 +504,20 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             //Notifications route
-                            composable(Routes.Notifications) {
-                                NotificationsScreen(
+                            composable(Routes.Suggestions) {
+                                SuggestionScreen(
                                     onBack = { navController.popBackStack() }
                                 )
 
                             }
                             composable(
-                                route = Routes.NotficationPerPet,
+                                route = Routes.SuggestionPerPet,
                                 arguments = listOf(
                                     navArgument("petId")   { type = NavType.StringType },
                                     navArgument("petName") { type = NavType.StringType }
                                 )
                             ) { backStackEntry ->
-                                NotificationsScreen(
+                                SuggestionScreen(
                                     filterPetId   = backStackEntry.arguments?.getString("petId"),
                                     filterPetName = backStackEntry.arguments?.getString("petName"),
                                     onBack        = { navController.popBackStack() }

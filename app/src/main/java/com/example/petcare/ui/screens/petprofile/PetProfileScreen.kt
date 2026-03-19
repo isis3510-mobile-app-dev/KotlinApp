@@ -155,7 +155,8 @@ fun PetProfileScreen(
                         ) {
                             Text(
                                 text     = "See all ${uiState.suggestions.size} alerts",
-                                fontSize = 13.sp
+                                fontSize = 13.sp,
+                                color    = GreenDark
                             )
                         }
                     }

@@ -41,7 +41,7 @@ fun HomeScreen(
     onNavigateToEvent: (String, String) -> Unit = { _, _ -> },
     authViewModel: AuthViewModel,
     homeViewModel: HomeViewModel = viewModel(),
-    onNavigateToNotifications: () -> Unit
+    onNavigateToSuggestions: () -> Unit
 ) {
     val homeState   by homeViewModel.state.collectAsStateWithLifecycle()
     val userProfile by authViewModel.userProfile.collectAsStateWithLifecycle()
@@ -77,7 +77,7 @@ fun HomeScreen(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     NfcButton(onClick = onNavigateToNfc)
-                    NotificationButton(onClick = onNavigateToNotifications)
+                    NotificationButton()
                 }
             }
         }
@@ -164,7 +164,7 @@ fun HomeScreen(
                         if (homeState.totalAlertCount >= 1) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier          = Modifier.clickable { onNavigateToNotifications() }
+                                modifier          = Modifier.clickable { onNavigateToSuggestions() }
                             ) {
                                 Text(
                                     text       = "See all ${homeState.totalAlertCount}",

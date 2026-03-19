@@ -1,4 +1,4 @@
-package com.example.petcare.ui.screens.notifications
+package com.example.petcare.ui.screens.suggestions
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,17 +13,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class NotificationsUiState(
+data class SuggestionUiState(
     val displayed: List<GroupedSuggestion> = emptyList(),
     val availablePets: List<PetFilterChip> = emptyList(),
     val selectedPetId: String? = null,
     val isLoading: Boolean = false
 )
 
-class NotificationsViewModel : ViewModel() {
+class SuggestionViewModel : ViewModel() {
 
-    private val _uiState = MutableStateFlow(NotificationsUiState(isLoading = true))
-    val uiState: StateFlow<NotificationsUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(SuggestionUiState(isLoading = true))
+    val uiState: StateFlow<SuggestionUiState> = _uiState.asStateFlow()
 
     private var allSuggestions: List<PetSuggestion> = emptyList()
 
@@ -54,7 +54,7 @@ class NotificationsViewModel : ViewModel() {
                 }
                 .sortedBy { it.petName }
 
-            _uiState.value = NotificationsUiState(
+            _uiState.value = SuggestionUiState(
                 displayed     = applyFilter(filterPetId),
                 availablePets = chips,
                 selectedPetId = filterPetId,
