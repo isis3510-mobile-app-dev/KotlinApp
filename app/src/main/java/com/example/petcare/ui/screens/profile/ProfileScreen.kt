@@ -79,7 +79,7 @@ fun ProfileScreen(
             ProfileHeader(
                 name = uiState.user?.name ?: "---",
                 email = uiState.user?.email ?: "---",
-                petCount = uiState.user?.pet_ids?.size ?: 0,
+                petCount = uiState.user?.pets?.size ?: 0,
                 initials = uiState.user?.initials ?: "?"
             )
 
@@ -99,8 +99,8 @@ fun ProfileScreen(
                 onThemeModeChanged = viewModel::onThemeModeChanged,
                 notificationsEnabled = uiState.notificationsEnabled,
                 onNotificationsToggled = viewModel::onNotificationsToggled,
-                offlineModeEnabled = uiState.offlineModeEnabled,
-                onOfflineModeToggled = viewModel::onOfflineModeToggled
+                //offlineModeEnabled = uiState.offlineModeEnabled,
+                //onOfflineModeToggled = viewModel::onOfflineModeToggled
             )
 
             // Support Section
@@ -161,8 +161,8 @@ fun ProfileScreenPreviewStub() {
                     onThemeModeChanged = {},
                     notificationsEnabled = true,
                     onNotificationsToggled = {},
-                    offlineModeEnabled = false,
-                    onOfflineModeToggled = {}
+                    //offlineModeEnabled = false,
+                    //onOfflineModeToggled = {}
                 )
 
                 // Support Section
