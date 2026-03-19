@@ -14,7 +14,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.ui.components.*
 import com.example.petcare.ui.theme.PetCareTheme
 
-
 @Composable
 fun AddVaccineFinalForm(
     onclick: () -> Unit,
@@ -38,41 +37,50 @@ fun AddVaccineFinalForm(
                 TransparentTopBar(title = "Add New Vaccine", onBackClick = onBack)
                 Stepper(currentStep = 3, stepLabels = listOf("Basic Info", "Details", "Overview"))
 
-                // Summary (read-only except administeredBy which can still be edited)
+                // Show the selected vaccine name (read-only — chosen from catalog)
                 TextFieldComponent(
-                    name = "Vaccine Name", label = state.vaccineName,
-                    value = state.vaccineName, onValueChange = {}
+                    name          = "Vaccine",
+                    label         = state.selectedVaccine?.name ?: "",
+                    value         = state.selectedVaccine?.name ?: "",
+                    onValueChange = {}
                 )
                 TextFieldComponent(
-                    name = "Date Given", label = state.dateGiven,
-                    value = state.dateGiven, onValueChange = {}
+                    name          = "Date Given",
+                    label         = state.dateGiven,
+                    value         = state.dateGiven,
+                    onValueChange = {}
                 )
                 TextFieldComponent(
-                    name = "Administered By", label = state.administeredBy,
-                    value = state.administeredBy, onValueChange = viewModel::setAdministeredBy
+                    name          = "Administered By",
+                    label         = state.administeredBy,
+                    value         = state.administeredBy,
+                    onValueChange = viewModel::setAdministeredBy
                 )
                 DateTextField(
-                    name = "Next Due Date (optional)",
+                    name           = "Next Due Date (optional)",
                     onDateSelected = viewModel::setNextDueDate
                 )
 
                 state.error?.let {
                     Text(
-                        text = it, color = MaterialTheme.colorScheme.error,
+                        text  = it,
+                        color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
             Row {
                 ButtonOutline(
-                    bgColor = MaterialTheme.colorScheme.background,
+                    bgColor      = MaterialTheme.colorScheme.background,
                     outlineColor = MaterialTheme.colorScheme.secondary,
-                    textColor = MaterialTheme.colorScheme.secondary,
-                    width = 169.dp, height = 50.57.dp, text = "Back", onclick = onBack
+                    textColor    = MaterialTheme.colorScheme.secondary,
+                    width = 169.dp, height = 50.57.dp,
+                    text = "Back", onclick = onBack
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 ButtonDefault(
-                    bgColor = com.example.petcare.ui.theme.GreenDark, textColor = Color.White,
+                    bgColor   = com.example.petcare.ui.theme.GreenDark,
+                    textColor = Color.White,
                     width = 169.dp, height = 50.57.dp,
                     text = if (state.isLoading) "Saving…" else "Add Vaccine",
                     onclick = { viewModel.submit { onclick() } }
@@ -82,13 +90,8 @@ fun AddVaccineFinalForm(
     }
 }
 
-
 @Preview
 @Composable
-fun AddVaccineFinalFormPreview(){
-    AddVaccineFinalForm(
-        onclick = {},
-        onBack = {},
-        viewModel = AddVaccineViewModel()
-    )
+fun AddVaccineFinalFormPreview() {
+    AddVaccineFinalForm(onclick = {}, onBack = {}, viewModel = AddVaccineViewModel())
 }

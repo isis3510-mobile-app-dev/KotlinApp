@@ -13,11 +13,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.example.petcare.R
 
-// Extended data classes that carry the real IDs needed for navigation
 data class VaccineListItemWithIds(
     val data: VaccineListItemData,
     val petId: String,
-    val vaccinationId: String   // vaccination _id (embedded doc)
+    val vaccinationId: String
 )
 
 data class EventListItemWithIds(
@@ -47,7 +46,6 @@ class HealthRecordsViewModel : ViewModel() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
 
-            // 1. Load user's pets
             val petsResult = RepositoryProvider.petRepository.getPets()
             if (petsResult.isFailure) {
                 _state.value = _state.value.copy(
@@ -58,26 +56,29 @@ class HealthRecordsViewModel : ViewModel() {
             }
             val pets = petsResult.getOrDefault(emptyList())
 
-            // 2. Build vaccine list — include real petId and vaccination _id
+            // Load catalog to resolve names
+            val catalogMap = RepositoryProvider.petRepository
+                .getVaccineCatalog()
+                .getOrElse { emptyList() }
+                .associateBy { it.id }
+
             val vaccines = pets.flatMap { pet ->
                 pet.vaccinations.map { vacc ->
-                    val daysText = computeDaysText(vacc.nextDueDate, vacc.dateGiven)
                     VaccineListItemWithIds(
                         data = VaccineListItemData(
-                            vaccineName = vacc.vaccineId.take(8),
+                            vaccineName = catalogMap[vacc.vaccineId]?.name ?: vacc.vaccineId.take(8),
                             petName     = pet.name,
                             clinicName  = vacc.administeredBy.ifBlank { "—" },
                             status      = vacc.status,
-                            daysText    = daysText,
+                            daysText    = computeDaysText(vacc.nextDueDate, vacc.dateGiven),
                             photoPath   = R.drawable.pet
                         ),
                         petId         = pet.id,
-                        vaccinationId = vacc.id   // vaccination _id for navigation
+                        vaccinationId = vacc.id
                     )
                 }
             }
 
-            // 3. Load events for all user's pets in parallel — include real petId and eventId
             val eventResults = pets.map { pet ->
                 async {
                     RepositoryProvider.eventRepository

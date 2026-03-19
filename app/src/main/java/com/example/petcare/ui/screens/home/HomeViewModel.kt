@@ -51,6 +51,13 @@ class HomeViewModel : ViewModel() {
 
             RepositoryProvider.petRepository.getPets().fold(
                 onSuccess = { pets ->
+
+                    // Load catalog to resolve vaccineId → name for upcoming vaccines list
+                    val catalogMap = RepositoryProvider.petRepository
+                        .getVaccineCatalog()
+                        .getOrElse { emptyList() }
+                        .associateBy { it.id }
+
                     // Events for all pets in parallel
                     val eventResults = pets.map { pet ->
                         async {
@@ -69,9 +76,9 @@ class HomeViewModel : ViewModel() {
                         }
                     }.awaitAll().flatten()
 
-                    // Upcoming vaccines — next 30 days + overdue
-                    val today     = java.time.LocalDate.now()
-                    val upcoming  = mutableListOf<UpcomingVaccine>()
+                    // Upcoming vaccines — next 30 days + overdue count
+                    val today    = java.time.LocalDate.now()
+                    val upcoming = mutableListOf<UpcomingVaccine>()
                     var overdueCount = 0
 
                     pets.forEach { pet ->
@@ -81,10 +88,12 @@ class HomeViewModel : ViewModel() {
                                 val dueDate = java.time.LocalDate.parse(dueDateStr.take(10))
                                 val days    = java.time.temporal.ChronoUnit.DAYS.between(today, dueDate)
                                 when {
-                                    days < 0  -> overdueCount++   // overdue
-                                    days <= 30 -> upcoming.add(   // due within 30 days
+                                    days < 0   -> overdueCount++
+                                    days <= 30 -> upcoming.add(
                                         UpcomingVaccine(
-                                            vaccineName  = vacc.vaccineId.take(8),
+                                            // ← CHANGED: was vacc.vaccineId.take(8)
+                                            vaccineName  = catalogMap[vacc.vaccineId]?.name
+                                                ?: vacc.vaccineId.take(8),
                                             petName      = pet.name,
                                             petId        = pet.id,
                                             dueDate      = dueDateStr.take(10),
@@ -92,7 +101,7 @@ class HomeViewModel : ViewModel() {
                                         )
                                     )
                                 }
-                            } catch (_: Exception) { /* skip malformed date */ }
+                            } catch (_: Exception) { }
                         }
                     }
 
