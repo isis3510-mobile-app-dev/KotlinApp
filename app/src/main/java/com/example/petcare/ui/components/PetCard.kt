@@ -79,26 +79,41 @@ fun PetCard(
                     contentAlignment = Alignment.Center
                 ) {
 
-                    if (status == PetStatus.DEFAULT) {
+                    when {
+                        status == PetStatus.DEFAULT -> {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
 
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(28.dp)
-                        )
-
-                    } else {
-                        if (photoUrl != null) {
+                        !photoUrl.isNullOrBlank() -> {
                             AsyncImage(
-                                model = UrlUtils.resolveUrl(photoUrl),
+                                model = ImageRequest.Builder(context)
+                                    .data(Uri.parse(photoUrl))
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = text,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                                error = painterResource(R.drawable.pet)
+                            )
+                        }
+
+                        image != null -> {
+                            Image(
+                                painter = image,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
-                        } else if (image != null) {
+                        }
+
+                        else -> {
                             Image(
-                                painter = image,
+                                painter = painterResource(R.drawable.pet),
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
