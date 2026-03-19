@@ -30,8 +30,7 @@ fun TextFieldComponent(name: String, label: String = "", icon: (@Composable () -
 ){
     var internalText by remember{ mutableStateOf("")}
     val text = value ?: internalText
-    PetCareTheme {
-        Column(
+    Column(
             modifier = Modifier.fillMaxWidth()
         ) {
 
@@ -90,7 +89,6 @@ fun TextFieldComponent(name: String, label: String = "", icon: (@Composable () -
             )
         }
     }
-}
 
 
 @Preview(showBackground = true)

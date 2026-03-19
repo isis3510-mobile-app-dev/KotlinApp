@@ -58,8 +58,7 @@ fun AddEventFinalForm(
         }
     }
 
-    PetCareTheme {
-        Column(
+    Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
@@ -183,13 +182,11 @@ fun AddEventFinalForm(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 ButtonDefault(
-                    bgColor   = com.example.petcare.ui.theme.GreenDark,
-                    textColor = Color.White,
+                    bgColor   = MaterialTheme.colorScheme.secondary,
+                    textColor = MaterialTheme.colorScheme.onSecondary,
                     width = 169.dp, height = 50.57.dp,
                     text = if (state.isLoading) "Saving…" else "Add Event",
                     onclick = { viewModel.submit { onclick() } }
                 )
             }
-        }
     }
-}

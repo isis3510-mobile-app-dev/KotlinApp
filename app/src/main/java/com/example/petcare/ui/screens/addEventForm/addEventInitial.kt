@@ -46,8 +46,7 @@ fun AddEventInitialForm(
 
     val selectedPetName = petsState.pets.find { it.id == state.petId }?.name ?: "Select a Pet"
 
-    PetCareTheme {
-        Column(
+    Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
@@ -175,8 +174,8 @@ fun AddEventInitialForm(
             }
 
             ButtonDefault(
-                bgColor = com.example.petcare.ui.theme.GreenDark,
-                textColor = Color.White,
+                bgColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.onSecondary,
                 width     = 342.dp,
                 height    = 56.dp,
                 text      = "Continue",
@@ -184,9 +183,7 @@ fun AddEventInitialForm(
                     if (state.petId.isNotBlank() && state.title.isNotBlank() && state.date.isNotBlank()) onclick()
                 }
             )
-        }
     }
-}
 
 @Preview
 @Composable

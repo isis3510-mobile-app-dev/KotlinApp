@@ -86,8 +86,8 @@ fun ScanNFCScreen(
             Spacer(modifier = Modifier.height(48.dp))
 
             ButtonDefault(
-                bgColor = GreenDark,
-                textColor = Color.White,
+                bgColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.onSecondary,
                 width = 342.dp,
                 height = 56.dp,
                 text = "Start Scanning",

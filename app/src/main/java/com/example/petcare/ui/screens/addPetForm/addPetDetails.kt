@@ -33,8 +33,7 @@ fun AddPetDetailsForm(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    PetCareTheme {
-        Column(
+    Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
@@ -81,12 +80,10 @@ fun AddPetDetailsForm(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 ButtonDefault(
-                    bgColor = com.example.petcare.ui.theme.GreenDark,
-                    textColor = Color.White,
+                    bgColor = MaterialTheme.colorScheme.secondary,
+                    textColor = MaterialTheme.colorScheme.onSecondary,
                     width = 169.dp, height = 50.57.dp,
                     text = "Continue", onclick = onclick
                 )
             }
-        }
     }
-}

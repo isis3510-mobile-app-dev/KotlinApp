@@ -82,16 +82,16 @@ fun VaccineDetailsScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Column(modifier = Modifier.background(GreenDark)) {
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.secondary)) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSecondary)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Vaccine Details", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("Vaccine Details", color = MaterialTheme.colorScheme.onSecondary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
             }
         },
@@ -121,10 +121,10 @@ fun VaccineDetailsScreen(
                         enabled  = !uiState.isSaving,
                         modifier = Modifier.weight(1f).height(52.dp),
                         shape    = RoundedCornerShape(28.dp),
-                        colors   = ButtonDefaults.buttonColors(containerColor = GreenDark)
+                        colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                     ) {
-                        if (uiState.isSaving) CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
-                        else Text("Save", color = Color.White, fontWeight = FontWeight.Bold)
+                        if (uiState.isSaving) CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onSecondary, strokeWidth = 2.dp)
+                        else Text("Save", color = MaterialTheme.colorScheme.onSecondary, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -133,7 +133,7 @@ fun VaccineDetailsScreen(
         when {
             uiState.isLoading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = GreenDark)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                 }
             }
             uiState.vaccine != null -> {
@@ -343,14 +343,14 @@ private fun StickyBottomActions(isDeleting: Boolean, onDelete: () -> Unit, onEdi
             modifier = Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(30.dp))
-                .background(GreenDark)
+                .background(MaterialTheme.colorScheme.secondary)
                 .clickable(onClick = onEdit)
                 .padding(vertical = 16.dp),
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                Text("Edit", color = Color.White, fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondary, modifier = Modifier.size(20.dp))
+                Text("Edit", color = MaterialTheme.colorScheme.onSecondary, fontWeight = FontWeight.Bold)
             }
         }
     }

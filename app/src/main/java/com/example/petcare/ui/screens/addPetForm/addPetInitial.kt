@@ -65,8 +65,7 @@ fun AddPetInitialForm(
         }
     }
 
-    PetCareTheme {
-        Column(
+    Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.background)
                 .fillMaxSize()
@@ -175,8 +174,8 @@ fun AddPetInitialForm(
             }
 
             ButtonDefault(
-                bgColor = com.example.petcare.ui.theme.GreenDark,
-                textColor = Color.White,
+                bgColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.onSecondary,
                 width = 342.dp,
                 height = 56.dp,
                 text = "Continue",
@@ -190,9 +189,7 @@ fun AddPetInitialForm(
                     }
                 }
             )
-        }
     }
-}
 
 
 /**

@@ -113,7 +113,7 @@ fun WriteNFCScreen(
             when {
                 petsUiState.isLoading -> {
                     Spacer(modifier = Modifier.height(16.dp))
-                    CircularProgressIndicator(color = GreenDark)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                 }
 
                 petOptions.isEmpty() -> {
@@ -141,8 +141,8 @@ fun WriteNFCScreen(
                     Spacer(modifier = Modifier.height(64.dp))
 
                     ButtonDefault(
-                        bgColor   = GreenDark,
-                        textColor = Color.White,
+                        bgColor   = MaterialTheme.colorScheme.secondary,
+                        textColor = MaterialTheme.colorScheme.onSecondary,
                         width     = 342.dp,
                         height    = 56.dp,
                         text      = "Start Writing",

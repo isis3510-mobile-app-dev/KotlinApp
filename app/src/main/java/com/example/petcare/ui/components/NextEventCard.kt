@@ -45,7 +45,7 @@ fun NextEventCard(name: String, pet: String, maxDate: String, daysOverdue: Int){
                 Icon(
                     imageVector = Icons.Default.Vaccines,
                     contentDescription = "Vaccine",
-                    tint = Color.Black
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
@@ -53,7 +53,7 @@ fun NextEventCard(name: String, pet: String, maxDate: String, daysOverdue: Int){
                 Text(
                     text = "NEXT VACCINE",
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = name,
@@ -64,13 +64,13 @@ fun NextEventCard(name: String, pet: String, maxDate: String, daysOverdue: Int){
                     Text (
                         text = "$pet - ",
                         fontSize = 14.sp,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Text (
                         text = maxDate,
                         fontSize = 14.sp,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 }
             }

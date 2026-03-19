@@ -103,16 +103,16 @@ fun EventDetailsScreen(
                         enabled  = !uiState.isSaving,
                         modifier = Modifier.weight(1f).height(52.dp),
                         shape    = RoundedCornerShape(28.dp),
-                        colors   = ButtonDefaults.buttonColors(containerColor = GreenDark)
+                        colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                     ) {
                         if (uiState.isSaving) {
                             CircularProgressIndicator(
                                 modifier    = Modifier.size(18.dp),
-                                color       = Color.White,
+                                color       = MaterialTheme.colorScheme.onSecondary,
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Save", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("Save", color = MaterialTheme.colorScheme.onSecondary, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -127,7 +127,7 @@ fun EventDetailsScreen(
                     modifier         = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = GreenDark)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                 }
             }
 
@@ -153,7 +153,7 @@ fun EventDetailsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(GreenDark)
+                            .background(MaterialTheme.colorScheme.secondary)
                             .padding(horizontal = 8.dp, vertical = 20.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -161,7 +161,7 @@ fun EventDetailsScreen(
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.onSecondary
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -170,21 +170,21 @@ fun EventDetailsScreen(
                                 Icon(
                                     Icons.Default.MedicalServices,
                                     contentDescription = null,
-                                    tint     = Color.White,
+                                    tint     = MaterialTheme.colorScheme.onSecondary,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text       = "Medical Event",
                                     style      = MaterialTheme.typography.titleLarge,
-                                    color      = Color.White,
+                                    color      = MaterialTheme.colorScheme.onSecondary,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                             Text(
                                 text  = event.title,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.8f)
+                                color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.8f)
                             )
                         }
                     }
