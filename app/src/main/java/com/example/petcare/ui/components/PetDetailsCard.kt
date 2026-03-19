@@ -190,7 +190,7 @@ fun PetDetailsCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(5.dp))
-                        Text(text = breed, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = breed, fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary)
                     }
 
                     Spacer(modifier = Modifier.size(4.dp))
@@ -198,15 +198,15 @@ fun PetDetailsCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Cake, contentDescription = null, tint = ErrorContent, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "$age", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = "$age", fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary)
                         Spacer(modifier = Modifier.width(12.dp))
-                        Icon(Icons.Default.Balance, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Default.Balance, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "$weight", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = "$weight", fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary)
                         Spacer(modifier = Modifier.width(12.dp))
                         Icon(genderIcon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = gender, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = gender, fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary)
                     }
                 }
 

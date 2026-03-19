@@ -135,7 +135,7 @@ fun CalendarScreen(
         Text(
             text       = dateText,
             style      = MaterialTheme.typography.labelSmall,
-            color      = GreenTextDark,
+            color      = MaterialTheme.colorScheme.secondary,
             fontWeight = FontWeight.Bold,
             fontSize   = 14.sp
         )

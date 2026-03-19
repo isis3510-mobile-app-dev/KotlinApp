@@ -15,18 +15,23 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 
-data class GenderOption(val name: String, val icon: @Composable () -> Unit)
+// 🔹 Modelo más limpio
+data class GenderOption(
+    val name: String,
+    val icon: ImageVector
+)
 
 @Composable
 fun GenderSelector(
-    title: String = "Species",
+    title: String = "Gender",
     options: List<GenderOption> = listOf(
-        GenderOption("Male") { Icon(Icons.Filled.Male, contentDescription = "Male", tint = MaterialTheme.colorScheme.onSurface) },
-        GenderOption("Female") { Icon(Icons.Filled.Female, contentDescription = "Female", tint = MaterialTheme.colorScheme.onSurface) }
+        GenderOption("Male", Icons.Filled.Male),
+        GenderOption("Female", Icons.Filled.Female)
     ),
     onOptionSelected: (String) -> Unit
 ) {
@@ -47,17 +52,26 @@ fun GenderSelector(
             options.forEach { option ->
                 val isSelected = option.name == selectedOption
 
+                val backgroundColor =
+                    if (isSelected) GreenDark else MaterialTheme.colorScheme.surface
+
+                val borderColor =
+                    if (isSelected) GreenDark else Color.Gray
+
+                val contentColor =
+                    if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp)
                         .border(
                             width = 2.dp,
-                            color = if (isSelected) GreenDark else Color.Gray,
+                            color = borderColor,
                             shape = RoundedCornerShape(30.dp)
                         )
                         .background(
-                            color = if (isSelected) GreenDark else MaterialTheme.colorScheme.surface,
+                            color = backgroundColor,
                             shape = RoundedCornerShape(30.dp)
                         )
                         .clickable {
@@ -70,15 +84,17 @@ fun GenderSelector(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
+                        Icon(
+                            imageVector = option.icon,
+                            contentDescription = option.name,
+                            tint = contentColor
+                        )
 
-                        Box(modifier = Modifier.size(20.dp)) {
-                            option.icon()
-                        }
                         Spacer(modifier = Modifier.width(8.dp))
 
                         Text(
                             text = option.name,
-                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                            color = contentColor,
                             fontSize = 14.sp
                         )
                     }
@@ -91,7 +107,9 @@ fun GenderSelector(
 @Preview(showBackground = true)
 @Composable
 fun GenderSelectorPreview() {
-    GenderSelector { selected ->
-        println("Selected: $selected")
+    PetCareTheme {
+        GenderSelector { selected ->
+            println("Selected: $selected")
+        }
     }
 }

@@ -60,7 +60,7 @@ fun NFCHeader(title: String, subtitle: String) {
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             fontSize = 24.sp,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = MaterialTheme.colorScheme.tertiary,
             textAlign = TextAlign.Center
         )
 
@@ -69,7 +69,7 @@ fun NFCHeader(title: String, subtitle: String) {
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyLarge,
-            color = GrayDark,
+            color = MaterialTheme.colorScheme.onTertiary,
             textAlign = TextAlign.Center,
             lineHeight = 24.sp
         )
