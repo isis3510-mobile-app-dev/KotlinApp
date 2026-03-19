@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.petcare.data.model.AttachedDocument
 import com.example.petcare.ui.theme.ErrorContainer
 import com.example.petcare.ui.theme.ErrorContent
 import com.example.petcare.ui.theme.GrayBorder
@@ -52,7 +53,8 @@ data class VaccineRecord(
     val nextDueDate: String?,
     val lotNumber: String?,
     val status: VaccineFilterStatus,
-    val attachedDocumentName: String? = null
+    val attachedDocuments: List<AttachedDocument> = emptyList()
+
 )
 
 @Composable

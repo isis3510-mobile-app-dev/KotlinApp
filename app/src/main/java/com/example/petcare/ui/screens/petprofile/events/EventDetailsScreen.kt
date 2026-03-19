@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -38,6 +39,7 @@ fun EventDetailsScreen(
 ) {
     val viewModel: EventDetailsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     // Load real event data
     LaunchedEffect(eventId) { viewModel.load(eventId) }
@@ -47,15 +49,6 @@ fun EventDetailsScreen(
         if (uiState.isDeleted) onNavigateBack()
     }
 
-    // File picker for document upload
-    val filePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            val fileName = uri.lastPathSegment ?: "document"
-            viewModel.addDocument(fileName, uri.toString())
-        }
-    }
 
     // Delete confirmation dialog
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -239,8 +232,11 @@ fun EventDetailsScreen(
                             NotesCard(description = event.description)
 
                             AttachedDocumentsCard(
-                                documents    = event.attachedDocuments,
-                                onAddClicked = { filePicker.launch("*/*") }
+                                documents        = event.attachedDocuments,
+                                isUploading      = uiState.isUploadingDoc,
+                                onDocumentPicked = { uri, _, _ ->
+                                    viewModel.addDocument(context, petId, uri)
+                                }
                             )
 
                             // ── Edit mode ─────────────────────────────────────
@@ -287,8 +283,11 @@ fun EventDetailsScreen(
 
                             // Documents still available in edit mode
                             AttachedDocumentsCard(
-                                documents    = event.attachedDocuments,
-                                onAddClicked = { filePicker.launch("*/*") }
+                                documents        = event.attachedDocuments,
+                                isUploading      = uiState.isUploadingDoc,
+                                onDocumentPicked = { uri, _, _ ->
+                                    viewModel.addDocument(context, petId, uri)
+                                }
                             )
                         }
 

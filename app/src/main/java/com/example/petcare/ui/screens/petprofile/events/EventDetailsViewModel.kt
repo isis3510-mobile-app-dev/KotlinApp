@@ -1,9 +1,12 @@
 package com.example.petcare.ui.screens.petprofile.events
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.repository.RepositoryProvider
+import com.example.petcare.util.FirebaseDocumentUploader
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,10 +17,10 @@ data class EventDetailsUiState(
     val isLoading: Boolean = false,
     val isDeleting: Boolean = false,
     val isSaving: Boolean = false,
+    val isUploadingDoc: Boolean = false,
     val error: String? = null,
     val isDeleted: Boolean = false,
     val isEditing: Boolean = false,
-    // Edit fields — pre-filled when editing starts
     val editTitle: String       = "",
     val editDescription: String = "",
     val editProvider: String    = "",
@@ -29,8 +32,6 @@ class EventDetailsViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(EventDetailsUiState(isLoading = true))
     val uiState: StateFlow<EventDetailsUiState> = _uiState.asStateFlow()
-
-    // ── Load ──────────────────────────────────────────────────────────────
 
     fun load(eventId: String) {
         viewModelScope.launch {
@@ -57,30 +58,20 @@ class EventDetailsViewModel : ViewModel() {
         }
     }
 
-    // ── Delete ────────────────────────────────────────────────────────────
-
     fun deleteEvent() {
         val eventId = _uiState.value.event?.id ?: return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isDeleting = true, error = null)
             RepositoryProvider.eventRepository.deleteEvent(eventId).fold(
                 onSuccess = {
-                    _uiState.value = _uiState.value.copy(
-                        isDeleting = false,
-                        isDeleted  = true
-                    )
+                    _uiState.value = _uiState.value.copy(isDeleting = false, isDeleted = true)
                 },
                 onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(
-                        isDeleting = false,
-                        error      = e.message ?: "Failed to delete event"
-                    )
+                    _uiState.value = _uiState.value.copy(isDeleting = false, error = e.message)
                 }
             )
         }
     }
-
-    // ── Edit ──────────────────────────────────────────────────────────────
 
     fun startEditing()  { _uiState.value = _uiState.value.copy(isEditing = true,  error = null) }
     fun cancelEditing() { _uiState.value = _uiState.value.copy(isEditing = false, error = null) }
@@ -112,37 +103,53 @@ class EventDetailsViewModel : ViewModel() {
                     )
                 },
                 onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(
-                        isSaving = false,
-                        error    = e.message ?: "Failed to save"
-                    )
+                    _uiState.value = _uiState.value.copy(isSaving = false, error = e.message)
                 }
             )
         }
     }
 
-    // ── Documents ─────────────────────────────────────────────────────────
-
-    fun addDocument(fileName: String, fileUri: String?) {
+    /**
+     * 1. Sube el archivo a Firebase Storage bajo pets/{petId}/documents/events/{eventId}/
+     * 2. Registra la URL pública en el backend Django
+     */
+    fun addDocument(context: Context, petId: String, uri: Uri) {
         val eventId = _uiState.value.event?.id ?: return
         viewModelScope.launch {
-            RepositoryProvider.eventRepository.addDocument(
-                eventId  = eventId,
-                fileName = fileName,
-                fileUri  = fileUri
-            ).fold(
-                onSuccess = { updated ->
-                    _uiState.value = _uiState.value.copy(event = updated)
-                },
-                onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(error = e.message)
-                }
-            )
+            _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
+
+            FirebaseDocumentUploader
+                .uploadEventDocument(context, uri, petId, eventId)
+                .fold(
+                    onSuccess = { uploaded ->
+                        RepositoryProvider.eventRepository.addDocument(
+                            eventId  = eventId,
+                            fileName = uploaded.fileName,
+                            fileUri  = uploaded.downloadUrl
+                        ).fold(
+                            onSuccess = { updatedEvent ->
+                                _uiState.value = _uiState.value.copy(
+                                    event          = updatedEvent,
+                                    isUploadingDoc = false
+                                )
+                            },
+                            onFailure = { e ->
+                                _uiState.value = _uiState.value.copy(
+                                    isUploadingDoc = false,
+                                    error = "Uploaded but failed to save: ${e.message}"
+                                )
+                            }
+                        )
+                    },
+                    onFailure = { e ->
+                        _uiState.value = _uiState.value.copy(
+                            isUploadingDoc = false,
+                            error          = "Upload failed: ${e.message}"
+                        )
+                    }
+                )
         }
     }
 
     fun clearError() { _uiState.value = _uiState.value.copy(error = null) }
-    fun onAttachDocumentClicked() { /* triggered via filePicker in the screen */ }
-    fun onDeleteClicked() = deleteEvent()
-    fun onEditClicked()   = startEditing()
 }
