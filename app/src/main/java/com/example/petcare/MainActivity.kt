@@ -28,6 +28,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.petcare.data.nfc.NfcManager
+import com.example.petcare.data.analytics.AnalyticsSeeder
+import com.example.petcare.data.analytics.ScreenTimeTracker
 import com.example.petcare.ui.preferences.AppThemeViewModel
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.components.ExpandableFAB
@@ -114,8 +116,18 @@ class MainActivity : ComponentActivity() {
                 if (authViewModel.isLoggedIn) {
                     authViewModel.fetchUserProfile()
                     authViewModel.syncEmailWithBackend()
+
+                    // ── Analytics: seed on first launch ──
+                    AnalyticsSeeder.seedIfNeeded(this@MainActivity)
                 }
             }
+
+            // ── Analytics: track screen time ──
+            val screenTimeTracker = if (authViewModel.isLoggedIn) {
+                ScreenTimeTracker(
+                    userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "unknown"
+                )
+            } else null
 
             CompositionLocalProvider(LocalAppThemeMode provides themeMode) {
                 PetCareTheme(themeMode = themeMode) {
@@ -144,6 +156,8 @@ class MainActivity : ComponentActivity() {
                                 startDestination = if (authViewModel.isLoggedIn) Routes.Home else Routes.Onboarding1,
                                 modifier         = Modifier.padding(innerPadding)
                             ) {
+                                // ── Analytics: attach screen time tracker ──
+                                screenTimeTracker?.attach(navController)
 
                                 // ── Onboarding ────────────────────────────────────────────
                                 composable(Routes.Onboarding1) {
