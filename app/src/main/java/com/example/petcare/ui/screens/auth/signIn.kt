@@ -23,6 +23,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -39,6 +40,7 @@ fun SignInScreen(
     val authState by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var passwordVisible by remember { mutableStateOf(false) }
+    var showForgotPassword by remember { mutableStateOf(false) }
 
     LaunchedEffect(authState) {
         if (authState is AuthViewModel.AuthState.Success) {
@@ -121,7 +123,12 @@ fun SignInScreen(
         ) {
             Text(
                 text = "Forgot password?",
-                modifier = Modifier.align(Alignment.CenterEnd),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .clickable{
+                        viewModel.resetState()
+                        showForgotPassword = true
+                    },
                 color = MaterialTheme.colorScheme.secondary,
                 style = MaterialTheme.typography.bodySmall
             )
@@ -196,6 +203,18 @@ fun SignInScreen(
                 tint = Color.Unspecified
             )
             }
+        )
+    }
+    if (showForgotPassword) {
+        ForgotPasswordBottomSheet(
+            isLoading = authState is AuthViewModel.AuthState.Loading,
+            emailSent = authState is AuthViewModel.AuthState.ResetEmailSent,
+            sentToEmail = (authState as? AuthViewModel.AuthState.ResetEmailSent)?.email ?: "",
+            onDismiss = {
+                showForgotPassword = false
+                viewModel.resetState()
+            },
+            onSend = { viewModel.resetPassword(it) }
         )
     }
 }
