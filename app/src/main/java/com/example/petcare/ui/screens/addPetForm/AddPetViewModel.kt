@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import android.content.Context
 import android.net.Uri
-import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.storage.storage
@@ -25,9 +24,10 @@ data class AddPetFormState(
     val breed: String   = "",
     val species: String = "",
     // Step 2 – Details
-    val gender: String = "",
-    val weight: String = "",   // kept as String so the text field can hold partial input
-    val color: String  = "",
+    val gender: String    = "",
+    val weight: String    = "",
+    val color: String     = "",
+    val birthDate: String = "",   // NEW: dd/MM/yyyy from DateTextField
     // Step 3 – Medical (all optional)
     val defaultVet: String     = "",
     val defaultClinic: String  = "",
@@ -37,44 +37,36 @@ data class AddPetFormState(
     val error: String?     = null
 )
 
-class AddPetViewModel(application: Application) : AndroidViewModel(application)  {
+class AddPetViewModel(application: Application) : AndroidViewModel(application) {
     private fun getContext(): Context = getApplication<Application>().applicationContext
 
     private val _state = MutableStateFlow(AddPetFormState())
     val state: StateFlow<AddPetFormState> = _state.asStateFlow()
 
-    // ── Setters (one per field) ───────────────────────────────────────────────
     fun setPhotoUri(uri: Uri?) {
         val persisted = uri?.let { persistUri(it) }
         _state.value = _state.value.copy(photoUri = persisted)
     }
-    fun clearPhoto()           { _state.value = _state.value.copy(photoUri = null) }
-    fun setName(v: String)           { _state.value = _state.value.copy(name = v) }
-    fun setBreed(v: String)          { _state.value = _state.value.copy(breed = v) }
-    fun setSpecies(v: String)        { _state.value = _state.value.copy(species = v) }
-    fun setGender(v: String)         { _state.value = _state.value.copy(gender = v) }
-    fun setWeight(v: String)         { _state.value = _state.value.copy(weight = v) }
-    fun setColor(v: String)          { _state.value = _state.value.copy(color = v) }
+    fun clearPhoto()               { _state.value = _state.value.copy(photoUri = null) }
+    fun setName(v: String)         { _state.value = _state.value.copy(name = v) }
+    fun setBreed(v: String)        { _state.value = _state.value.copy(breed = v) }
+    fun setSpecies(v: String)      { _state.value = _state.value.copy(species = v) }
+    fun setGender(v: String)       { _state.value = _state.value.copy(gender = v) }
+    fun setWeight(v: String)       { _state.value = _state.value.copy(weight = v) }
+    fun setColor(v: String)        { _state.value = _state.value.copy(color = v) }
+    fun setBirthDate(v: String)    { _state.value = _state.value.copy(birthDate = v) }   // NEW
     fun setDefaultVet(v: String)     { _state.value = _state.value.copy(defaultVet = v) }
     fun setDefaultClinic(v: String)  { _state.value = _state.value.copy(defaultClinic = v) }
     fun setKnownAllergies(v: String) { _state.value = _state.value.copy(knownAllergies = v) }
 
-
-    // ── Submit ────────────────────────────────────────────────────────────────
-    /**
-     * Calls POST /api/pets/ and invokes [onSuccess] with the new petId on success.
-     * Any error is written to state.error.
-     */
     private suspend fun uploadPhoto(uri: Uri): String? {
         return try {
             val filename = "pets/${UUID.randomUUID()}.jpg"
             val ref = Firebase.storage.reference.child(filename)
             ref.putFile(uri).await()
-
             val bucket = ref.bucket
             val encodedPath = filename.replace("/", "%2F")
             "https://firebasestorage.googleapis.com/v0/b/$bucket/o/$encodedPath?alt=media"
-
         } catch (e: Exception) {
             null
         }
@@ -97,6 +89,7 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
                 gender         = s.gender.trim().lowercase(),
                 weight         = s.weight.toDoubleOrNull(),
                 color          = s.color.trim(),
+                birthDate      = s.birthDate.takeIf { it.isNotBlank() }?.let { toIso(it) },
                 knownAllergies = s.knownAllergies.trim(),
                 defaultVet     = s.defaultVet.trim(),
                 defaultClinic  = s.defaultClinic.trim(),
@@ -118,20 +111,22 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun clearError() { _state.value = _state.value.copy(error = null) }
-    /** Call after successful navigation so the form is blank for the next pet. */
     fun reset()      { _state.value = AddPetFormState() }
 
-    // En AddPetViewModel
     private fun persistUri(uri: Uri): Uri {
         val context = getApplication<Application>().applicationContext
         val filename = "pet_${System.currentTimeMillis()}.jpg"
         val dest = File(context.filesDir, "pets/$filename")
             .also { it.parentFile?.mkdirs() }
-
         context.contentResolver.openInputStream(uri)?.use { input ->
             dest.outputStream().use { output -> input.copyTo(output) }
         }
         return Uri.fromFile(dest)
     }
 
+    /** Converts dd/MM/yyyy → yyyy-MM-ddT00:00:00Z */
+    private fun toIso(date: String): String = try {
+        val p = date.split("/")
+        if (p.size == 3) "${p[2]}-${p[1]}-${p[0]}T00:00:00Z" else date
+    } catch (_: Exception) { date }
 }

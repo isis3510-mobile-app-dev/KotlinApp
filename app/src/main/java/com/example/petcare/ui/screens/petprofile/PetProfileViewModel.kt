@@ -33,7 +33,11 @@ data class PetProfileUiState(
     val suggestions: List<SuggestionDto> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val photoUrl: String? = null
+    val photoUrl: String? = null,
+    // ── Extra fields for EditPetBottomSheet ──────────────────────────────────
+    val knownAllergies: String = "",
+    val defaultVet: String = "",
+    val defaultClinic: String = ""
 )
 
 class PetProfileViewModel : ViewModel() {
@@ -44,10 +48,9 @@ class PetProfileViewModel : ViewModel() {
     private val _selectedTabIndex = MutableStateFlow(0)
     val selectedTabIndex: StateFlow<Int> = _selectedTabIndex.asStateFlow()
 
-    // Guardamos el petId para poder recargar
     private var currentPetId: String = ""
 
-    // ── Carga ─────────────────────────────────────────────────────────────────
+    // ── Load ──────────────────────────────────────────────────────────────────
 
     fun loadPet(petId: String) {
         currentPetId = petId
@@ -58,20 +61,20 @@ class PetProfileViewModel : ViewModel() {
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = e.message ?: "Failed to load pet"
+                        error     = e.message ?: "Failed to load pet"
                     )
                 }
             )
         }
     }
 
-    /** Recarga silenciosa (sin spinner) — útil tras editar/borrar vacuna o evento */
+    /** Silent refresh — used after editing or deleting a vaccination/event */
     fun reloadPet() {
         if (currentPetId.isBlank()) return
         viewModelScope.launch {
             RepositoryProvider.petRepository.getPet(currentPetId).fold(
                 onSuccess = { pet -> applyPetToState(pet, currentPetId) },
-                onFailure = { /* ignorar errores silenciosos */ }
+                onFailure = { /* ignore silent errors */ }
             )
         }
     }
@@ -84,9 +87,9 @@ class PetProfileViewModel : ViewModel() {
 
         val vaccines = pet.vaccinations.map { v ->
             val status = when (v.status.lowercase()) {
-                "overdue"   -> VaccineFilterStatus.OVERDUE
-                "upcoming"  -> VaccineFilterStatus.UPCOMING
-                else        -> VaccineFilterStatus.COMPLETED
+                "overdue"  -> VaccineFilterStatus.OVERDUE
+                "upcoming" -> VaccineFilterStatus.UPCOMING
+                else       -> VaccineFilterStatus.COMPLETED
             }
             VaccineRecord(
                 id          = v.id,
@@ -130,14 +133,17 @@ class PetProfileViewModel : ViewModel() {
             suggestions          = suggestions,
             isLoading            = false,
             error                = null,
-            photoUrl             = pet.photoUrl
+            photoUrl             = pet.photoUrl,
+            // ── Extra fields for the edit sheet ───────────────────────────────
+            knownAllergies       = pet.knownAllergies,
+            defaultVet           = pet.defaultVet,
+            defaultClinic        = pet.defaultClinic
         )
     }
 
     // ── Tabs ──────────────────────────────────────────────────────────────────
 
-    fun onTabSelected(index: Int) { _selectedTabIndex.value = index }
-
+    fun onTabSelected(index: Int)           { _selectedTabIndex.value = index }
     fun onVaccineFilterClick(status: VaccineFilterStatus) {
         val current = _uiState.value.vaccineFilter
         _uiState.value = _uiState.value.copy(
@@ -151,7 +157,7 @@ class PetProfileViewModel : ViewModel() {
     fun onLostModeClicked()   {}
     fun onNfcActiveClicked()  {}
 
-    // ── Eliminar mascota ──────────────────────────────────────────────────────
+    // ── Delete pet ────────────────────────────────────────────────────────────
 
     fun deletePet(petId: String, onNavigatedBack: () -> Unit) {
         viewModelScope.launch {
