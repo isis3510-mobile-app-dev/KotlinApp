@@ -89,16 +89,27 @@ fun PetCard(
                         )
 
                     } else {
-                        if (photoUrl != null) {
+                        val resolvedUrl = UrlUtils.resolveUrl(photoUrl)
+                        if (resolvedUrl != null || photoUrl != null) {
                             AsyncImage(
-                                model = UrlUtils.resolveUrl(photoUrl),
+                                model = resolvedUrl,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize(),
+                                placeholder = painterResource(R.drawable.pet),
+                                error = painterResource(R.drawable.pet),
+                                fallback = painterResource(R.drawable.pet)
                             )
                         } else if (image != null) {
                             Image(
                                 painter = image,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(R.drawable.pet),
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
