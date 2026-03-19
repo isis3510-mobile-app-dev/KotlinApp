@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -127,28 +128,32 @@ fun PetDetailsCard(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (photoUrl != null && photoUrl.isNotBlank()) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(UrlUtils.resolveUrl(photoUrl))
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = petName,
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop,
-                        error = painterResource(R.drawable.pet)
-                    )
-                } else {
-                    Image(
-                        painter = painterResource(id = R.drawable.pet),
-                        contentDescription = petName,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
+
+                when {
+                    !photoUrl.isNullOrBlank() -> {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(Uri.parse(photoUrl))
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = petName,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            error = painterResource(R.drawable.pet)
+                        )
+                    }
+                    else -> {
+                        Image(
+                            painter = painterResource(R.drawable.pet),
+                            contentDescription = "Pet Avatar",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))

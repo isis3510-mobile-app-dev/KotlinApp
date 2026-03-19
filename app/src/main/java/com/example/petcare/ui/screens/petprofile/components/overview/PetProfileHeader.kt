@@ -1,9 +1,14 @@
 package com.example.petcare.ui.screens.petprofile.components.overview
 
+import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Contactless
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -11,24 +16,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.border
-import androidx.compose.material.icons.outlined.Contactless
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.petcare.R
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.GreenLight
 import com.example.petcare.ui.theme.PetCareTheme
-import androidx.compose.foundation.Image
-import androidx.compose.ui.layout.ContentScale
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import androidx.compose.ui.platform.LocalContext
-import com.example.petcare.util.UrlUtils
 
 @Composable
 fun PetProfileHeader(
@@ -43,18 +44,18 @@ fun PetProfileHeader(
     isNfcSynched: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .background(GreenDark)
             .padding(top = 48.dp, bottom = 24.dp, start = 24.dp, end = 24.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+
             // Pet Avatar with optional NFC Badge
             Box(contentAlignment = Alignment.BottomEnd) {
-                // Main Avatar
                 Box(
                     modifier = Modifier
                         .size(80.dp)
@@ -62,45 +63,46 @@ fun PetProfileHeader(
                         .background(Color.White.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    val context = LocalContext.current
-
-                    if (photoPath.isNullOrBlank()) {
-                        Image(
-                            painter = painterResource(id = R.drawable.pet),
-                            contentDescription = "Pet Avatar",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(UrlUtils.resolveUrl(photoPath))
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = "Pet Avatar",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                            error = painterResource(R.drawable.pet)
-                        )
+                    when {
+                        !photoPath.isNullOrBlank() -> {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(Uri.parse(photoPath))
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = name,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                                error = painterResource(R.drawable.pet)
+                            )
+                        }
+                        else -> {
+                            Image(
+                                painter = painterResource(R.drawable.pet),
+                                contentDescription = "Pet Avatar",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
-                
+
                 // NFC Badge
                 if (isNfcSynched) {
                     Box(
                         modifier = Modifier
-                            .offset(x = 8.dp, y = 8.dp) // Push out past the corner slightly
+                            .offset(x = 8.dp, y = 8.dp)
                             .size(32.dp)
-                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .clip(CircleShape)
                             .background(GreenLight)
-                            .border(2.dp, GreenDark, androidx.compose.foundation.shape.CircleShape),
+                            .border(2.dp, GreenDark, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Contactless,
+                            imageVector        = Icons.Outlined.Contactless,
                             contentDescription = "NFC Synched",
-                            tint = GreenDark,
-                            modifier = Modifier.size(16.dp)
+                            tint               = GreenDark,
+                            modifier           = Modifier.size(16.dp)
                         )
                     }
                 }
@@ -111,60 +113,53 @@ fun PetProfileHeader(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = name,
+                        text  = name,
                         color = Color.White,
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         fontSize = 24.sp
                     )
-                    
                     Spacer(modifier = Modifier.width(12.dp))
-                    
                     if (isHealthy) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
+                            modifier          = Modifier
                                 .background(GreenLight, RoundedCornerShape(12.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = "+ Healthy",
-                                color = GreenDark,
-                                fontSize = 12.sp,
+                                text       = "+ Healthy",
+                                color      = GreenDark,
+                                fontSize   = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(4.dp))
-                
+
                 Text(
-                    text = "$breed · $species",
+                    text  = "$breed · $species",
                     color = Color.White.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.bodyMedium
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment     = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Age
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(text = "🎂", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(text = age, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
                     }
-                    
-                    // Weight
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(text = "⚖️", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(text = weight, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
                     }
-
-                    // Gender
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val genderEmoji = if (gender.contains("Male", true)) "♂" else "♀"
                         Text(text = genderEmoji, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
@@ -182,12 +177,12 @@ fun PetProfileHeader(
 fun PetProfileHeaderPreview() {
     PetCareTheme {
         PetProfileHeader(
-            name = "Max",
-            breed = "Golden Retriever",
-            species = "Dog",
-            age = "6 yrs",
-            weight = "28.5 kg",
-            gender = "Male",
+            name        = "Max",
+            breed       = "Golden Retriever",
+            species     = "Dog",
+            age         = "6 yrs",
+            weight      = "28.5 kg",
+            gender      = "Male",
             isNfcSynched = true
         )
     }
