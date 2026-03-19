@@ -322,6 +322,7 @@ class MainActivity : ComponentActivity() {
                                     }
 
                                     val userProfile by authViewModel.userProfile.collectAsStateWithLifecycle()
+                                    val petsUiState by petsViewModel.uiState.collectAsStateWithLifecycle()
 
                                     val profileViewModel: ProfileViewModel = viewModel(
                                         factory = ViewModelFactory(
@@ -357,6 +358,7 @@ class MainActivity : ComponentActivity() {
 
                                     ProfileScreen(
                                         viewModel = profileViewModel,
+                                        petCount = petsUiState.pets.size,
                                         onNavigateToLogin = {
                                             authViewModel.logout()
                                             navController.navigate(Routes.SignIn) { popUpTo(0) }

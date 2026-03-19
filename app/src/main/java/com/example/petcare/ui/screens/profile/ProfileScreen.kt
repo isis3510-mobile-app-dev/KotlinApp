@@ -40,6 +40,7 @@ import com.example.petcare.ui.theme.PetCareTheme
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
+    petCount: Int? = null,
     onNavigateToLogin: () -> Unit = {},
     paddingValues: PaddingValues = PaddingValues(0.dp)
 
@@ -79,7 +80,7 @@ fun ProfileScreen(
             ProfileHeader(
                 name = uiState.user?.name ?: "---",
                 email = uiState.user?.email ?: "---",
-                petCount = uiState.user?.pets?.size ?: 0,
+                petCount = petCount ?: uiState.user?.pets?.size ?: 0,
                 initials = uiState.user?.initials ?: "?"
             )
 
