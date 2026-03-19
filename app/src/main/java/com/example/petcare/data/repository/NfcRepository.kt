@@ -12,11 +12,11 @@ class NfcRepository(private val api: ApiService) : INfcRepository {
         val response = api.getNfcPayload(petId)
         val body = response.body() ?: error("Empty response (${response.code()})")
         NfcPetPayload(
-            petId = body.petId,
-            petName = body.petName,
-            species = body.species,
-            breed = body.breed,
-            ownerName = body.ownerName,
+            petId      = body.petId,
+            petName    = body.petName,
+            species    = body.species,
+            breed      = body.breed,
+            ownerName  = body.ownerName,
             ownerPhone = body.ownerPhone,
             appDeepLink = "petcare://pet/${body.petId}"
         )
@@ -36,15 +36,18 @@ class NfcRepository(private val api: ApiService) : INfcRepository {
         val response = api.nfcPublicRead(petId)
         val body = response.body() ?: error("Empty response (${response.code()})")
         NfcPetPayload(
-            petId = body.petId,
-            petName = body.petName,
-            species = body.species,
-            breed = body.breed,
-            ownerName = body.ownerName,
-            ownerPhone = body.ownerPhone,
-            ownerInitials = body.ownerInitials,
-            photoUrl = body.photoUrl,
-            status = body.status
+            petId           = body.petId,
+            petName         = body.petName,
+            species         = body.species,
+            breed           = body.breed,
+            ownerName       = body.ownerName,
+            ownerPhone      = body.ownerPhone,
+            ownerInitials   = body.ownerInitials,
+            photoUrl        = body.photoUrl,
+            status          = body.status,
+            knownAllergies  = body.knownAllergies,
+            defaultVet      = body.defaultVet,
+            defaultClinic   = body.defaultClinic
         )
     }
 }
