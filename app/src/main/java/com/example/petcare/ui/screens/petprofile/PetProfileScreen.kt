@@ -87,7 +87,8 @@ fun PetProfileScreen(
             initialBreed       = uiState.breed,
             // Strip " kg" suffix added by the ViewModel for display
             initialWeight      = uiState.weight.removeSuffix(" kg"),
-            initialColor       = uiState.color,
+            initialColor          = uiState.color,
+            initialBirthDate      = uiState.dateOfBirth,
             initialKnownAllergies = uiState.knownAllergies,
             initialDefaultVet  = uiState.defaultVet,
             initialDefaultClinic = uiState.defaultClinic,

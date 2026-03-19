@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.petcare.ui.components.DateTextField
 import com.example.petcare.ui.theme.GrayBorder
 import com.example.petcare.ui.theme.GreenDark
 import java.io.File
@@ -44,6 +45,7 @@ fun EditPetBottomSheet(
     initialBreed: String,
     initialWeight: String,
     initialColor: String,
+    initialBirthDate: String,
     initialKnownAllergies: String,
     initialDefaultVet: String,
     initialDefaultClinic: String,
@@ -65,6 +67,7 @@ fun EditPetBottomSheet(
             breed          = initialBreed,
             weight         = initialWeight,
             color          = initialColor,
+            birthDate      = initialBirthDate,
             knownAllergies = initialKnownAllergies,
             defaultVet     = initialDefaultVet,
             defaultClinic  = initialDefaultClinic,
@@ -102,14 +105,15 @@ fun EditPetBottomSheet(
         sheetState       = sheetState,
         dragHandle       = {}
     ) {
-        // ── No PetCareTheme wrapper here — inherits from MainActivity ──────────
+        // No PetCareTheme wrapper — inherits theme from MainActivity
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.92f)
                 .padding(horizontal = 24.dp)
         ) {
-            // Header
+
+            // ── Header ────────────────────────────────────────────────────
             Row(
                 modifier              = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -125,11 +129,10 @@ fun EditPetBottomSheet(
                 modifier            = Modifier.weight(1f).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // ── Photo ─────────────────────────────────────────────────────
+
+                // ── Photo ─────────────────────────────────────────────────
                 Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("PHOTO", style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    SectionLabel("PHOTO")
                     Spacer(Modifier.height(12.dp))
 
                     Box(contentAlignment = Alignment.BottomEnd) {
@@ -138,29 +141,40 @@ fun EditPetBottomSheet(
 
                         if (imageData != null) {
                             AsyncImage(
-                                model            = ImageRequest.Builder(context).data(imageData).crossfade(true).build(),
+                                model              = ImageRequest.Builder(context).data(imageData).crossfade(true).build(),
                                 contentDescription = "Pet photo",
-                                contentScale     = ContentScale.Crop,
-                                modifier         = Modifier.size(100.dp).clip(RoundedCornerShape(20.dp))
+                                contentScale       = ContentScale.Crop,
+                                modifier           = Modifier
+                                    .size(100.dp)
+                                    .clip(RoundedCornerShape(20.dp))
                                     .clickable { showPhotoOptions = true }
                             )
                         } else {
                             Box(
-                                modifier = Modifier.size(100.dp).clip(RoundedCornerShape(20.dp))
+                                modifier = Modifier
+                                    .size(100.dp)
+                                    .clip(RoundedCornerShape(20.dp))
                                     .background(MaterialTheme.colorScheme.surfaceVariant)
                                     .border(1.dp, GrayBorder, RoundedCornerShape(20.dp))
                                     .clickable { showPhotoOptions = true },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.CameraAlt, contentDescription = "Add photo",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(32.dp))
+                                Icon(
+                                    Icons.Default.CameraAlt,
+                                    contentDescription = "Add photo",
+                                    tint     = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(32.dp)
+                                )
                             }
                         }
 
+                        // Green camera badge
                         Box(
-                            modifier = Modifier.offset(x = 4.dp, y = 4.dp).size(30.dp)
-                                .clip(CircleShape).background(GreenDark)
+                            modifier = Modifier
+                                .offset(x = 4.dp, y = 4.dp)
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(GreenDark)
                                 .clickable { showPhotoOptions = true },
                             contentAlignment = Alignment.Center
                         ) {
@@ -172,16 +186,19 @@ fun EditPetBottomSheet(
                     if (showPhotoOptions) {
                         Spacer(Modifier.height(12.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
-                                modifier = Modifier.weight(1f)) { Text("Camera") }
                             OutlinedButton(
-                                onClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                                modifier = Modifier.weight(1f)) { Text("Gallery") }
+                                onClick  = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                                modifier = Modifier.weight(1f)
+                            ) { Text("Camera") }
+                            OutlinedButton(
+                                onClick  = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                                modifier = Modifier.weight(1f)
+                            ) { Text("Gallery") }
                         }
                     }
                 }
 
-                // ── Basic info — plain OutlinedTextFields, no PetCareTheme wrapper ──
+                // ── Basic info ────────────────────────────────────────────
                 SectionLabel("BASIC INFO")
 
                 EditField("Name *", "e.g. Buddy", state.name, editViewModel::setName)
@@ -189,6 +206,15 @@ fun EditPetBottomSheet(
                 EditField("Weight (Kg)", "e.g. 4.5", state.weight, editViewModel::setWeight)
                 EditField("Color / Markings", "e.g. Golden, White Chest", state.color, editViewModel::setColor)
 
+                // Birth date — uses the same DateTextField picker as the add-pet form.
+                // Shows the current stored date as the label so the user knows the existing value.
+                DateTextField(
+                    name          = "Date of Birth",
+                    label         = state.birthDate.ifBlank { "dd/mm/yyyy" },
+                    onDateSelected = editViewModel::setBirthDate
+                )
+
+                // ── Medical info ──────────────────────────────────────────
                 SectionLabel("MEDICAL INFO")
 
                 EditField("Veterinarian", "e.g. Dr. Smith", state.defaultVet, editViewModel::setDefaultVet)
@@ -202,14 +228,16 @@ fun EditPetBottomSheet(
                 Spacer(Modifier.height(8.dp))
             }
 
-            // Save / Cancel
+            // ── Save / Cancel ─────────────────────────────────────────────
             Row(
                 modifier              = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedButton(onClick = onDismiss,
+                OutlinedButton(
+                    onClick  = onDismiss,
                     modifier = Modifier.weight(1f).height(52.dp),
-                    shape = RoundedCornerShape(28.dp)) { Text("Cancel") }
+                    shape    = RoundedCornerShape(28.dp)
+                ) { Text("Cancel") }
 
                 Button(
                     onClick  = { editViewModel.save(petId) },
@@ -229,7 +257,7 @@ fun EditPetBottomSheet(
     }
 }
 
-// ── Reusable helpers (no PetCareTheme wrapper) ────────────────────────────────
+// ── Private helpers ───────────────────────────────────────────────────────────
 
 @Composable
 private fun SectionLabel(text: String) {
@@ -265,7 +293,7 @@ private fun EditField(
             shape         = RoundedCornerShape(20.dp),
             colors        = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor   = GreenDark,
-                unfocusedBorderColor = com.example.petcare.ui.theme.GrayBorder
+                unfocusedBorderColor = GrayBorder
             )
         )
     }

@@ -20,6 +20,7 @@ data class EditPetState(
     val breed: String          = "",
     val weight: String         = "",
     val color: String          = "",
+    val birthDate: String      = "",   // dd/MM/yyyy from DateTextField, or yyyy-MM-dd from API
     val knownAllergies: String = "",
     val defaultVet: String     = "",
     val defaultClinic: String  = "",
@@ -40,18 +41,19 @@ class EditPetViewModel(application: Application) : AndroidViewModel(application)
         breed: String,
         weight: String,
         color: String,
+        birthDate: String,
         knownAllergies: String,
         defaultVet: String,
         defaultClinic: String,
         photoUrl: String?
     ) {
-        // Only init once — skip if name is already populated to avoid resetting on recomposition
         if (_state.value.name.isNotBlank()) return
         _state.value = EditPetState(
             name           = name,
             breed          = breed,
             weight         = weight,
             color          = color,
+            birthDate      = birthDate,
             knownAllergies = knownAllergies,
             defaultVet     = defaultVet,
             defaultClinic  = defaultClinic,
@@ -63,6 +65,7 @@ class EditPetViewModel(application: Application) : AndroidViewModel(application)
     fun setBreed(v: String)          { _state.value = _state.value.copy(breed = v) }
     fun setWeight(v: String)         { _state.value = _state.value.copy(weight = v) }
     fun setColor(v: String)          { _state.value = _state.value.copy(color = v) }
+    fun setBirthDate(v: String)      { _state.value = _state.value.copy(birthDate = v) }
     fun setKnownAllergies(v: String) { _state.value = _state.value.copy(knownAllergies = v) }
     fun setDefaultVet(v: String)     { _state.value = _state.value.copy(defaultVet = v) }
     fun setDefaultClinic(v: String)  { _state.value = _state.value.copy(defaultClinic = v) }
@@ -90,6 +93,7 @@ class EditPetViewModel(application: Application) : AndroidViewModel(application)
                 breed          = s.breed.trim().takeIf { it.isNotBlank() },
                 weight         = s.weight.toDoubleOrNull(),
                 color          = s.color.trim().takeIf { it.isNotBlank() },
+                birthDate      = s.birthDate.takeIf { it.isNotBlank() }?.let { toIso(it) },
                 knownAllergies = s.knownAllergies.trim(),
                 defaultVet     = s.defaultVet.trim(),
                 defaultClinic  = s.defaultClinic.trim(),
@@ -123,4 +127,21 @@ class EditPetViewModel(application: Application) : AndroidViewModel(application)
             null
         }
     }
+
+    /**
+     * Accepts both dd/MM/yyyy (from the DateTextField picker) and
+     * yyyy-MM-dd (already stored in the backend) and normalises to ISO-8601.
+     */
+    private fun toIso(date: String): String = try {
+        when {
+            date.matches(Regex("""\d{2}/\d{2}/\d{4}""")) -> {
+                val p = date.split("/")
+                "${p[2]}-${p[1]}-${p[0]}T00:00:00Z"
+            }
+            date.matches(Regex("""\d{4}-\d{2}-\d{2}.*""")) -> {
+                "${date.take(10)}T00:00:00Z"
+            }
+            else -> date
+        }
+    } catch (_: Exception) { date }
 }
