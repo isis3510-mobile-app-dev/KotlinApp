@@ -90,4 +90,5 @@ dependencies {
 
     //Camera
     implementation(libs.coil.compose)
+    implementation(libs.firebase.storage)
 }

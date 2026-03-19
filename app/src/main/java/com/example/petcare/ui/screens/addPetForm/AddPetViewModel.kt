@@ -12,7 +12,11 @@ import android.content.Context
 import android.net.Uri
 import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
+import com.google.firebase.Firebase
+import com.google.firebase.storage.storage
+import kotlinx.coroutines.tasks.await
 import java.io.File
+import java.util.UUID
 
 data class AddPetFormState(
     // Step 1 – Basic Info
@@ -61,6 +65,21 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
      * Calls POST /api/pets/ and invokes [onSuccess] with the new petId on success.
      * Any error is written to state.error.
      */
+    private suspend fun uploadPhoto(uri: Uri): String? {
+        return try {
+            val filename = "pets/${UUID.randomUUID()}.jpg"
+            val ref = Firebase.storage.reference.child(filename)
+            ref.putFile(uri).await()
+
+            val bucket = ref.bucket
+            val encodedPath = filename.replace("/", "%2F")
+            "https://firebasestorage.googleapis.com/v0/b/$bucket/o/$encodedPath?alt=media"
+
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun submit(onSuccess: (petId: String) -> Unit) {
         val s = _state.value
         if (s.name.isBlank() || s.species.isBlank()) {
@@ -69,6 +88,8 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
         }
         viewModelScope.launch {
             _state.value = s.copy(isLoading = true, error = null)
+            val photoUrl = s.photoUri?.let { uploadPhoto(it) }
+
             val request = CreatePetRequest(
                 name           = s.name.trim(),
                 species        = s.species.trim().lowercase(),
@@ -79,7 +100,7 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
                 knownAllergies = s.knownAllergies.trim(),
                 defaultVet     = s.defaultVet.trim(),
                 defaultClinic  = s.defaultClinic.trim(),
-                photoUrl       = s.photoUri?.toString()
+                photoUrl       = photoUrl
             )
             RepositoryProvider.petRepository.createPet(request).fold(
                 onSuccess = { pet ->
