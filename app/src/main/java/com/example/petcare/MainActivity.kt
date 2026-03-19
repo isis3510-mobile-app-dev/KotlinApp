@@ -55,6 +55,7 @@ import com.example.petcare.ui.screens.nfc.ScannedSuccessScreen
 import com.example.petcare.ui.screens.nfc.ScanningNFCScreen
 import com.example.petcare.ui.screens.nfc.TagWrittenScreen
 import com.example.petcare.ui.screens.nfc.WriteNFCScreen
+import com.example.petcare.ui.screens.notifications.NotificationsScreen
 import com.example.petcare.ui.screens.onboarding.OnBoardingScreen
 import com.example.petcare.ui.screens.petprofile.PetProfileScreen
 import com.example.petcare.ui.screens.petprofile.PetProfileViewModel
@@ -219,7 +220,8 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToAddPet      = { navController.navigate(Routes.AddPet1) },
                                     onNavigateToVaccine     = { petId, vaccineId -> navController.navigate("vaccineDetails/$petId/$vaccineId") },
                                     onNavigateToEvent       = { petId, eventId   -> navController.navigate("eventDetails/$petId/$eventId") },
-                                    onNavigateToRecords     = { navController.navigate(Routes.Records) }
+                                    onNavigateToRecords     = { navController.navigate(Routes.Records) },
+                                    onNavigateToNotifications = { navController.navigate(Routes.Notifications) }
                                 )
                             }
 
@@ -323,6 +325,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onNavigateToEventDetail = { pId, eventId ->
                                         navController.navigate("eventDetails/$pId/$eventId")
+                                    },
+                                    onSeeAllNotifications = { pid, petName ->
+                                        navController.navigate("notifications/$pid/$petName")
                                     }
                                 )
                             }
@@ -498,6 +503,26 @@ class MainActivity : ComponentActivity() {
                                             popUpTo(Routes.AddEvent1) { inclusive = true }
                                         }
                                     }
+                                )
+                            }
+                            //Notifications route
+                            composable(Routes.Notifications) {
+                                NotificationsScreen(
+                                    onBack = { navController.popBackStack() }
+                                )
+
+                            }
+                            composable(
+                                route = Routes.NotficationPerPet,
+                                arguments = listOf(
+                                    navArgument("petId")   { type = NavType.StringType },
+                                    navArgument("petName") { type = NavType.StringType }
+                                )
+                            ) { backStackEntry ->
+                                NotificationsScreen(
+                                    filterPetId   = backStackEntry.arguments?.getString("petId"),
+                                    filterPetName = backStackEntry.arguments?.getString("petName"),
+                                    onBack        = { navController.popBackStack() }
                                 )
                             }
                         }

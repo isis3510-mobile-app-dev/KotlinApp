@@ -4,6 +4,7 @@ import com.example.petcare.data.model.AddDocumentRequest
 import com.example.petcare.data.model.AddVaccinationRequest
 import com.example.petcare.data.model.CreatePetRequest
 import com.example.petcare.data.model.Pet
+import com.example.petcare.data.model.SuggestionDto
 import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.model.UpdateVaccinationRequest
 import com.example.petcare.data.network.ApiService
@@ -25,10 +26,6 @@ class PetRepository(private val api: ApiService) {
         response.body() ?: error("Failed to create pet")
     }
 
-    suspend fun updatePet(petId: String, request: UpdatePetRequest): Result<Pet> = runCatching {
-        val response = api.updatePet(petId, request)
-        response.body() ?: error("Failed to update pet")
-    }
 
     suspend fun deletePet(petId: String): Result<Unit> = runCatching {
         api.deletePet(petId)
@@ -77,7 +74,17 @@ class PetRepository(private val api: ApiService) {
         response.body() ?: error("Failed to update vaccination — HTTP ${response.code()}")
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    suspend fun getPetSmart(petId: String): Result<List<SuggestionDto>> = runCatching {
+        val response = api.getPetSmart(petId)
+        if (response.isSuccessful) {
+            response.body()?.suggestions ?: emptyList()
+        } else {
+            emptyList()
+        }
+    }
+
+
+        // ── Helpers ───────────────────────────────────────────────────────────────
 
     /**
      * Converts a date string to ISO-8601 format expected by the backend.

@@ -9,6 +9,7 @@ import com.example.petcare.data.model.NfcPayloadResponse
 import com.example.petcare.data.model.NfcPublicReadResponse
 import com.example.petcare.data.model.NfcSyncResponse
 import com.example.petcare.data.model.Pet
+import com.example.petcare.data.model.PetSmartResponse
 import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.model.UpdateUserRequest
 import com.example.petcare.data.model.UpdateVaccinationRequest
@@ -129,4 +130,9 @@ interface ApiService {
 
     @GET("nfc/read/{petId}/")
     suspend fun nfcPublicRead(@Path("petId") petId: String): Response<NfcPublicReadResponse>
+
+    @GET("pets/{petId}/smart/")
+    suspend fun getPetSmart(
+        @Path("petId") petId: String
+    ): Response<PetSmartResponse>
 }
