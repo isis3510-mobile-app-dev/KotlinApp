@@ -48,12 +48,13 @@ fun PetProfileScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedTabIndex by viewModel.selectedTabIndex.collectAsStateWithLifecycle()
 
-    // Carga inicial
     LaunchedEffect(petId) { viewModel.loadPet(petId) }
 
-    // ── Delete dialog ─────────────────────────────────────────────────────────
+    // ── Dialog / Sheet state ──────────────────────────────────────────────────
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showEditSheet    by remember { mutableStateOf(false) }
 
+    // ── Delete dialog ─────────────────────────────────────────────────────────
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -74,6 +75,27 @@ fun PetProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // ── Edit bottom sheet ─────────────────────────────────────────────────────
+    if (showEditSheet && !uiState.isLoading) {
+        EditPetBottomSheet(
+            petId              = petId,
+            initialName        = uiState.name,
+            initialBreed       = uiState.breed,
+            // Strip " kg" suffix added by the ViewModel for display
+            initialWeight      = uiState.weight.removeSuffix(" kg"),
+            initialColor       = uiState.color,
+            initialKnownAllergies = uiState.knownAllergies,
+            initialDefaultVet  = uiState.defaultVet,
+            initialDefaultClinic = uiState.defaultClinic,
+            initialPhotoUrl    = uiState.photoUrl,
+            onDismiss          = { showEditSheet = false },
+            onSaved            = {
+                showEditSheet = false
+                viewModel.reloadPet()   // silently refresh after save
             }
         )
     }
@@ -104,7 +126,8 @@ fun PetProfileScreen(
                     IconButton(onClick = { /* Share */ }) {
                         Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
                     }
-                    IconButton(onClick = { /* Edit */ }) {
+                    // Edit button now opens the bottom sheet
+                    IconButton(onClick = { showEditSheet = true }) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
                     }
                     IconButton(onClick = { showDeleteDialog = true }) {
@@ -137,7 +160,7 @@ fun PetProfileScreen(
             )
         }
 
-        // ── Alertas de salud ──────────────────────────────────────────────────
+        // ── Health alerts ─────────────────────────────────────────────────────
         if (uiState.suggestions.isNotEmpty()) {
             item {
                 Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
@@ -149,9 +172,9 @@ fun PetProfileScreen(
                             modifier = Modifier.align(Alignment.End)
                         ) {
                             Text(
-                                text  = "See all ${uiState.suggestions.size} alerts",
+                                text     = "See all ${uiState.suggestions.size} alerts",
                                 fontSize = 13.sp,
-                                color = GreenDark
+                                color    = GreenDark
                             )
                         }
                     }
@@ -167,7 +190,7 @@ fun PetProfileScreen(
             item { Spacer(modifier = Modifier.height(16.dp)) }
         }
 
-        // ── Contenido de cada tab ─────────────────────────────────────────────
+        // ── Tab content ───────────────────────────────────────────────────────
         when (selectedTabIndex) {
             0 -> overviewTabContent(
                 uiState      = uiState,
@@ -184,12 +207,9 @@ fun PetProfileScreen(
                     uiState.vaccines
                 }
                 vaccineTabContent(
-                    vaccines = displayedVaccines,
-                    onFilterClick = viewModel::onVaccineFilterClick,
-                    onVaccineClick = { vaccine ->
-                        // Navegar al detalle; al volver se recargará el perfil
-                        onNavigateToVaccineDetail(petId, vaccine.id)
-                    },
+                    vaccines          = displayedVaccines,
+                    onFilterClick     = viewModel::onVaccineFilterClick,
+                    onVaccineClick    = { vaccine -> onNavigateToVaccineDetail(petId, vaccine.id) },
                     onAddVaccineClick = onAddVaccine
                 )
             }

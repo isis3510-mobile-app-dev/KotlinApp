@@ -27,6 +27,10 @@ class PetRepository(private val api: ApiService) {
         response.body() ?: error("Failed to create pet")
     }
 
+    suspend fun updatePet(petId: String, request: UpdatePetRequest): Result<Pet> = runCatching {
+        val response = api.updatePet(petId, request)
+        response.body() ?: error("Failed to update pet — HTTP ${response.code()}")
+    }
 
     suspend fun deletePet(petId: String): Result<Unit> = runCatching {
         api.deletePet(petId)
