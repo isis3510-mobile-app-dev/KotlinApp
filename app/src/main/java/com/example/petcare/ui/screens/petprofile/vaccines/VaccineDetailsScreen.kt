@@ -43,6 +43,7 @@ fun VaccineDetailsScreen(
 ) {
     val viewModel: VaccineDetailsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     // Load real data
     LaunchedEffect(petId, vaccineId) { viewModel.load(petId, vaccineId) }
@@ -50,16 +51,6 @@ fun VaccineDetailsScreen(
     // Navigate back after successful delete
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) onNavigateBack()
-    }
-
-    // File picker for document upload
-    val filePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            val fileName = uri.lastPathSegment ?: "document"
-            viewModel.addDocument(fileName, uri.toString())
-        }
     }
 
     // Confirm-delete dialog state
@@ -190,10 +181,11 @@ fun VaccineDetailsScreen(
 
                     // Documents
                     AttachedDocumentsCard(
-                        documents  = vaccine.attachedDocumentName?.let {
-                            listOf(AttachedDocument(id = "1", fileName = it))
-                        } ?: emptyList(),
-                        onAddClicked = { filePicker.launch("*/*") }
+                        documents        = uiState.vaccine?.attachedDocuments ?: emptyList(),
+                        isUploading      = uiState.isUploadingDoc,
+                        onDocumentPicked = { uri, _, _ ->
+                            viewModel.addDocument(context, uri)
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))

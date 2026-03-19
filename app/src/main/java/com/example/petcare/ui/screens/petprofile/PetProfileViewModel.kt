@@ -98,7 +98,14 @@ class PetProfileViewModel : ViewModel() {
                 dateGiven   = v.dateGiven.take(10),
                 nextDueDate = v.nextDueDate?.take(10),
                 lotNumber   = v.lotNumber.ifBlank { null },
-                status      = status
+                status      = status,
+                attachedDocuments = v.attachedDocuments.map { doc ->
+                    com.example.petcare.data.model.AttachedDocument(
+                        id       = doc.id,
+                        fileName = doc.fileName,
+                        fileUri  = doc.fileUri
+                    )
+                }
             )
         }
 

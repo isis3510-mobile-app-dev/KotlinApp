@@ -1,11 +1,15 @@
 package com.example.petcare.ui.screens.petprofile.vaccines
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.AddDocumentRequest
+import com.example.petcare.data.model.AttachedDocument
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
+import com.example.petcare.util.FirebaseDocumentUploader
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,6 +21,7 @@ data class VaccineDetailsUiState(
     val isLoading: Boolean = false,
     val isDeleting: Boolean = false,
     val isSaving: Boolean = false,
+    val isUploadingDoc: Boolean = false,      // ← NUEVO
     val error: String? = null,
     val isDeleted: Boolean = false,
     val isEditing: Boolean = false,
@@ -26,10 +31,11 @@ data class VaccineDetailsUiState(
 )
 
 class VaccineDetailsViewModel : ViewModel() {
+
     private val _uiState = MutableStateFlow(VaccineDetailsUiState(isLoading = true))
     val uiState: StateFlow<VaccineDetailsUiState> = _uiState.asStateFlow()
 
-    // ── Carga ─────────────────────────────────────────────────────────────────
+    // ── Load ──────────────────────────────────────────────────────────────
 
     fun load(petId: String, vaccineId: String) {
         viewModelScope.launch {
@@ -42,30 +48,39 @@ class VaccineDetailsViewModel : ViewModel() {
 
             RepositoryProvider.petRepository.getPet(petId).fold(
                 onSuccess = { pet ->
-                    // Buscar por id (campo _id del embedded document)
                     val vacc = pet.vaccinations.find { it.id == vaccineId }
                     if (vacc == null) {
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            error = "Vacunación no encontrada"
+                            error     = "Vaccination not found"
                         )
                         return@fold
                     }
+
                     val status = when (vacc.status.lowercase()) {
                         "overdue"  -> VaccineFilterStatus.OVERDUE
                         "upcoming" -> VaccineFilterStatus.UPCOMING
                         else       -> VaccineFilterStatus.COMPLETED
                     }
+
                     val record = VaccineRecord(
-                        id                   = vacc.id,
-                        name                 = catalogMap[vacc.vaccineId]?.name ?: vacc.vaccineId.take(8),
-                        provider             = vacc.administeredBy,
-                        dateGiven            = vacc.dateGiven.take(10),
-                        nextDueDate          = vacc.nextDueDate?.take(10),
-                        lotNumber            = vacc.lotNumber.ifBlank { null },
-                        status               = status,
-                        attachedDocumentName = vacc.attachedDocuments.firstOrNull()?.fileName
+                        id                = vacc.id,
+                        name              = catalogMap[vacc.vaccineId]?.name
+                            ?: vacc.vaccineId.take(8),
+                        provider          = vacc.administeredBy,
+                        dateGiven         = vacc.dateGiven.take(10),
+                        nextDueDate       = vacc.nextDueDate?.take(10),
+                        lotNumber         = vacc.lotNumber.ifBlank { null },
+                        status            = status,
+                        attachedDocuments = vacc.attachedDocuments.map { doc ->
+                            AttachedDocument(
+                                id       = doc.id,
+                                fileName = doc.fileName,
+                                fileUri  = doc.fileUri
+                            )
+                        }
                     )
+
                     _uiState.value = _uiState.value.copy(
                         vaccine            = record,
                         isLoading          = false,
@@ -75,13 +90,16 @@ class VaccineDetailsViewModel : ViewModel() {
                     )
                 },
                 onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error     = e.message
+                    )
                 }
             )
         }
     }
 
-    // ── Eliminar ──────────────────────────────────────────────────────────────
+    // ── Delete ────────────────────────────────────────────────────────────
 
     fun deleteVaccine() {
         val petId         = _uiState.value.petId
@@ -93,23 +111,35 @@ class VaccineDetailsViewModel : ViewModel() {
                 vaccinationId = vaccinationId
             ).fold(
                 onSuccess = {
-                    _uiState.value = _uiState.value.copy(isDeleting = false, isDeleted = true)
+                    _uiState.value = _uiState.value.copy(
+                        isDeleting = false,
+                        isDeleted  = true
+                    )
                 },
                 onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(isDeleting = false, error = e.message)
+                    _uiState.value = _uiState.value.copy(
+                        isDeleting = false,
+                        error      = e.message
+                    )
                 }
             )
         }
     }
 
-    // ── Edición ───────────────────────────────────────────────────────────────
+    // ── Edit ──────────────────────────────────────────────────────────────
 
     fun startEditing()  { _uiState.value = _uiState.value.copy(isEditing = true,  error = null) }
     fun cancelEditing() { _uiState.value = _uiState.value.copy(isEditing = false, error = null) }
 
-    fun setAdministeredBy(v: String) { _uiState.value = _uiState.value.copy(editAdministeredBy = v) }
-    fun setNextDueDate(v: String)    { _uiState.value = _uiState.value.copy(editNextDueDate = v) }
-    fun setLotNumber(v: String)      { _uiState.value = _uiState.value.copy(editLotNumber = v) }
+    fun setAdministeredBy(v: String) {
+        _uiState.value = _uiState.value.copy(editAdministeredBy = v)
+    }
+    fun setNextDueDate(v: String) {
+        _uiState.value = _uiState.value.copy(editNextDueDate = v)
+    }
+    fun setLotNumber(v: String) {
+        _uiState.value = _uiState.value.copy(editLotNumber = v)
+    }
 
     fun saveEdits() {
         val petId         = _uiState.value.petId
@@ -136,24 +166,68 @@ class VaccineDetailsViewModel : ViewModel() {
                     )
                 },
                 onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(isSaving = false, error = e.message)
+                    _uiState.value = _uiState.value.copy(
+                        isSaving = false,
+                        error    = e.message
+                    )
                 }
             )
         }
     }
 
-    // ── Documentos ────────────────────────────────────────────────────────────
+    // ── Documents ─────────────────────────────────────────────────────────
 
-    fun addDocument(fileName: String, fileUri: String?) {
-        val petId     = _uiState.value.petId
-        val vaccineId = _uiState.value.vaccine?.id ?: return
+    fun addDocument(context: Context, uri: Uri) {
+        val petId         = _uiState.value.petId
+        val vaccinationId = _uiState.value.vaccine?.id ?: return
         viewModelScope.launch {
-            RepositoryProvider.petRepository.addVaccinationDocument(
-                petId, vaccineId, AddDocumentRequest(fileName = fileName, fileUri = fileUri)
-            ).fold(
-                onSuccess = { _uiState.value = _uiState.value.copy(error = null) },
-                onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message) }
-            )
+            _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
+
+            FirebaseDocumentUploader
+                .uploadVaccinationDocument(context, uri, petId, vaccinationId)
+                .fold(
+                    onSuccess = { uploaded ->
+                        RepositoryProvider.petRepository.addVaccinationDocument(
+                            petId,
+                            vaccinationId,
+                            AddDocumentRequest(
+                                fileName = uploaded.fileName,
+                                fileUri  = uploaded.downloadUrl
+                            )
+                        ).fold(
+                            onSuccess = { updatedPet ->
+                                val updatedVacc = updatedPet.vaccinations
+                                    .find { it.id == vaccinationId }
+                                _uiState.value = _uiState.value.copy(
+                                    isUploadingDoc = false,
+                                    vaccine = _uiState.value.vaccine?.copy(
+                                        attachedDocuments = updatedVacc
+                                            ?.attachedDocuments
+                                            ?.map { doc ->
+                                                AttachedDocument(
+                                                    id       = doc.id,
+                                                    fileName = doc.fileName,
+                                                    fileUri  = doc.fileUri
+                                                )
+                                            } ?: emptyList()
+                                    )
+                                )
+                            },
+                            onFailure = { e ->
+                                _uiState.value = _uiState.value.copy(
+                                    isUploadingDoc = false,
+                                    error = "Uploaded but failed to save: ${e.message}"
+                                )
+                            }
+                        )
+                    },
+                    onFailure = { e ->
+                        _uiState.value = _uiState.value.copy(
+                            isUploadingDoc = false,
+                            error          = "Upload failed: ${e.message}"
+                        )
+                    }
+                )
         }
     }
 
