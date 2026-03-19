@@ -51,7 +51,7 @@ fun ActiveVaccineCard(vaccine: ActiveVaccineListItemData){
             .fillMaxWidth()
             .shadow(elevation = 12.dp, shape = RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.2f)),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier

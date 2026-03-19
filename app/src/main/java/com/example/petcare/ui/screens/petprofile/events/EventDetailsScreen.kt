@@ -95,7 +95,7 @@ fun EventDetailsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.surface)
                         .padding(24.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -125,7 +125,7 @@ fun EventDetailsScreen(
                 }
             }
         },
-        containerColor = OffWhite
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
 
         when {

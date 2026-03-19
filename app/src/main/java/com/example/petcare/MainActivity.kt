@@ -247,11 +247,22 @@ class MainActivity : ComponentActivity() {
                             // ── Records / Calendar / Profile ─────────────────────────────────────
                             composable(Routes.Records) {
                                 HealthRecordsScreen(
-                                    onNavigateToVaccineDetail = { petId, vaccinationId ->
-                                        navController.navigate("vaccineDetails/$petId/$vaccinationId")
-                                    },
                                     onNavigateToEventDetail = { petId, eventId ->
                                         navController.navigate("eventDetails/$petId/$eventId")
+                                    },
+                                    onAddRecordClick = {
+                                        addEventViewModel.reset()
+                                        addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
+                                        navController.navigate(Routes.AddEvent1)
+                                    },
+                                    onAddVaccineClick = {
+                                        addVaccineViewModel.reset()
+                                        navController.navigate(Routes.AddVaccine1)
+                                    },
+                                    onAddEventClick = {
+                                        addEventViewModel.reset()
+                                        addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
+                                        navController.navigate(Routes.AddEvent1)
                                     }
                                 )
                             }
@@ -432,12 +443,13 @@ class MainActivity : ComponentActivity() {
 
                             // ── Add Vaccine ───────────────────────────────────────────────────────
                             composable(Routes.AddVaccine1) {
-                                AddVaccineInitialForm(
-                                    viewModel = addVaccineViewModel,
-                                    onBack    = { navController.popBackStack() },
-                                    onclick   = { navController.navigate(Routes.AddVaccine2) }
-                                )
-                            }
+                                        AddVaccineInitialForm(
+                                            viewModel = addVaccineViewModel,
+                                            petsViewModel = petsViewModel,
+                                            onBack    = { navController.popBackStack() },
+                                            onclick   = { navController.navigate(Routes.AddVaccine2) }
+                                        )
+                                    }
                             composable(Routes.AddVaccine2) {
                                 AddVaccineDetailsForm(
                                     viewModel = addVaccineViewModel,
@@ -463,6 +475,7 @@ class MainActivity : ComponentActivity() {
                             composable(Routes.AddEvent1) {
                                 AddEventInitialForm(
                                     viewModel = addEventViewModel,
+                                    petsViewModel = petsViewModel,
                                     onBack    = { navController.popBackStack() },
                                     onclick   = { navController.navigate(Routes.AddEvent2) }
                                 )
@@ -493,8 +506,15 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                                 ExpandableFAB(
                                     onAddPet     = { navController.navigate(Routes.AddPet1) },
-                                    onAddVaccine = { navController.navigate(Routes.AddVaccine1) },
-                                    onAddEvent   = { navController.navigate(Routes.AddEvent1) },
+                                    onAddVaccine = {
+                                        addVaccineViewModel.reset()
+                                        navController.navigate(Routes.AddVaccine1)
+                                    },
+                                    onAddEvent   = {
+                                        addEventViewModel.reset()
+                                        addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
+                                        navController.navigate(Routes.AddEvent1)
+                                    },
                                     onScanNFC    = { navController.navigate(Routes.NfcScan) }
                                 )
                             }

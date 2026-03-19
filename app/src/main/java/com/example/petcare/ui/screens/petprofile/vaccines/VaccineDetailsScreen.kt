@@ -89,7 +89,7 @@ fun VaccineDetailsScreen(
     }
 
     Scaffold(
-        containerColor = OffWhite,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Column(modifier = Modifier.background(GreenDark)) {
                 Row(
@@ -114,7 +114,7 @@ fun VaccineDetailsScreen(
             } else {
                 // Save / Cancel bar
                 Row(
-                    modifier = Modifier.fillMaxWidth().background(Color.White).padding(24.dp),
+                    modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(24.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     OutlinedButton(
@@ -215,7 +215,7 @@ private fun EditableTimelineCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(24.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -237,7 +237,7 @@ private fun EditableProviderCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(24.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -250,7 +250,7 @@ private fun EditableProviderCard(
 
 @Composable
 private fun VaccineHeaderCard(name: String, status: VaccineFilterStatus) {
-    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color.White).padding(24.dp)) {
+    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surface).padding(24.dp)) {
         Column {
             Text(name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
@@ -268,7 +268,7 @@ private fun VaccineHeaderCard(name: String, status: VaccineFilterStatus) {
 
 @Composable
 private fun TimelineCard(dateGiven: String, nextDueDate: String?) {
-    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color.White).padding(24.dp)) {
+    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surface).padding(24.dp)) {
         Column {
             Text("TIMELINE", style = MaterialTheme.typography.labelMedium, color = GrayText, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Spacer(modifier = Modifier.height(20.dp))
@@ -299,7 +299,7 @@ private fun TimelineCard(dateGiven: String, nextDueDate: String?) {
 
 @Composable
 private fun ProviderCard(veterinarian: String, clinic: String) {
-    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color.White).padding(24.dp)) {
+    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surface).padding(24.dp)) {
         Column {
             Text("PROVIDER INFORMATION", style = MaterialTheme.typography.labelMedium, color = GrayText, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Spacer(modifier = Modifier.height(20.dp))
@@ -329,7 +329,7 @@ private fun ProviderCard(veterinarian: String, clinic: String) {
 @Composable
 private fun StickyBottomActions(isDeleting: Boolean, onDelete: () -> Unit, onEdit: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().background(Color.White).padding(24.dp),
+        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(24.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Box(

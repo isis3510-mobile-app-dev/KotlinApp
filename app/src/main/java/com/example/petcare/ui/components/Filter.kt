@@ -31,8 +31,8 @@ fun Filters(
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = GreenDark,
                     selectedLabelColor = Color.White,
-                    containerColor = Color.White,
-                    labelColor = Color.Gray
+                    containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+                    labelColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
                 ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,

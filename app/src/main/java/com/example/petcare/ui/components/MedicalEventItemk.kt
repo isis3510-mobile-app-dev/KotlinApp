@@ -62,7 +62,7 @@ fun MedicalEventItem(event: MedicalEventData, onClick: () -> Unit = {}
         modifier = Modifier.fillMaxWidth().clickable{ onClick() },
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier

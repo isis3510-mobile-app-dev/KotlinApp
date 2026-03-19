@@ -33,7 +33,7 @@ fun EventDateCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(24.dp)
     ) {
         Text(
@@ -61,7 +61,7 @@ fun EventDateCard(
                 Text(
                     text = eventDate,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
@@ -84,7 +84,7 @@ fun EventDateCard(
                     Text(
                         text = followUpDate,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
             }

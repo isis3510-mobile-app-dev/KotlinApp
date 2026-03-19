@@ -38,19 +38,19 @@ fun EventCard(eventName: String,pet:String, date: String){
         //.padding(16.dp)
         .shadow(elevation = 12.dp, shape = RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.2f)),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(modifier = Modifier.size(46.dp).clip(CircleShape).background(Color.White),
+            Box(modifier = Modifier.size(46.dp).clip(CircleShape).background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ){
                 Icon(
                     imageVector = Icons.Default.LocalHospital,
                     contentDescription = "Event",
-                    tint = Color.Black
+                    tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
@@ -82,7 +82,7 @@ fun EventCard(eventName: String,pet:String, date: String){
                     Icon(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = "Event",
-                        tint = Color.Black,
+                        tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
