@@ -11,4 +11,7 @@ data class NfcPetPayload(
     val photoUrl: String = "",
     val status: String = "Unknown",
     val appDeepLink: String = "",
+    val knownAllergies: String = "",
+    val defaultVet: String = "",
+    val defaultClinic: String = ""
 )
