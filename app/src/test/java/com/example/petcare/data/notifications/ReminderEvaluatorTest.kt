@@ -126,18 +126,117 @@ class ReminderEvaluatorTest {
         assertEquals("petProfile/pet-1", results.first().targetRoute)
     }
 
+    @Test
+    fun `stale vet visit older than 60 days creates reminder`() {
+        val pet = makePet(id = "pet-1", name = "Luna")
+        val eventDate = now.minus(70, ChronoUnit.DAYS).toString()
+        val event = makeEvent(
+            id = "evt-vet-old",
+            petId = pet.id,
+            date = eventDate,
+            eventType = EventType.CHECKUP
+        )
+
+        val results = evaluator.evaluate(
+            pets = listOf(pet),
+            eventsByPetId = mapOf(pet.id to listOf(event)),
+            suggestionsByPetId = emptyMap(),
+            urgencyLevel = VaccineUrgencyLevel.DANGER_ONLY,
+            sentKeys = emptySet(),
+            now = now
+        )
+
+        assertEquals(1, results.size)
+        assertEquals("VET_VISIT_STALE", results.first().backendType)
+        assertEquals("petProfile/pet-1", results.first().targetRoute)
+    }
+
+    @Test
+    fun `recent vet visit does not create stale reminder`() {
+        val pet = makePet(id = "pet-1", name = "Luna")
+        val event = makeEvent(
+            id = "evt-vet-recent",
+            petId = pet.id,
+            date = now.minus(20, ChronoUnit.DAYS).toString(),
+            eventType = EventType.CHECKUP
+        )
+
+        val results = evaluator.evaluate(
+            pets = listOf(pet),
+            eventsByPetId = mapOf(pet.id to listOf(event)),
+            suggestionsByPetId = emptyMap(),
+            urgencyLevel = VaccineUrgencyLevel.DANGER_ONLY,
+            sentKeys = emptySet(),
+            now = now
+        )
+
+        assertTrue(results.isEmpty())
+    }
+
+    @Test
+    fun `vet visit exactly 60 days ago does not create stale reminder`() {
+        val pet = makePet(id = "pet-1", name = "Luna")
+        val event = makeEvent(
+            id = "evt-vet-60",
+            petId = pet.id,
+            date = now.minus(60, ChronoUnit.DAYS).toString(),
+            eventType = EventType.CHECKUP
+        )
+
+        val results = evaluator.evaluate(
+            pets = listOf(pet),
+            eventsByPetId = mapOf(pet.id to listOf(event)),
+            suggestionsByPetId = emptyMap(),
+            urgencyLevel = VaccineUrgencyLevel.DANGER_ONLY,
+            sentKeys = emptySet(),
+            now = now
+        )
+
+        assertTrue(results.isEmpty())
+    }
+
+    @Test
+    fun `sent key prevents duplicate stale vet reminder`() {
+        val pet = makePet(id = "pet-1", name = "Luna")
+        val oldVisitInstant = now.minus(90, ChronoUnit.DAYS)
+        val event = makeEvent(
+            id = "evt-vet",
+            petId = pet.id,
+            date = oldVisitInstant.toString(),
+            eventType = EventType.CHECKUP
+        )
+        val sent = setOf("vetVisit:${pet.id}:last:${event.id}:${oldVisitInstant.epochSecond}")
+
+        val results = evaluator.evaluate(
+            pets = listOf(pet),
+            eventsByPetId = mapOf(pet.id to listOf(event)),
+            suggestionsByPetId = emptyMap(),
+            urgencyLevel = VaccineUrgencyLevel.DANGER_ONLY,
+            sentKeys = sent,
+            now = now
+        )
+
+        assertTrue(results.isEmpty())
+    }
+
     private fun makePet(id: String, name: String): Pet = Pet(
         id = id,
         name = name,
         species = "dog"
     )
 
-    private fun makeEvent(id: String, petId: String, date: String): Event = Event(
+    private fun makeEvent(
+        id: String,
+        petId: String,
+        date: String,
+        eventType: EventType = EventType.CHECKUP,
+        title: String = "Vet Visit"
+    ): Event = Event(
         id = id,
         petId = petId,
         ownerId = "owner-1",
-        title = "Vet Visit",
-        eventType = EventType.CHECKUP,
+        title = title,
+        eventType = eventType,
         date = date
     )
 }
