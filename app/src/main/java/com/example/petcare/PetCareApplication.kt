@@ -19,5 +19,6 @@ class PetCareApplication : Application() {
         super.onCreate()
         userPreferencesRepository = UserPreferencesRepository(dataStore)
         RepositoryProvider.init(AuthRepository())
+        com.example.petcare.data.analytics.FeatureExecutionTracker.init(this)
     }
 }

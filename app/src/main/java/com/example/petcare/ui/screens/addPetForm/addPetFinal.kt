@@ -16,6 +16,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.components.*
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
@@ -138,7 +139,12 @@ fun AddPetFinalForm(
                 textColor = MaterialTheme.colorScheme.onSecondary,
                 width = 169.dp, height = 50.57.dp,
                 text = if (state.isLoading) "Saving…" else "Add Pet",
-                onclick = { viewModel.submit { petId -> onclick(petId) } }
+                onclick = {
+                    viewModel.submit { petId ->
+                        FeatureClicksTracker.endRoute()
+                        onclick(petId)
+                    }
+                }
             )
         }
     }

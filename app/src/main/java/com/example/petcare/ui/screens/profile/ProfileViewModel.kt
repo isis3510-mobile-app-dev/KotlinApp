@@ -2,6 +2,7 @@ package com.example.petcare.ui.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.repository.AuthRepository
 import com.example.petcare.data.repository.UserRepository
 import com.example.petcare.data.model.UpdateUserRequest
@@ -79,8 +80,9 @@ class ProfileViewModel(
     fun loadUserProfile() {
         viewModelScope.launch {
             _userState.value = Triple(_userState.value.first, true, null)
-            userRepository.getMe()
-                .onSuccess { user ->
+            FeatureExecutionTracker.track("Load User Profile") {
+                userRepository.getMe()
+            }.onSuccess { user ->
                     _userState.value = Triple(user, false, null)
                 }
                 .onFailure { error ->
@@ -133,8 +135,9 @@ class ProfileViewModel(
                 is EditField.Address -> UpdateUserRequest(address = value)
             }
 
-            userRepository.updateMe(request)
-                .onSuccess { updatedUser ->
+            FeatureExecutionTracker.track("Update User Profile") {
+                userRepository.updateMe(request)
+            }.onSuccess { updatedUser ->
                     _userState.value = Triple(updatedUser, false, null)
                     _uiEvents.send(UiEvent.SaveSuccess)
                 }
@@ -179,8 +182,9 @@ class ProfileViewModel(
         val current = _userState.value.first ?: return
         viewModelScope.launch {
             _userState.value = Triple(current, true, null)
-            userRepository.deleteMe()
-                .onSuccess {
+            FeatureExecutionTracker.track("Delete Account") {
+                userRepository.deleteMe()
+            }.onSuccess {
                     authRepository.logout()
                     _userState.value = Triple(null, false, null)
                     _uiEvents.send(UiEvent.NavigateToLogin)

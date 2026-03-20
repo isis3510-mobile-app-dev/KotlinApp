@@ -18,53 +18,53 @@ object AnalyticsSeedData {
 
     val screens: List<ScreenDto> = listOf(
         // Onboarding
-        ScreenDto(name = "Onboarding1", buttons = listOf(
+        ScreenDto(name = "onboarding1", buttons = listOf(
             ButtonDto(buttonId = "btn_next_onb1", name = "Next")
         )),
-        ScreenDto(name = "Onboarding2", buttons = listOf(
+        ScreenDto(name = "onboarding2", buttons = listOf(
             ButtonDto(buttonId = "btn_next_onb2", name = "Next"),
             ButtonDto(buttonId = "btn_back_onb2", name = "Back")
         )),
-        ScreenDto(name = "Onboarding3", buttons = listOf(
+        ScreenDto(name = "onboarding3", buttons = listOf(
             ButtonDto(buttonId = "btn_get_started", name = "Get Started"),
             ButtonDto(buttonId = "btn_back_onb3", name = "Back")
         )),
 
         // Auth
-        ScreenDto(name = "SignIn", buttons = listOf(
+        ScreenDto(name = "signin", buttons = listOf(
             ButtonDto(buttonId = "btn_sign_in", name = "Sign In"),
             ButtonDto(buttonId = "btn_go_signup", name = "Go to Sign Up")
         )),
-        ScreenDto(name = "SignUp", buttons = listOf(
+        ScreenDto(name = "signup", buttons = listOf(
             ButtonDto(buttonId = "btn_sign_up", name = "Sign Up"),
             ButtonDto(buttonId = "btn_go_signin", name = "Go to Sign In")
         )),
 
         // Main tabs
-        ScreenDto(name = "Home", buttons = listOf(
+        ScreenDto(name = "home", buttons = listOf(
             ButtonDto(buttonId = "btn_add_pet", name = "Add Pet"),
             ButtonDto(buttonId = "btn_view_pet", name = "View Pet Card"),
             ButtonDto(buttonId = "btn_view_event", name = "View Event"),
             ButtonDto(buttonId = "btn_view_vaccine", name = "View Vaccine Alert")
         )),
-        ScreenDto(name = "Pets", buttons = listOf(
+        ScreenDto(name = "pets", buttons = listOf(
             ButtonDto(buttonId = "btn_pet_card", name = "Pet Card"),
             ButtonDto(buttonId = "btn_add_pet_fab", name = "Add Pet FAB")
         )),
-        ScreenDto(name = "Records", buttons = listOf(
+        ScreenDto(name = "records", buttons = listOf(
             ButtonDto(buttonId = "btn_record_item", name = "Record Item")
         )),
-        ScreenDto(name = "Calendar", buttons = listOf(
+        ScreenDto(name = "calendar", buttons = listOf(
             ButtonDto(buttonId = "btn_calendar_event", name = "Calendar Event")
         )),
-        ScreenDto(name = "Profile", buttons = listOf(
+        ScreenDto(name = "profile", buttons = listOf(
             ButtonDto(buttonId = "btn_edit_profile", name = "Edit Profile"),
             ButtonDto(buttonId = "btn_theme_toggle", name = "Theme Toggle"),
             ButtonDto(buttonId = "btn_sign_out", name = "Sign Out")
         )),
 
         // Pet profile & detail screens
-        ScreenDto(name = "PetProfile", buttons = listOf(
+        ScreenDto(name = "petProfile", buttons = listOf(
             ButtonDto(buttonId = "btn_edit_pet", name = "Edit Pet"),
             ButtonDto(buttonId = "btn_delete_pet", name = "Delete Pet"),
             ButtonDto(buttonId = "btn_add_vaccine", name = "Add Vaccine"),
@@ -74,80 +74,80 @@ object AnalyticsSeedData {
             ButtonDto(buttonId = "btn_nfc_write", name = "Write NFC"),
             ButtonDto(buttonId = "btn_nfc_scan", name = "Scan NFC")
         )),
-        ScreenDto(name = "VaccineDetails", buttons = listOf(
+        ScreenDto(name = "vaccineDetails", buttons = listOf(
             ButtonDto(buttonId = "btn_edit_vaccine", name = "Edit Vaccine"),
             ButtonDto(buttonId = "btn_delete_vaccine", name = "Delete Vaccine"),
             ButtonDto(buttonId = "btn_back_vaccine", name = "Back")
         )),
-        ScreenDto(name = "EventDetails", buttons = listOf(
+        ScreenDto(name = "eventDetails", buttons = listOf(
             ButtonDto(buttonId = "btn_edit_event", name = "Edit Event"),
             ButtonDto(buttonId = "btn_delete_event", name = "Delete Event"),
             ButtonDto(buttonId = "btn_back_event", name = "Back")
         )),
 
         // NFC
-        ScreenDto(name = "NfcScan", buttons = listOf(
+        ScreenDto(name = "nfc/scan", buttons = listOf(
             ButtonDto(buttonId = "btn_start_scan", name = "Start Scan")
         )),
-        ScreenDto(name = "NfcScanning", buttons = emptyList()),
-        ScreenDto(name = "NfcScanSuccess", buttons = listOf(
+        ScreenDto(name = "nfc/scanning", buttons = emptyList()),
+        ScreenDto(name = "nfc/scanSuccess", buttons = listOf(
             ButtonDto(buttonId = "btn_scan_done", name = "Done")
         )),
-        ScreenDto(name = "NfcWrite", buttons = listOf(
+        ScreenDto(name = "nfc/write", buttons = listOf(
             ButtonDto(buttonId = "btn_start_write", name = "Start Write")
         )),
-        ScreenDto(name = "NfcWriting", buttons = emptyList()),
-        ScreenDto(name = "NfcWriteSuccess", buttons = listOf(
+        ScreenDto(name = "nfc/writing", buttons = emptyList()),
+        ScreenDto(name = "nfc/writeSuccess", buttons = listOf(
             ButtonDto(buttonId = "btn_write_done", name = "Done")
         )),
 
         // Add Pet flow
-        ScreenDto(name = "AddPet1", buttons = listOf(
+        ScreenDto(name = "addPet1", buttons = listOf(
             ButtonDto(buttonId = "btn_next_pet1", name = "Continue"),
             ButtonDto(buttonId = "btn_back_pet1", name = "Back")
         )),
-        ScreenDto(name = "AddPet2", buttons = listOf(
+        ScreenDto(name = "addPet2", buttons = listOf(
             ButtonDto(buttonId = "btn_next_pet2", name = "Continue"),
             ButtonDto(buttonId = "btn_back_pet2", name = "Back")
         )),
-        ScreenDto(name = "AddPet3", buttons = listOf(
+        ScreenDto(name = "addPet3", buttons = listOf(
             ButtonDto(buttonId = "btn_submit_pet", name = "Submit"),
             ButtonDto(buttonId = "btn_back_pet3", name = "Back")
         )),
 
         // Add Vaccine flow
-        ScreenDto(name = "AddVaccine1", buttons = listOf(
+        ScreenDto(name = "addVaccine1", buttons = listOf(
             ButtonDto(buttonId = "btn_next_vax1", name = "Continue"),
             ButtonDto(buttonId = "btn_back_vax1", name = "Back")
         )),
-        ScreenDto(name = "AddVaccine2", buttons = listOf(
+        ScreenDto(name = "addVaccine2", buttons = listOf(
             ButtonDto(buttonId = "btn_next_vax2", name = "Continue"),
             ButtonDto(buttonId = "btn_back_vax2", name = "Back")
         )),
-        ScreenDto(name = "AddVaccine3", buttons = listOf(
+        ScreenDto(name = "addVaccine3", buttons = listOf(
             ButtonDto(buttonId = "btn_submit_vaccine", name = "Submit"),
             ButtonDto(buttonId = "btn_back_vax3", name = "Back")
         )),
 
         // Add Event flow
-        ScreenDto(name = "AddEvent1", buttons = listOf(
+        ScreenDto(name = "addEvent1", buttons = listOf(
             ButtonDto(buttonId = "btn_next_evt1", name = "Continue"),
             ButtonDto(buttonId = "btn_back_evt1", name = "Back")
         )),
-        ScreenDto(name = "AddEvent2", buttons = listOf(
+        ScreenDto(name = "addEvent2", buttons = listOf(
             ButtonDto(buttonId = "btn_next_evt2", name = "Continue"),
             ButtonDto(buttonId = "btn_back_evt2", name = "Back")
         )),
-        ScreenDto(name = "AddEvent3", buttons = listOf(
+        ScreenDto(name = "addEvent3", buttons = listOf(
             ButtonDto(buttonId = "btn_submit_event", name = "Submit"),
             ButtonDto(buttonId = "btn_back_evt3", name = "Back")
         )),
 
         // Suggestions
-        ScreenDto(name = "Suggestions", buttons = listOf(
+        ScreenDto(name = "suggestions", buttons = listOf(
             ButtonDto(buttonId = "btn_suggestion_item", name = "Suggestion Item")
         )),
-        ScreenDto(name = "SuggestionPerPet", buttons = listOf(
+        ScreenDto(name = "suggestions/{petId}/{petName}", buttons = listOf(
             ButtonDto(buttonId = "btn_back_suggestion", name = "Back")
         ))
     )
@@ -158,19 +158,27 @@ object AnalyticsSeedData {
     // NOTE: originScreen will be replaced with the actual MongoDB _id after seeding.
 
     val features: List<FeatureDto> = listOf(
-        FeatureDto(name = "Create Pet",       originButton = "btn_submit_pet",     originScreen = "AddPet3"),
-        FeatureDto(name = "Edit Pet",         originButton = "btn_edit_pet",       originScreen = "PetProfile"),
-        FeatureDto(name = "Delete Pet",       originButton = "btn_delete_pet",     originScreen = "PetProfile"),
-        FeatureDto(name = "Add Vaccination",  originButton = "btn_submit_vaccine", originScreen = "AddVaccine3"),
-        FeatureDto(name = "Edit Vaccination", originButton = "btn_edit_vaccine",   originScreen = "VaccineDetails"),
-        FeatureDto(name = "Delete Vaccination", originButton = "btn_delete_vaccine", originScreen = "VaccineDetails"),
-        FeatureDto(name = "Create Event",     originButton = "btn_submit_event",   originScreen = "AddEvent3"),
-        FeatureDto(name = "Edit Event",       originButton = "btn_edit_event",     originScreen = "EventDetails"),
-        FeatureDto(name = "Delete Event",     originButton = "btn_delete_event",   originScreen = "EventDetails"),
-        FeatureDto(name = "NFC Write",        originButton = "btn_start_write",    originScreen = "NfcWrite"),
-        FeatureDto(name = "NFC Scan",         originButton = "btn_start_scan",     originScreen = "NfcScan"),
-        FeatureDto(name = "Sign In",          originButton = "btn_sign_in",        originScreen = "SignIn"),
-        FeatureDto(name = "Sign Up",          originButton = "btn_sign_up",        originScreen = "SignUp"),
+        FeatureDto(name = "Create Pet",       originButton = "btn_submit_pet",     originScreen = "addPet3"),
+        FeatureDto(name = "Edit Pet",         originButton = "btn_edit_pet",       originScreen = "petProfile"),
+        FeatureDto(name = "Delete Pet",       originButton = "btn_delete_pet",     originScreen = "petProfile"),
+        FeatureDto(name = "Add Vaccination",  originButton = "btn_submit_vaccine", originScreen = "addVaccine3"),
+        FeatureDto(name = "Edit Vaccination", originButton = "btn_edit_vaccine",   originScreen = "vaccineDetails"),
+        FeatureDto(name = "Delete Vaccination", originButton = "btn_delete_vaccine", originScreen = "vaccineDetails"),
+        FeatureDto(name = "Create Event",     originButton = "btn_submit_event",   originScreen = "addEvent3"),
+        FeatureDto(name = "Edit Event",       originButton = "btn_edit_event",     originScreen = "eventDetails"),
+        FeatureDto(name = "Delete Event",     originButton = "btn_delete_event",   originScreen = "eventDetails"),
+        FeatureDto(name = "NFC Write",        originButton = "btn_start_write",    originScreen = "nfc/write"),
+        FeatureDto(name = "NFC Scan",         originButton = "btn_start_scan",     originScreen = "nfc/scan"),
+        FeatureDto(name = "Sign In",          originButton = "btn_sign_in",        originScreen = "signin"),
+        FeatureDto(name = "Sign Up",          originButton = "btn_sign_up",        originScreen = "signup"),
+        FeatureDto(name = "Load Home Data",   originButton = "system",            originScreen = "home"),
+        FeatureDto(name = "Load My Pets",     originButton = "system",            originScreen = "pets"),
+        FeatureDto(name = "Load Pet Profile", originButton = "btn_view_pet",       originScreen = "home"),
+        FeatureDto(name = "Load User Profile", originButton = "system",           originScreen = "profile"),
+        FeatureDto(name = "Update User Profile", originButton = "btn_edit_profile", originScreen = "profile"),
+        FeatureDto(name = "Delete Account",   originButton = "btn_sign_out",       originScreen = "profile"),
+        FeatureDto(name = "Load Event Details", originButton = "btn_view_event",   originScreen = "home"),
+        FeatureDto(name = "Load Vaccination Details", originButton = "btn_view_vaccine", originScreen = "home"),
     )
 
     // ── Feature Routes ───────────────────────────────────────────────────
@@ -180,38 +188,68 @@ object AnalyticsSeedData {
     val featureRoutes: List<FeatureRouteDto> = listOf(
         FeatureRouteDto(
             name = "Add Pet Flow",
-            originButton = "btn_add_pet", originScreen = "Home",
-            endButton = "btn_submit_pet", endScreen = "AddPet3"
+            originButton = "btn_add_pet", originScreen = "home",
+            endButton = "btn_submit_pet", endScreen = "addPet3"
         ),
         FeatureRouteDto(
             name = "Add Pet Flow (FAB)",
-            originButton = "btn_add_pet_fab", originScreen = "Pets",
-            endButton = "btn_submit_pet", endScreen = "AddPet3"
+            originButton = "btn_add_pet_fab", originScreen = "pets",
+            endButton = "btn_submit_pet", endScreen = "addPet3"
         ),
         FeatureRouteDto(
             name = "Add Vaccine Flow",
-            originButton = "btn_add_vaccine", originScreen = "PetProfile",
-            endButton = "btn_submit_vaccine", endScreen = "AddVaccine3"
+            originButton = "btn_add_vaccine", originScreen = "petProfile",
+            endButton = "btn_submit_vaccine", endScreen = "addVaccine3"
         ),
         FeatureRouteDto(
             name = "Add Event Flow",
-            originButton = "btn_add_event", originScreen = "PetProfile",
-            endButton = "btn_submit_event", endScreen = "AddEvent3"
+            originButton = "btn_add_event", originScreen = "petProfile",
+            endButton = "btn_submit_event", endScreen = "addEvent3"
         ),
         FeatureRouteDto(
             name = "NFC Write Flow",
-            originButton = "btn_nfc_write", originScreen = "PetProfile",
-            endButton = "btn_write_done", endScreen = "NfcWriteSuccess"
+            originButton = "btn_nfc_write", originScreen = "petProfile",
+            endButton = "btn_write_done", endScreen = "nfc/writeSuccess"
         ),
         FeatureRouteDto(
             name = "NFC Scan Flow",
-            originButton = "btn_nfc_scan", originScreen = "PetProfile",
-            endButton = "btn_scan_done", endScreen = "NfcScanSuccess"
+            originButton = "btn_nfc_scan", originScreen = "petProfile",
+            endButton = "btn_scan_done", endScreen = "nfc/scanSuccess"
         ),
         FeatureRouteDto(
             name = "Onboarding Flow",
-            originButton = "btn_next_onb1", originScreen = "Onboarding1",
-            endButton = "btn_get_started", endScreen = "Onboarding3"
+            originButton = "btn_next_onb1", originScreen = "onboarding1",
+            endButton = "btn_get_started", endScreen = "onboarding3"
+        ),
+        FeatureRouteDto(
+            name = "Edit Pet Flow",
+            originButton = "btn_edit_pet", originScreen = "petProfile",
+            endButton = "btn_submit_pet_edit", endScreen = "petProfile"
+        ),
+        FeatureRouteDto(
+            name = "Delete Pet Flow",
+            originButton = "btn_delete_pet", originScreen = "petProfile",
+            endButton = "btn_confirm_delete_pet", endScreen = "pets"
+        ),
+        FeatureRouteDto(
+            name = "Edit Vaccination Flow",
+            originButton = "btn_edit_vaccine", originScreen = "vaccineDetails",
+            endButton = "btn_save_vaccine_edit", endScreen = "vaccineDetails"
+        ),
+        FeatureRouteDto(
+            name = "Delete Vaccination Flow",
+            originButton = "btn_delete_vaccine", originScreen = "vaccineDetails",
+            endButton = "btn_confirm_delete_vax", endScreen = "petProfile"
+        ),
+        FeatureRouteDto(
+            name = "Edit Event Flow",
+            originButton = "btn_edit_event", originScreen = "eventDetails",
+            endButton = "btn_save_event_edit", endScreen = "eventDetails"
+        ),
+        FeatureRouteDto(
+            name = "Delete Event Flow",
+            originButton = "btn_delete_event", originScreen = "eventDetails",
+            endButton = "btn_confirm_delete_evt", endScreen = "petProfile"
         ),
     )
 }

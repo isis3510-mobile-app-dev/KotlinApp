@@ -12,6 +12,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.ui.components.*
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.PetCareTheme
 
 
@@ -60,7 +61,10 @@ fun AddVaccineDetailsForm(
                 width = 169.dp,
                 height = 50.57.dp,
                 text = "Continue",
-                onclick = onclick
+                onclick = {
+                    FeatureClicksTracker.recordClick()
+                    onclick()
+                }
             )
         }
     }

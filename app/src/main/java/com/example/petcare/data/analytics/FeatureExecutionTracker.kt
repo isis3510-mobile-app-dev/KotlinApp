@@ -3,66 +3,75 @@ package com.example.petcare.data.analytics
 import android.content.Context
 import android.util.Log
 import com.example.petcare.data.model.analytics.CreateFeatureExecutionLogRequest
-import com.example.petcare.data.network.RetrofitClient
+import com.example.petcare.data.repository.RepositoryProvider
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import retrofit2.Response
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 
 /**
- * Wraps API calls to measure execution time and network speed.
+ * Wraps repository calls to measure execution time and network speed.
  *
  * Usage in ViewModels:
  * ```kotlin
- * val result = executionTracker.track(context, userId, featureName) {
- *     apiService.createPet(body)
+ * val result = FeatureExecutionTracker.track("Create Pet") {
+ *     petRepository.createPet(request)
  * }
+ * result.fold(onSuccess = { ... }, onFailure = { ... })
  * ```
+ *
+ * Call [init] once from [com.example.petcare.PetCareApplication.onCreate].
  */
 object FeatureExecutionTracker {
 
     private const val TAG = "FeatureExecTracker"
     private val formatter = DateTimeFormatter.ISO_INSTANT
+    private val logScope = CoroutineScope(Dispatchers.IO)
+
+    private var appContext: Context? = null
+
+    /** Call once from Application.onCreate() */
+    fun init(context: Context) {
+        appContext = context.applicationContext
+    }
 
     /**
-     * Execute [apiCall], measure its latency and network speed, then POST a log.
+     * Execute [block], measure its latency and network speed, then POST a log.
      *
-     * @param context     Application context for network speed measurement.
-     * @param userId      Current user's ID.
      * @param featureName Human-readable feature name (e.g. "Create Pet").
-     *                    Must match a name in [AnalyticsSeedData.features].
-     * @param apiCall     The suspend lambda that calls the API.
-     * @return The [Response] from [apiCall] (passes through transparently).
+     * @param block       The suspend lambda (typically a repository call) to measure.
+     * @return The [Result] from [block] — passes through transparently.
      */
     suspend fun <T> track(
-        context: Context,
-        userId: String,
         featureName: String,
-        apiCall: suspend () -> Response<T>
-    ): Response<T> {
-        val speed = NetworkSpeedMeasurer.measure(context)
+        block: suspend () -> Result<T>
+    ): Result<T> {
+        val ctx = appContext
+        val speed = if (ctx != null) NetworkSpeedMeasurer.measure(ctx)
+                    else NetworkSpeedMeasurer.Speed(0, 0)
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "unknown"
         val startTime = Instant.now()
 
-        // Execute the actual API call
-        val response = apiCall()
+        val result = block()
 
         val endTime = Instant.now()
         val totalSeconds = java.time.Duration.between(startTime, endTime).seconds.toInt()
 
-        // Fire-and-forget the log POST
-        withContext(Dispatchers.IO) {
+        // Fire-and-forget the analytics log
+        logScope.launch {
             try {
                 val request = CreateFeatureExecutionLogRequest(
                     userId = userId,
-                    featureId = featureName,  // backend resolves name to _id
+                    featureId = featureName,
                     startTime = formatter.format(startTime),
                     endTime = formatter.format(endTime),
                     totalTime = totalSeconds,
                     downloadSpeed = speed.downloadKbps,
                     uploadSpeed = speed.uploadKbps
                 )
-                val logResp = RetrofitClient.apiService.createFeatureExecutionLog(request)
+                val logResp = RepositoryProvider.apiService.createFeatureExecutionLog(request)
                 if (logResp.isSuccessful) {
                     Log.d(TAG, "Logged '$featureName' in ${totalSeconds}s (↓${speed.downloadKbps} ↑${speed.uploadKbps} kbps)")
                 } else {
@@ -73,6 +82,6 @@ object FeatureExecutionTracker {
             }
         }
 
-        return response
+        return result
     }
 }

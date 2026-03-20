@@ -33,6 +33,7 @@ import com.example.petcare.ui.components.DateTextField
 import com.example.petcare.ui.components.TextFieldComponent
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
 import com.example.petcare.data.model.AttachedDocument
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.*
 
 @Composable
@@ -67,6 +68,7 @@ fun VaccineDetailsScreen(
                         showDeleteDialog = false
                         val vaccine = uiState.vaccine
                         if (vaccine != null) {
+                            FeatureClicksTracker.endRoute()
                             viewModel.deleteVaccine()
                         }
                     },
@@ -99,8 +101,14 @@ fun VaccineDetailsScreen(
             if (!uiState.isEditing) {
                 StickyBottomActions(
                     isDeleting = uiState.isDeleting,
-                    onDelete   = { showDeleteDialog = true },
-                    onEdit     = { viewModel.startEditing() }
+                    onDelete   = {
+                        FeatureClicksTracker.startRoute("Delete Vaccination Flow")
+                        showDeleteDialog = true
+                    },
+                    onEdit     = {
+                        FeatureClicksTracker.startRoute("Edit Vaccination Flow")
+                        viewModel.startEditing()
+                    }
                 )
             } else {
                 // Save / Cancel bar
@@ -116,6 +124,7 @@ fun VaccineDetailsScreen(
                     Button(
                         onClick = {
                             val v = uiState.vaccine ?: return@Button
+                            FeatureClicksTracker.endRoute()
                             viewModel.saveEdits()
                         },
                         enabled  = !uiState.isSaving,

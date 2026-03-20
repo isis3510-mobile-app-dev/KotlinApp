@@ -29,6 +29,7 @@ import com.example.petcare.ui.theme.ErrorContainer
 import com.example.petcare.ui.theme.ErrorContent
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.OffWhite
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.PetCareTheme
 
 @Composable
@@ -62,6 +63,7 @@ fun EventDetailsScreen(
                 TextButton(
                     onClick = {
                         showDeleteDialog = false
+                        FeatureClicksTracker.endRoute()
                         viewModel.deleteEvent()
                     },
                     colors = ButtonDefaults.textButtonColors(
@@ -79,8 +81,14 @@ fun EventDetailsScreen(
         bottomBar = {
             if (!uiState.isEditing) {
                 ActionFooter(
-                    onDeleteClicked = { showDeleteDialog = true },
-                    onEditClicked   = { viewModel.startEditing() },
+                    onDeleteClicked = {
+                        FeatureClicksTracker.startRoute("Delete Event Flow")
+                        showDeleteDialog = true
+                    },
+                    onEditClicked   = {
+                        FeatureClicksTracker.startRoute("Edit Event Flow")
+                        viewModel.startEditing()
+                    },
                     isDeleteEnabled = !uiState.isDeleting
                 )
             } else {
@@ -99,7 +107,10 @@ fun EventDetailsScreen(
                     ) { Text("Cancel") }
 
                     Button(
-                        onClick  = { viewModel.saveEdits() },
+                        onClick  = {
+                            FeatureClicksTracker.endRoute()
+                            viewModel.saveEdits()
+                        },
                         enabled  = !uiState.isSaving,
                         modifier = Modifier.weight(1f).height(52.dp),
                         shape    = RoundedCornerShape(28.dp),

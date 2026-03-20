@@ -28,6 +28,7 @@ import com.example.petcare.ui.screens.petprofile.components.overview.PetProfileT
 import com.example.petcare.ui.screens.petprofile.components.overview.QuickActionGrid
 import com.example.petcare.ui.screens.petprofile.components.overview.UpcomingEventsBanner
 import com.example.petcare.ui.screens.petprofile.components.vaccines.vaccineTabContent
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.OffWhite
@@ -66,6 +67,7 @@ fun PetProfileScreen(
                 TextButton(
                     onClick = {
                         showDeleteDialog = false
+                        FeatureClicksTracker.endRoute()
                         viewModel.deletePet(petId, onNavigatedBack = onBack)
                     },
                     colors = ButtonDefaults.textButtonColors(
@@ -74,7 +76,10 @@ fun PetProfileScreen(
                 ) { Text("Delete permanently") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                TextButton(onClick = {
+                    FeatureClicksTracker.cancelRoute()
+                    showDeleteDialog = false
+                }) { Text("Cancel") }
             }
         )
     }
@@ -95,6 +100,7 @@ fun PetProfileScreen(
             initialPhotoUrl    = uiState.photoUrl,
             onDismiss          = { showEditSheet = false },
             onSaved            = {
+                FeatureClicksTracker.endRoute()
                 showEditSheet = false
                 viewModel.reloadPet()   // silently refresh after save
             }
@@ -116,7 +122,10 @@ fun PetProfileScreen(
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = {
+                    FeatureClicksTracker.cancelRoute()
+                    onBack()
+                }) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
@@ -128,10 +137,16 @@ fun PetProfileScreen(
                         Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
                     }
                     // Edit button now opens the bottom sheet
-                    IconButton(onClick = { showEditSheet = true }) {
+                    IconButton(onClick = {
+                        FeatureClicksTracker.startRoute("Edit Pet Flow")
+                        showEditSheet = true
+                    }) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
                     }
-                    IconButton(onClick = { showDeleteDialog = true }) {
+                    IconButton(onClick = {
+                        FeatureClicksTracker.startRoute("Delete Pet Flow")
+                        showDeleteDialog = true
+                    }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "More options", tint = Color.White)
                     }
                 }
@@ -169,7 +184,10 @@ fun PetProfileScreen(
                     if (uiState.suggestions.size > 2) {
                         Spacer(Modifier.height(6.dp))
                         TextButton(
-                            onClick = { onSeeAllNotifications(petId, uiState.name) },
+                            onClick = {
+                                FeatureClicksTracker.recordClick()
+                                onSeeAllNotifications(petId, uiState.name)
+                            },
                             modifier = Modifier.align(Alignment.End)
                         ) {
                             Text(
@@ -210,14 +228,20 @@ fun PetProfileScreen(
                 vaccineTabContent(
                     vaccines          = displayedVaccines,
                     onFilterClick     = viewModel::onVaccineFilterClick,
-                    onVaccineClick    = { vaccine -> onNavigateToVaccineDetail(petId, vaccine.id) },
+                    onVaccineClick    = { vaccine ->
+                        FeatureClicksTracker.recordClick()
+                        onNavigateToVaccineDetail(petId, vaccine.id)
+                    },
                     onAddVaccineClick = onAddVaccine
                 )
             }
 
             2 -> eventTabContent(
                 events          = uiState.events,
-                onEventClick    = { eventId -> onNavigateToEventDetail(petId, eventId) },
+                onEventClick    = { eventId ->
+                    FeatureClicksTracker.recordClick()
+                    onNavigateToEventDetail(petId, eventId)
+                },
                 onAddEventClick = onAddEvent
             )
         }
@@ -259,8 +283,14 @@ private fun LazyListScope.overviewTabContent(
             }
 
             QuickActionGrid(
-                onAddEventClick   = onAddEvent,
-                onAddVaccineClick = onAddVaccine,
+                onAddEventClick   = {
+                    FeatureClicksTracker.startRoute("Add Event Flow")
+                    onAddEvent()
+                },
+                onAddVaccineClick = {
+                    FeatureClicksTracker.startRoute("Add Vaccine Flow")
+                    onAddVaccine()
+                },
                 onLostModeClick   = viewModel::onLostModeClicked,
                 onNfcClick        = onNFCScan
             )

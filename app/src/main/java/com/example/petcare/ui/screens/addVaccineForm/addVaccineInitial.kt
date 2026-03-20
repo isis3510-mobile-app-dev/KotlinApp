@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petcare.ui.components.*
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.screens.pets.PetsViewModel
 import com.example.petcare.ui.theme.GrayBorder
 import com.example.petcare.ui.theme.PetCareTheme
@@ -49,7 +50,10 @@ fun AddVaccineInitialForm(
             verticalArrangement = Arrangement.spacedBy(30.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            TransparentTopBar(title = "Add New Vaccine", onBackClick = onBack)
+            TransparentTopBar(title = "Add New Vaccine", onBackClick = {
+                FeatureClicksTracker.cancelRoute()
+                onBack()
+            })
             Stepper(currentStep = 1, stepLabels = listOf("Basic Info", "Details", "Overview"))
 
             // ── Pet dropdown ─────────────────────────────────────────────
@@ -202,7 +206,10 @@ fun AddVaccineInitialForm(
                 if (state.petId.isNotBlank()
                     && state.selectedVaccine != null
                     && state.dateGiven.isNotBlank()
-                ) onclick()
+                ) {
+                    FeatureClicksTracker.recordClick()
+                    onclick()
+                }
             }
         )
     }

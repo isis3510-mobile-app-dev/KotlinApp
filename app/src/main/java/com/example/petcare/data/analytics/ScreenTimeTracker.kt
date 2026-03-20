@@ -3,12 +3,11 @@ package com.example.petcare.data.analytics
 import android.util.Log
 import androidx.navigation.NavController
 import com.example.petcare.data.model.analytics.CreateScreenTimeLogRequest
-import com.example.petcare.data.network.RetrofitClient
+import com.example.petcare.data.repository.RepositoryProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /**
@@ -27,21 +26,38 @@ class ScreenTimeTracker(
 
     private var currentScreen: String? = null
     private var enterTime: Instant? = null
+    private var attachedNavController: NavController? = null
+
+    private val destinationListener = NavController.OnDestinationChangedListener { _, destination, _ ->
+        val rawRoute = destination.route ?: return@OnDestinationChangedListener
+        val newRoute = normalizeRoute(rawRoute)
+
+        // Log time for the previous screen
+        logCurrentScreen()
+
+        // Start tracking the new screen
+        currentScreen = newRoute
+        enterTime = Instant.now()
+    }
 
     /**
      * Attach to a NavController to automatically track screen transitions.
      */
     fun attach(navController: NavController) {
-        navController.addOnDestinationChangedListener { _, destination, _ ->
-            val newRoute = destination.route?.substringBefore("/")  // strip parameters
-                ?: return@addOnDestinationChangedListener
+        if (attachedNavController === navController) return
+        attachedNavController?.removeOnDestinationChangedListener(destinationListener)
+        attachedNavController = navController
+        navController.addOnDestinationChangedListener(destinationListener)
+    }
 
-            // Log time for the previous screen
-            logCurrentScreen()
-
-            // Start tracking the new screen
-            currentScreen = newRoute
-            enterTime = Instant.now()
+    /**
+     * Detach the current destination listener from the NavController.
+     */
+    fun detach(navController: NavController? = attachedNavController) {
+        val target = navController ?: return
+        target.removeOnDestinationChangedListener(destinationListener)
+        if (attachedNavController === target) {
+            attachedNavController = null
         }
     }
 
@@ -52,6 +68,11 @@ class ScreenTimeTracker(
         logCurrentScreen()
         currentScreen = null
         enterTime = null
+    }
+
+    private fun normalizeRoute(route: String): String {
+        val argsStart = route.indexOf("/{")
+        return if (argsStart >= 0) route.substring(0, argsStart) else route
     }
 
     private fun logCurrentScreen() {
@@ -75,7 +96,7 @@ class ScreenTimeTracker(
 
         scope.launch {
             try {
-                val resp = RetrofitClient.apiService.createScreenTimeLog(request)
+                val resp = RepositoryProvider.apiService.createScreenTimeLog(request)
                 if (resp.isSuccessful) {
                     Log.d(tag, "Logged $totalSeconds s on '$screen'")
                 } else {
