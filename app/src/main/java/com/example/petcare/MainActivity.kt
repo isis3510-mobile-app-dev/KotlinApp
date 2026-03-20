@@ -16,6 +16,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -28,6 +30,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.petcare.data.nfc.NfcManager
+import com.example.petcare.data.analytics.AnalyticsSeeder
+import com.example.petcare.data.analytics.ScreenTimeTracker
 import com.example.petcare.ui.preferences.AppThemeViewModel
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.components.ExpandableFAB
@@ -78,6 +82,7 @@ import com.example.petcare.ui.theme.OnboardingBlueStart
 import com.example.petcare.ui.theme.OnboardingPurpleEnd
 import com.example.petcare.ui.theme.OnboardingPurpleStart
 import com.example.petcare.ui.theme.PetCareTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -109,11 +114,35 @@ class MainActivity : ComponentActivity() {
             val addPetViewModel: AddPetViewModel = viewModel()
             val addVaccineViewModel: AddVaccineViewModel = viewModel()
             val addEventViewModel: AddEventViewModel = viewModel()
+            val uiScope = rememberCoroutineScope()
 
-            LaunchedEffect(Unit) {
+            LaunchedEffect(authViewModel.isLoggedIn) {
                 if (authViewModel.isLoggedIn) {
                     authViewModel.fetchUserProfile()
                     authViewModel.syncEmailWithBackend()
+
+                    // ── Analytics: verify+seed metadata for this session ──
+                    AnalyticsSeeder.seedIfNeeded(this@MainActivity)
+                }
+            }
+
+            // ── Analytics: track screen time ──
+            val firebaseUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+            val screenTimeTracker = remember(authViewModel.isLoggedIn, firebaseUserId) {
+                if (authViewModel.isLoggedIn && !firebaseUserId.isNullOrBlank()) {
+                    ScreenTimeTracker(userId = firebaseUserId)
+                } else {
+                    null
+                }
+            }
+
+            DisposableEffect(navController, screenTimeTracker) {
+                if (screenTimeTracker != null) {
+                    screenTimeTracker.attach(navController)
+                }
+                onDispose {
+                    screenTimeTracker?.detach(navController)
+                    screenTimeTracker?.flush()
                 }
             }
 
@@ -144,7 +173,6 @@ class MainActivity : ComponentActivity() {
                                 startDestination = if (authViewModel.isLoggedIn) Routes.Home else Routes.Onboarding1,
                                 modifier         = Modifier.padding(innerPadding)
                             ) {
-
                                 // ── Onboarding ────────────────────────────────────────────
                                 composable(Routes.Onboarding1) {
                                     OnBoardingScreen(
@@ -189,6 +217,9 @@ class MainActivity : ComponentActivity() {
                                         viewModel = authViewModel,
                                         onSignInSuccess = {
                                             authViewModel.fetchUserProfile()
+                                            uiScope.launch {
+                                                AnalyticsSeeder.seedIfNeeded(this@MainActivity)
+                                            }
                                             navController.navigate(Routes.Home) {
                                                 popUpTo(Routes.SignIn) { inclusive = true }
                                             }
@@ -200,6 +231,9 @@ class MainActivity : ComponentActivity() {
                                     LoginScreen(
                                         onSignUpSuccess = {
                                             authViewModel.fetchUserProfile()
+                                            uiScope.launch {
+                                                AnalyticsSeeder.seedIfNeeded(this@MainActivity)
+                                            }
                                             navController.navigate(Routes.Home) {
                                                 popUpTo(Routes.SignUp) { inclusive = true }
                                             }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.AddDocumentRequest
 import com.example.petcare.data.model.AttachedDocument
 import com.example.petcare.data.repository.RepositoryProvider
@@ -106,10 +107,12 @@ class VaccineDetailsViewModel : ViewModel() {
         val vaccinationId = _uiState.value.vaccine?.id ?: return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isDeleting = true, error = null)
-            RepositoryProvider.petRepository.deleteVaccination(
-                petId         = petId,
-                vaccinationId = vaccinationId
-            ).fold(
+            FeatureExecutionTracker.track("Delete Vaccination") {
+                RepositoryProvider.petRepository.deleteVaccination(
+                    petId         = petId,
+                    vaccinationId = vaccinationId
+                )
+            }.fold(
                 onSuccess = {
                     _uiState.value = _uiState.value.copy(
                         isDeleting = false,
@@ -147,13 +150,15 @@ class VaccineDetailsViewModel : ViewModel() {
         val s             = _uiState.value
         viewModelScope.launch {
             _uiState.value = s.copy(isSaving = true, error = null)
-            RepositoryProvider.petRepository.updateVaccination(
-                petId          = petId,
-                vaccinationId  = vaccinationId,
-                administeredBy = s.editAdministeredBy,
-                nextDueDate    = s.editNextDueDate.takeIf { it.isNotBlank() },
-                lotNumber      = s.editLotNumber
-            ).fold(
+            FeatureExecutionTracker.track("Edit Vaccination") {
+                RepositoryProvider.petRepository.updateVaccination(
+                    petId          = petId,
+                    vaccinationId  = vaccinationId,
+                    administeredBy = s.editAdministeredBy,
+                    nextDueDate    = s.editNextDueDate.takeIf { it.isNotBlank() },
+                    lotNumber      = s.editLotNumber
+                )
+            }.fold(
                 onSuccess = { _ ->
                     _uiState.value = _uiState.value.copy(
                         isSaving  = false,

@@ -20,6 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.ui.components.*
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.PetCareTheme
 
 @Composable
@@ -141,7 +142,12 @@ fun AddVaccineFinalForm(
                 textColor = MaterialTheme.colorScheme.surface,
                 width = 169.dp, height = 50.57.dp,
                 text = if (state.isLoading) "Saving…" else "Add Vaccine",
-                onclick = { viewModel.submit { onclick() } }
+                onclick = {
+                    viewModel.submit {
+                        FeatureClicksTracker.endRoute()
+                        onclick()
+                    }
+                }
             )
         }
     }

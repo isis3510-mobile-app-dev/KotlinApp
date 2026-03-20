@@ -2,6 +2,7 @@ package com.example.petcare.ui.screens.petprofile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.model.SuggestionDto
@@ -56,7 +57,9 @@ class PetProfileViewModel : ViewModel() {
         currentPetId = petId
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            RepositoryProvider.petRepository.getPet(petId).fold(
+            FeatureExecutionTracker.track("Load Pet Profile") {
+                RepositoryProvider.petRepository.getPet(petId)
+            }.fold(
                 onSuccess = { pet -> applyPetToState(pet, petId) },
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
@@ -168,7 +171,9 @@ class PetProfileViewModel : ViewModel() {
 
     fun deletePet(petId: String, onNavigatedBack: () -> Unit) {
         viewModelScope.launch {
-            RepositoryProvider.petRepository.deletePet(petId).fold(
+            FeatureExecutionTracker.track("Delete Pet") {
+                RepositoryProvider.petRepository.deletePet(petId)
+            }.fold(
                 onSuccess = { onNavigatedBack() },
                 onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message) }
             )

@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.EventType
 import com.example.petcare.data.repository.RepositoryProvider
@@ -151,7 +152,9 @@ class AddEventViewModel : ViewModel() {
                     ?.let { toIso(it) }
             )
 
-            RepositoryProvider.eventRepository.createEvent(request).fold(
+            FeatureExecutionTracker.track("Create Event") {
+                RepositoryProvider.eventRepository.createEvent(request)
+            }.fold(
                 onSuccess = { event ->
                     // Registrar documentos staged en el backend
                     val successfulDocs = s.stagedDocuments

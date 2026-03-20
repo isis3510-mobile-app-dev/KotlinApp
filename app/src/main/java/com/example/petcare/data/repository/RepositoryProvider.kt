@@ -4,7 +4,8 @@ import com.example.petcare.data.network.ApiService
 
 object RepositoryProvider {
 
-    private lateinit var apiService: ApiService
+    lateinit var apiService: ApiService
+        private set
     private lateinit var _authRepository: AuthRepository
 
     val authRepository: AuthRepository get() = _authRepository

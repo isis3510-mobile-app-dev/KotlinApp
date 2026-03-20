@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petcare.ui.components.*
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.screens.auth.AuthViewModel
 import com.example.petcare.ui.theme.*
 
@@ -117,7 +118,10 @@ fun HomeScreen(
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier          = Modifier.clickable { onNavigateToPets() }
+                        modifier          = Modifier.clickable {
+                            FeatureClicksTracker.recordClick()
+                            onNavigateToPets()
+                        }
                     ) {
                         Text("See all", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.secondary)
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = GreenDark)
@@ -130,7 +134,10 @@ fun HomeScreen(
                 ) {
                     items(homeState.pets.size) { i ->
                         val pet = homeState.pets[i]
-                        Box(modifier = Modifier.clickable { onNavigateToPetProfile(pet.id) }) {
+                        Box(modifier = Modifier.clickable {
+                            FeatureClicksTracker.recordClick()
+                            onNavigateToPetProfile(pet.id)
+                        }) {
                             PetCard(
                                 photoUrl = pet.photoUrl,
                                 text     = pet.name,
@@ -142,7 +149,11 @@ fun HomeScreen(
                         }
                     }
                     item {
-                        Box(modifier = Modifier.clickable { onNavigateToAddPet() }) {
+                        Box(modifier = Modifier.clickable {
+                            FeatureClicksTracker.recordClick()
+                            FeatureClicksTracker.startRoute("Add Pet Flow")
+                            onNavigateToAddPet()
+                        }) {
                             PetCard()
                         }
                     }
@@ -168,7 +179,10 @@ fun HomeScreen(
                         if (homeState.totalAlertCount >= 1) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier          = Modifier.clickable { onNavigateToSuggestions() }
+                                modifier          = Modifier.clickable {
+                                    FeatureClicksTracker.recordClick()
+                                    onNavigateToSuggestions()
+                                }
                             ) {
                                 Text(
                                     text       = "See all ${homeState.totalAlertCount}",
@@ -209,7 +223,10 @@ fun HomeScreen(
                             fontSize   = 16.sp,
                             fontWeight = FontWeight.Medium,
                             color      = GreenDark,
-                            modifier   = Modifier.clickable { onNavigateToRecords() }
+                            modifier   = Modifier.clickable {
+                                FeatureClicksTracker.recordClick()
+                                onNavigateToRecords()
+                            }
                         )
                     }
 
@@ -221,6 +238,7 @@ fun HomeScreen(
                                 .background(MaterialTheme.colorScheme.surface)
                                 // ← Ahora navega a VaccineDetails con vaccinationId real
                                 .clickable {
+                                    FeatureClicksTracker.recordClick()
                                     if (vacc.vaccinationId.isNotBlank()) {
                                         onNavigateToVaccine(vacc.petId, vacc.vaccinationId)
                                     } else {
@@ -307,6 +325,7 @@ fun HomeScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         homeState.recentEvents.take(3).forEach { event ->
                             Box(modifier = Modifier.clickable {
+                                FeatureClicksTracker.recordClick()
                                 onNavigateToEvent(event.petId, event.id)
                             }) {
                                 EventCard(

@@ -2,6 +2,7 @@ package com.example.petcare.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.GroupedSuggestion
 import com.example.petcare.data.model.Pet
@@ -49,7 +50,9 @@ class HomeViewModel : ViewModel() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
 
-            RepositoryProvider.petRepository.getPets().fold(
+            FeatureExecutionTracker.track("Load Home Data") {
+                RepositoryProvider.petRepository.getPets()
+            }.fold(
                 onSuccess = { pets ->
 
                     val catalogMap = RepositoryProvider.petRepository

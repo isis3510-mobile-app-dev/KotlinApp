@@ -4,12 +4,14 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.AddDocumentRequest
 import com.example.petcare.data.model.AddVaccinationRequest
 import com.example.petcare.data.model.Vaccine
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.addEventForm.StagedDocument
 import com.example.petcare.util.FirebaseDocumentUploader
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -144,7 +146,9 @@ class AddVaccineViewModel : ViewModel() {
                 administeredBy = s.administeredBy.trim()
             )
 
-            RepositoryProvider.petRepository.addVaccination(s.petId, request).fold(
+            FeatureExecutionTracker.track("Add Vaccination") {
+                RepositoryProvider.petRepository.addVaccination(s.petId, request)
+            }.fold(
                 onSuccess = { pet ->
                     // Buscar la vacunación recién creada (la última)
                     val newVaccinationId = pet.vaccinations.lastOrNull()?.id

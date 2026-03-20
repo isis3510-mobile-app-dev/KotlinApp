@@ -23,6 +23,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.petcare.ui.components.*
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.PetCareTheme
 import java.io.File
 
@@ -76,7 +77,10 @@ fun AddPetInitialForm(
             verticalArrangement = Arrangement.spacedBy(30.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            TransparentTopBar(title = "Add New Pet", onBackClick = onBack)
+            TransparentTopBar(title = "Add New Pet", onBackClick = {
+                FeatureClicksTracker.cancelRoute()
+                onBack()
+            })
 
             Stepper(currentStep = 1, stepLabels = listOf("Basic Info", "Details", "Medical"))
 
@@ -181,6 +185,7 @@ fun AddPetInitialForm(
             text = "Continue",
             onclick = {
                 if (state.name.isNotBlank() && state.species.isNotBlank()) {
+                    FeatureClicksTracker.recordClick()
                     onclick()
                 } else {
                     if (state.name.isBlank()) viewModel.setName("")

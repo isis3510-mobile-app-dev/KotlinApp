@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.components.ButtonDefault
 import com.example.petcare.ui.components.ButtonOutline
 import com.example.petcare.ui.components.DateTextField
@@ -83,7 +84,10 @@ fun AddPetDetailsForm(
                 bgColor = MaterialTheme.colorScheme.secondary,
                 textColor = MaterialTheme.colorScheme.surface,
                 width = 169.dp, height = 50.57.dp,
-                text = "Continue", onclick = onclick
+                text = "Continue", onclick = {
+                    FeatureClicksTracker.recordClick()
+                    onclick()
+                }
             )
         }
     }

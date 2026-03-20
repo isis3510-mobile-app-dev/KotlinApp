@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.util.FirebaseDocumentUploader
@@ -36,7 +37,9 @@ class EventDetailsViewModel : ViewModel() {
     fun load(eventId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            RepositoryProvider.eventRepository.getEvent(eventId).fold(
+            FeatureExecutionTracker.track("Load Event Details") {
+                RepositoryProvider.eventRepository.getEvent(eventId)
+            }.fold(
                 onSuccess = { event ->
                     _uiState.value = _uiState.value.copy(
                         event           = event,
@@ -62,7 +65,9 @@ class EventDetailsViewModel : ViewModel() {
         val eventId = _uiState.value.event?.id ?: return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isDeleting = true, error = null)
-            RepositoryProvider.eventRepository.deleteEvent(eventId).fold(
+            FeatureExecutionTracker.track("Delete Event") {
+                RepositoryProvider.eventRepository.deleteEvent(eventId)
+            }.fold(
                 onSuccess = {
                     _uiState.value = _uiState.value.copy(isDeleting = false, isDeleted = true)
                 },
@@ -87,14 +92,16 @@ class EventDetailsViewModel : ViewModel() {
         val s     = _uiState.value
         viewModelScope.launch {
             _uiState.value = s.copy(isSaving = true, error = null)
-            RepositoryProvider.eventRepository.updateEvent(
-                eventId     = event.id,
-                title       = s.editTitle.trim(),
-                description = s.editDescription.trim(),
-                provider    = s.editProvider.trim(),
-                clinic      = s.editClinic.trim(),
-                price       = s.editPrice.toDoubleOrNull()
-            ).fold(
+            FeatureExecutionTracker.track("Edit Event") {
+                RepositoryProvider.eventRepository.updateEvent(
+                    eventId     = event.id,
+                    title       = s.editTitle.trim(),
+                    description = s.editDescription.trim(),
+                    provider    = s.editProvider.trim(),
+                    clinic      = s.editClinic.trim(),
+                    price       = s.editPrice.toDoubleOrNull()
+                )
+            }.fold(
                 onSuccess = { updated ->
                     _uiState.value = _uiState.value.copy(
                         event     = updated,

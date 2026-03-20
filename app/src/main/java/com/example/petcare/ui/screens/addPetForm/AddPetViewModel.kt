@@ -2,8 +2,10 @@ package com.example.petcare.ui.screens.addPetForm
 
 import android.app.Application
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.CreatePetRequest
 import com.example.petcare.data.repository.RepositoryProvider
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -95,7 +97,9 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
                 defaultClinic  = s.defaultClinic.trim(),
                 photoUrl       = photoUrl
             )
-            RepositoryProvider.petRepository.createPet(request).fold(
+            FeatureExecutionTracker.track("Create Pet") {
+                RepositoryProvider.petRepository.createPet(request)
+            }.fold(
                 onSuccess = { pet ->
                     _state.value = _state.value.copy(isLoading = false)
                     onSuccess(pet.id)

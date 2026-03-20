@@ -15,6 +15,12 @@ import com.example.petcare.data.model.UpdateUserRequest
 import com.example.petcare.data.model.UpdateVaccinationRequest
 import com.example.petcare.data.model.User
 import com.example.petcare.data.model.Vaccine
+import com.example.petcare.data.model.analytics.CreateFeatureClicksLogRequest
+import com.example.petcare.data.model.analytics.CreateFeatureExecutionLogRequest
+import com.example.petcare.data.model.analytics.CreateScreenTimeLogRequest
+import com.example.petcare.data.model.analytics.FeatureDto
+import com.example.petcare.data.model.analytics.FeatureRouteDto
+import com.example.petcare.data.model.analytics.ScreenDto
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -139,4 +145,45 @@ interface ApiService {
     suspend fun getPetSmart(
         @Path("petId") petId: String
     ): Response<PetSmartResponse>
+
+    // ── Analytics — Screens ──────────────────────────────────────────────
+
+    @GET("screens/")
+    suspend fun getScreens(
+        @Query("appType") appType: String = "Kotlin"
+    ): Response<List<ScreenDto>>
+
+    @POST("screens/")
+    suspend fun createScreen(@Body body: ScreenDto): Response<ScreenDto>
+
+    // ── Analytics — Features ─────────────────────────────────────────────
+
+    @GET("features/")
+    suspend fun getFeatures(
+        @Query("appType") appType: String = "Kotlin"
+    ): Response<List<FeatureDto>>
+
+    @POST("features/")
+    suspend fun createFeature(@Body body: FeatureDto): Response<FeatureDto>
+
+    // ── Analytics — Feature Routes ───────────────────────────────────────
+
+    @GET("feature-routes/")
+    suspend fun getFeatureRoutes(
+        @Query("appType") appType: String = "Kotlin"
+    ): Response<List<FeatureRouteDto>>
+
+    @POST("feature-routes/")
+    suspend fun createFeatureRoute(@Body body: FeatureRouteDto): Response<FeatureRouteDto>
+
+    // ── Analytics — Logs ─────────────────────────────────────────────────
+
+    @POST("screen-time-logs/")
+    suspend fun createScreenTimeLog(@Body body: CreateScreenTimeLogRequest): Response<Unit>
+
+    @POST("feature-execution-logs/")
+    suspend fun createFeatureExecutionLog(@Body body: CreateFeatureExecutionLogRequest): Response<Unit>
+
+    @POST("feature-clicks-logs/")
+    suspend fun createFeatureClicksLog(@Body body: CreateFeatureClicksLogRequest): Response<Unit>
 }

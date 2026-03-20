@@ -4,6 +4,7 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.repository.RepositoryProvider
 import com.google.firebase.Firebase
@@ -100,7 +101,9 @@ class EditPetViewModel(application: Application) : AndroidViewModel(application)
                 photoUrl       = finalPhotoUrl
             )
 
-            RepositoryProvider.petRepository.updatePet(petId, request).fold(
+            FeatureExecutionTracker.track("Edit Pet") {
+                RepositoryProvider.petRepository.updatePet(petId, request)
+            }.fold(
                 onSuccess = {
                     _state.value = _state.value.copy(isSaving = false, isSaved = true)
                 },

@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.ui.components.*
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.RobotoBold
 import com.example.petcare.ui.theme.RobotoRegular
@@ -187,7 +188,12 @@ fun AddEventFinalForm(
                 textColor = MaterialTheme.colorScheme.surface,
                 width = 169.dp, height = 50.57.dp,
                 text = if (state.isLoading) "Saving…" else "Add Event",
-                onclick = { viewModel.submit { onclick() } }
+                onclick = {
+                    viewModel.submit {
+                        FeatureClicksTracker.endRoute()
+                        onclick()
+                    }
+                }
             )
         }
     }

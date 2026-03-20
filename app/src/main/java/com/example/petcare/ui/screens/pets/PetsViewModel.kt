@@ -2,6 +2,7 @@ package com.example.petcare.ui.screens.pets
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.CreatePetRequest
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.repository.PetRepository
@@ -38,7 +39,9 @@ class PetsViewModel(
     fun loadPets() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            petRepository.getPets().fold(
+            FeatureExecutionTracker.track("Load My Pets") {
+                petRepository.getPets()
+            }.fold(
                 onSuccess = { pets ->
                     allPets = pets
                     applyFilters()
