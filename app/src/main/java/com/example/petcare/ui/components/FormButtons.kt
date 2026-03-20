@@ -29,12 +29,14 @@ fun DateTextField(
     label: String = "dd/mm/yyyy",
     name: String,
     value: String = "",
-    onDateSelected: (String) -> Unit
+    onDateSelected: (String) -> Unit,
+    allowFutureDates: Boolean = true,    // NEW: true = allow any date by default
+    allowPastDates: Boolean = true,      // NEW: false = restrict to today or future
+    minDateAfter: String? = null         // NEW: if set, minimum selectable date (dd/MM/yyyy)
 ) {
     val context = LocalContext.current
     var selectedDate by remember { mutableStateOf(value) }
 
-    // Sync if parent changes value (e.g. from ViewModel load)
     LaunchedEffect(value) {
         selectedDate = value
     }
@@ -51,7 +53,30 @@ fun DateTextField(
             selectedDate = formattedDate
             onDateSelected(formattedDate)
         }, year, month, day
-    )
+    ).also { dialog ->
+        // Restrict future dates (e.g., birth date, date given for vaccine)
+        if (!allowFutureDates) {
+            dialog.datePicker.maxDate = calendar.timeInMillis
+        }
+        // Restrict past dates (e.g., if we only want future events — not currently used)
+        if (!allowPastDates) {
+            dialog.datePicker.minDate = calendar.timeInMillis
+        }
+        // Minimum date constraint (for next due date > date given)
+        if (minDateAfter != null) {
+            try {
+                val parts = minDateAfter.split("/")
+                if (parts.size == 3) {
+                    val minCal = Calendar.getInstance()
+                    minCal.set(parts[2].toInt(), parts[1].toInt() - 1, parts[0].toInt())
+                    // Add 1 day so next due date must be strictly after date given
+                    minCal.add(Calendar.DAY_OF_MONTH, 1)
+                    dialog.datePicker.minDate = minCal.timeInMillis
+                }
+            } catch (_: Exception) { /* ignore parse errors */ }
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -80,14 +105,11 @@ fun DateTextField(
                     contentDescription = "Calendar",
                     modifier = Modifier.clickable { datePickerDialog.show() },
                     tint = Color.LightGray
-
                 )
             },
             colors = OutlinedTextFieldDefaults.colors(
-
                 focusedBorderColor = MaterialTheme.colorScheme.secondary,
                 unfocusedBorderColor = GrayBorder,
-
                 focusedTextColor = MaterialTheme.colorScheme.onBackground,
                 unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
             ),
@@ -97,21 +119,6 @@ fun DateTextField(
                 .clip(RoundedCornerShape(12.dp)),
             shape = RoundedCornerShape(20.dp),
             readOnly = true
-        )
-    }
-}
-
-
-
-@Preview(showBackground = true)
-@Composable
-fun DateTextFieldPreview() {
-    PetCareTheme {
-        DateTextField(
-            name = "Date *",
-            onDateSelected = { date ->
-                println("Selected date: $date")
-            }
         )
     }
 }
@@ -142,7 +149,7 @@ fun TimeTextField(
             val formattedTime = "${amPmHour.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${if(h >= 12) "PM" else "AM"}"
             selectedTime = formattedTime
             onTimeSelected(formattedTime)
-        }, hour, minute, false // false for 12 hour view
+        }, hour, minute, false
     )
 
     Column(

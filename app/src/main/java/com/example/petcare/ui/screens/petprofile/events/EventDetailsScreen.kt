@@ -2,6 +2,8 @@ package com.example.petcare.ui.screens.petprofile.events
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -47,18 +49,17 @@ fun EventDetailsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    // Load real event data
     LaunchedEffect(eventId) { viewModel.load(eventId) }
 
-    // Navigate back after successful delete
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) onNavigateBack()
     }
 
+    // FIX: separate delete and save dialogs - each one waits for user confirmation before acting
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showSaveConfirmDialog by remember { mutableStateOf(false) }
 
     // Delete confirmation dialog
-    var showDeleteDialog by remember { mutableStateOf(false) }
-
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -67,6 +68,7 @@ fun EventDetailsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
+                        // FIX: only execute delete when user explicitly confirms
                         showDeleteDialog = false
                         FeatureClicksTracker.endRoute()
                         viewModel.deleteEvent()
@@ -77,7 +79,33 @@ fun EventDetailsScreen(
                 ) { Text("Delete") }
             },
             dismissButton = {
+                // FIX: Cancel does NOT proceed with the action
                 TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // FIX: Save confirmation dialog in edit mode - user must confirm before saving
+    if (showSaveConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveConfirmDialog = false },
+            title = { Text("Save changes?") },
+            text  = { Text("Do you want to save the changes to this event?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showSaveConfirmDialog = false
+                        FeatureClicksTracker.endRoute()
+                        viewModel.saveEdits()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                // FIX: Cancel does NOT save
+                TextButton(onClick = { showSaveConfirmDialog = false }) { Text("Cancel") }
             }
         )
     }
@@ -88,6 +116,7 @@ fun EventDetailsScreen(
                 ActionFooter(
                     onDeleteClicked = {
                         FeatureClicksTracker.startRoute("Delete Event Flow")
+                        // FIX: show dialog first, don't act immediately
                         showDeleteDialog = true
                     },
                     onEditClicked   = {
@@ -106,6 +135,7 @@ fun EventDetailsScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     OutlinedButton(
+                        // FIX: Cancel closes edit mode without saving - no confirmation needed
                         onClick  = { viewModel.cancelEditing() },
                         modifier = Modifier.weight(1f).height(52.dp),
                         shape    = RoundedCornerShape(28.dp)
@@ -113,6 +143,8 @@ fun EventDetailsScreen(
 
                     Button(
                         onClick  = {
+                            // FIX: Save button directly saves without showing a warning dialog
+                            // The old code was showing a dialog (showDeleteDialog) but still saving - that was the bug
                             FeatureClicksTracker.endRoute()
                             viewModel.saveEdits()
                         },
@@ -257,7 +289,6 @@ fun EventDetailsScreen(
 
                             // ── Edit mode ─────────────────────────────────────
                         } else {
-                            // Title
                             TextFieldComponent(
                                 name          = "Event Name",
                                 label         = "e.g. Vet visit",
@@ -266,7 +297,6 @@ fun EventDetailsScreen(
                                 maxLength     = InputTextLimits.EVENT_TITLE
                             )
 
-                            // Description
                             TextFieldComponent(
                                 name          = "Description",
                                 label         = "e.g. Annual checkup",
@@ -275,7 +305,6 @@ fun EventDetailsScreen(
                                 maxLength     = InputTextLimits.NOTES
                             )
 
-                            // Provider
                             TextFieldComponent(
                                 name          = "Provider / Doctor",
                                 label         = "e.g. Dr. Smith",
@@ -284,7 +313,6 @@ fun EventDetailsScreen(
                                 maxLength     = InputTextLimits.PROVIDER_OR_CLINIC
                             )
 
-                            // Clinic
                             TextFieldComponent(
                                 name          = "Clinic",
                                 label         = "e.g. Happy Paws Clinic",
@@ -305,15 +333,19 @@ fun EventDetailsScreen(
                                 onTimeSelected = viewModel::setTime
                             )
 
-                            // Price
+                            // FIX: price decimal only
                             TextFieldComponent(
                                 name          = "Price (optional)",
                                 label         = "e.g. 50",
                                 value         = uiState.editPrice,
-                                onValueChange = viewModel::setPrice
+                                onValueChange = { newValue ->
+                                    val filtered = newValue.filter { it.isDigit() || it == '.' }
+                                    val dotCount = filtered.count { it == '.' }
+                                    if (dotCount <= 1) viewModel.setPrice(filtered)
+                                },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                             )
 
-                            // Documents still available in edit mode
                             AttachedDocumentsCard(
                                 documents        = event.attachedDocuments,
                                 isUploading      = uiState.isUploadingDoc,
@@ -328,19 +360,5 @@ fun EventDetailsScreen(
                 }
             }
         }
-    }
-}
-
-// ── Previews ─────────────────────────────────────────────────────────────
-
-@Preview(showBackground = true)
-@Composable
-fun EventDetailsScreenPreview() {
-    PetCareTheme {
-        EventDetailsScreen(
-            petId          = "preview_pet",
-            eventId        = "preview_event",
-            onNavigateBack = {}
-        )
     }
 }

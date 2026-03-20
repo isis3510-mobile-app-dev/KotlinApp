@@ -7,7 +7,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -33,7 +32,6 @@ fun AddVaccineInitialForm(
 
     val selectedPetName = petsState.pets.find { it.id == state.petId }?.name ?: "Select a Pet"
 
-    // Load catalog when the selected pet changes (to filter by species)
     val selectedPet = petsState.pets.find { it.id == state.petId }
     LaunchedEffect(state.petId) {
         viewModel.loadCatalog(petSpecies = selectedPet?.species ?: "")
@@ -93,7 +91,7 @@ fun AddVaccineInitialForm(
                                 text = { Text(pet.name) },
                                 onClick = {
                                     viewModel.setPetId(pet.id)
-                                    viewModel.setSelectedVaccine(null) // reset vaccine when pet changes
+                                    viewModel.setSelectedVaccine(null)
                                     petDropdownExpanded = false
                                 }
                             )
@@ -125,7 +123,6 @@ fun AddVaccineInitialForm(
                     ExposedDropdownMenuBox(
                         expanded = vaccineDropdownExpanded,
                         onExpandedChange = {
-                            // Only open if a pet is selected (so catalog is filtered)
                             if (state.petId.isNotBlank()) vaccineDropdownExpanded =
                                 !vaccineDropdownExpanded
                         }
@@ -192,8 +189,12 @@ fun AddVaccineInitialForm(
                 }
             }
 
-            // ── Date ─────────────────────────────────────────────────────
-            DateTextField(name = "Date *", onDateSelected = viewModel::setDateGiven)
+            // FIX: date given cannot be in the future (vaccine was applied in the past or today)
+            DateTextField(
+                name = "Date *",
+                onDateSelected = viewModel::setDateGiven,
+                allowFutureDates = false
+            )
         }
 
         ButtonDefault(

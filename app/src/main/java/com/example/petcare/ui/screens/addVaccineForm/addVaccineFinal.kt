@@ -1,5 +1,3 @@
-// AddVaccineFinalForm.kt — reemplaza completo
-
 package com.example.petcare.ui.screens.addVaccineForm
 
 import android.net.Uri
@@ -9,6 +7,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -91,10 +91,33 @@ fun AddVaccineFinalForm(
                 onValueChange = viewModel::setAdministeredBy,
                 maxLength = InputTextLimits.PROVIDER_OR_CLINIC
             )
-            DateTextField(
-                name = "Next Due Date (optional)",
-                onDateSelected = viewModel::setNextDueDate
-            )
+
+            // FIX: next due date must be strictly after date given + clearable
+            Column(modifier = Modifier.fillMaxWidth()) {
+                DateTextField(
+                    name = "Next Due Date (optional)",
+                    value = state.nextDueDate,
+                    onDateSelected = viewModel::setNextDueDate,
+                    allowFutureDates = true,   // due date can be in the future
+                    allowPastDates = false,     // due date must be after today... actually we want it after dateGiven
+                    minDateAfter = state.dateGiven.takeIf { it.isNotBlank() }
+                )
+                // FIX: allow clearing the next due date
+                if (state.nextDueDate.isNotBlank()) {
+                    TextButton(
+                        onClick = { viewModel.setNextDueDate("") },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Clear date",
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("Clear date", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
 
             // ── Documentos adjuntos ──────────────────────────────────
             AttachedDocumentsCard(
