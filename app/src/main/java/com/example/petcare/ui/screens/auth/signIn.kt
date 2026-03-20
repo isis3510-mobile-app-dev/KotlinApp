@@ -68,8 +68,7 @@ fun SignInScreen(
         ) {
             FeatureCard(
                 title = "PetCare",
-                subtitle = "Your pet's health companion",
-                icon = Icons.Outlined.Pets
+                subtitle = "Your pet's health companion"
             )
         }
         Spacer(modifier = Modifier.height(30.dp))
