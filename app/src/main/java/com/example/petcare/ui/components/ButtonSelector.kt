@@ -71,8 +71,15 @@ fun SpeciesSelector(
                         horizontalArrangement = Arrangement.Center
                     ) {
 
+                        val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+                        val finalIconResId = when (option.iconResId) {
+                            R.drawable.dog_logo -> if (isDark) R.drawable.dog_logo_white else R.drawable.dog_logo
+                            R.drawable.cat_logo -> if (isDark) R.drawable.cat_logo_white else R.drawable.cat_logo
+                            else -> option.iconResId
+                        }
+
                         Image(
-                            painter = painterResource(id = option.iconResId),
+                            painter = painterResource(id = finalIconResId),
                             contentDescription = option.name,
                             modifier = Modifier.size(24.dp),
                             colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface)

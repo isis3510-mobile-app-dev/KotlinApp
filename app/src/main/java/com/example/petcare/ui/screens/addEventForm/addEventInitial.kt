@@ -18,6 +18,7 @@ import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.screens.pets.PetsViewModel
 import com.example.petcare.ui.theme.GrayBorder
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.util.InputTextLimits
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,7 +118,8 @@ fun AddEventInitialForm(
                 name = "Event Name *",
                 label = "e.g. Doctor's Appointment",
                 value = state.title,
-                onValueChange = viewModel::setTitle
+                onValueChange = viewModel::setTitle,
+                maxLength = InputTextLimits.EVENT_TITLE
             )
 
             DateTextField(name = "Date *", onDateSelected = viewModel::setDate)

@@ -20,16 +20,18 @@ import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.RobotoMedium
 import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.GrayBorder
+import com.example.petcare.util.enforceMaxLength
 
 @Composable
 fun TextFieldComponent(name: String, label: String = "", icon: (@Composable () -> Unit)? = null,
                        value: String? = null,
                        onValueChange: ((String) -> Unit)? = null,
                        visualTransformation: VisualTransformation = VisualTransformation.None,
-                       keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+                       keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+                       maxLength: Int? = null
 ){
     var internalText by remember{ mutableStateOf("")}
-    val text = value ?: internalText
+    val text = enforceMaxLength(value ?: internalText, maxLength)
     Column(
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -45,10 +47,11 @@ fun TextFieldComponent(name: String, label: String = "", icon: (@Composable () -
                 value = text,
                 onValueChange = {
                     newValue ->
+                    val sanitized = enforceMaxLength(newValue, maxLength)
                     if (onValueChange != null){
-                        onValueChange(newValue)
+                        onValueChange(sanitized)
                     } else {
-                        internalText = newValue
+                        internalText = sanitized
                     }
                 },
                 modifier = Modifier

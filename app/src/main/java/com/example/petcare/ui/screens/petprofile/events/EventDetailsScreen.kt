@@ -25,12 +25,17 @@ import com.example.petcare.ui.components.ActionFooter
 import com.example.petcare.ui.components.AttachedDocumentsCard
 import com.example.petcare.ui.components.ProviderInfoCard
 import com.example.petcare.ui.components.TextFieldComponent
+import com.example.petcare.ui.components.DateTextField
+import com.example.petcare.ui.components.TimeTextField
 import com.example.petcare.ui.theme.ErrorContainer
 import com.example.petcare.ui.theme.ErrorContent
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.OffWhite
 import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun EventDetailsScreen(
@@ -193,7 +198,7 @@ fun EventDetailsScreen(
                                 )
                             }
                             Text(
-                                text  = event.title,
+                                text  = event.title.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
                             )
@@ -257,7 +262,8 @@ fun EventDetailsScreen(
                                 name          = "Event Name",
                                 label         = "e.g. Vet visit",
                                 value         = uiState.editTitle,
-                                onValueChange = viewModel::setTitle
+                                onValueChange = viewModel::setTitle,
+                                maxLength     = InputTextLimits.EVENT_TITLE
                             )
 
                             // Description
@@ -265,7 +271,8 @@ fun EventDetailsScreen(
                                 name          = "Description",
                                 label         = "e.g. Annual checkup",
                                 value         = uiState.editDescription,
-                                onValueChange = viewModel::setDescription
+                                onValueChange = viewModel::setDescription,
+                                maxLength     = InputTextLimits.NOTES
                             )
 
                             // Provider
@@ -273,7 +280,8 @@ fun EventDetailsScreen(
                                 name          = "Provider / Doctor",
                                 label         = "e.g. Dr. Smith",
                                 value         = uiState.editProvider,
-                                onValueChange = viewModel::setProvider
+                                onValueChange = viewModel::setProvider,
+                                maxLength     = InputTextLimits.PROVIDER_OR_CLINIC
                             )
 
                             // Clinic
@@ -281,7 +289,20 @@ fun EventDetailsScreen(
                                 name          = "Clinic",
                                 label         = "e.g. Happy Paws Clinic",
                                 value         = uiState.editClinic,
-                                onValueChange = viewModel::setClinic
+                                onValueChange = viewModel::setClinic,
+                                maxLength     = InputTextLimits.PROVIDER_OR_CLINIC
+                            )
+
+                            DateTextField(
+                                name           = "Event Date *",
+                                value          = uiState.editDate,
+                                onDateSelected = viewModel::setDate
+                            )
+
+                            TimeTextField(
+                                name           = "Event Time",
+                                value          = uiState.editTime,
+                                onTimeSelected = viewModel::setTime
                             )
 
                             // Price

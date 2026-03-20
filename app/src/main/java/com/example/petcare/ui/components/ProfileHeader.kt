@@ -23,12 +23,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.GreenLight
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun ProfileHeader(
@@ -70,18 +73,22 @@ fun ProfileHeader(
 
             Column {
                 Text(
-                    text = name,
+                    text = name.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                     color = Color.White,
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    fontSize = 22.sp
+                    fontSize = 22.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 
                 Spacer(modifier = Modifier.height(4.dp))
                 
                 Text(
-                    text = email,
+                    text = email.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                     color = Color.White.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))

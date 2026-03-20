@@ -92,7 +92,8 @@ class HealthRecordsViewModel : ViewModel() {
                                         .replaceFirstChar { it.uppercase() },
                                     petName    = pet.name,
                                     clinicName = event.clinic.ifBlank { event.provider }.ifBlank { "—" },
-                                    date       = event.date.take(10),
+                                    date       = parseDate(event.date),
+                                    time       = parseTime(event.date),
                                     cost       = event.price?.let { "$${"%.0f".format(it)}" } ?: ""
                                 ),
                                 petId   = pet.id,
@@ -125,5 +126,27 @@ class HealthRecordsViewModel : ViewModel() {
         } catch (e: Exception) {
             nextDueDate.take(10)
         }
+    }
+
+    private fun parseDate(iso: String): String {
+        return try {
+            val datePart = iso.split("T")[0]
+            val dP = datePart.split("-")
+            "${dP[2]}/${dP[1]}/${dP[0]}"
+        } catch (_: Exception) { iso.take(10) }
+    }
+
+    private fun parseTime(iso: String): String {
+        return try {
+            val parts = iso.split("T")
+            if (parts.size < 2) return ""
+            val timePart = parts[1].take(5)
+            val tP = timePart.split(":")
+            val h = tP[0].toInt()
+            val m = tP[1].toInt()
+            val ap = if (h >= 12) "PM" else "AM"
+            val h12 = if (h == 0) 12 else if (h > 12) h - 12 else h
+            "${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} $ap"
+        } catch (_: Exception) { "" }
     }
 }

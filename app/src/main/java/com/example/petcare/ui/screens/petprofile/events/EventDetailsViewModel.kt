@@ -7,7 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.repository.RepositoryProvider
+import com.example.petcare.util.EventDateUtils
 import com.example.petcare.util.FirebaseDocumentUploader
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.enforceMaxLength
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,7 +29,9 @@ data class EventDetailsUiState(
     val editDescription: String = "",
     val editProvider: String    = "",
     val editClinic: String      = "",
-    val editPrice: String       = ""
+    val editPrice: String       = "",
+    val editDate: String        = "",
+    val editTime: String        = ""
 )
 
 class EventDetailsViewModel : ViewModel() {
@@ -41,14 +46,17 @@ class EventDetailsViewModel : ViewModel() {
                 RepositoryProvider.eventRepository.getEvent(eventId)
             }.fold(
                 onSuccess = { event ->
+                    val (appDate, appTime) = EventDateUtils.splitToAppDateTime(event.date)
                     _uiState.value = _uiState.value.copy(
                         event           = event,
                         isLoading       = false,
-                        editTitle       = event.title,
-                        editDescription = event.description,
-                        editProvider    = event.provider,
-                        editClinic      = event.clinic,
-                        editPrice       = event.price?.toString() ?: ""
+                        editTitle       = enforceMaxLength(event.title, InputTextLimits.EVENT_TITLE),
+                        editDescription = enforceMaxLength(event.description, InputTextLimits.NOTES),
+                        editProvider    = enforceMaxLength(event.provider, InputTextLimits.PROVIDER_OR_CLINIC),
+                        editClinic      = enforceMaxLength(event.clinic, InputTextLimits.PROVIDER_OR_CLINIC),
+                        editPrice       = event.price?.toString() ?: "",
+                        editDate        = appDate,
+                        editTime        = appTime
                     )
                 },
                 onFailure = { e ->
@@ -81,15 +89,31 @@ class EventDetailsViewModel : ViewModel() {
     fun startEditing()  { _uiState.value = _uiState.value.copy(isEditing = true,  error = null) }
     fun cancelEditing() { _uiState.value = _uiState.value.copy(isEditing = false, error = null) }
 
-    fun setTitle(v: String)       { _uiState.value = _uiState.value.copy(editTitle = v) }
-    fun setDescription(v: String) { _uiState.value = _uiState.value.copy(editDescription = v) }
-    fun setProvider(v: String)    { _uiState.value = _uiState.value.copy(editProvider = v) }
-    fun setClinic(v: String)      { _uiState.value = _uiState.value.copy(editClinic = v) }
+    fun setTitle(v: String)       { _uiState.value = _uiState.value.copy(editTitle = enforceMaxLength(v, InputTextLimits.EVENT_TITLE)) }
+    fun setDescription(v: String) { _uiState.value = _uiState.value.copy(editDescription = enforceMaxLength(v, InputTextLimits.NOTES)) }
+    fun setProvider(v: String)    { _uiState.value = _uiState.value.copy(editProvider = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
+    fun setClinic(v: String)      { _uiState.value = _uiState.value.copy(editClinic = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
     fun setPrice(v: String)       { _uiState.value = _uiState.value.copy(editPrice = v) }
+    fun setDate(v: String)        { _uiState.value = _uiState.value.copy(editDate = v) }
+    fun setTime(v: String)        { _uiState.value = _uiState.value.copy(editTime = v) }
 
     fun saveEdits() {
         val event = _uiState.value.event ?: return
         val s     = _uiState.value
+
+        val isoDate = EventDateUtils.toIsoFromAppDateTime(
+            appDate = s.editDate,
+            appTime = s.editTime,
+            fallbackRaw = event.date
+        )
+        if (isoDate == null) {
+            _uiState.value = s.copy(
+                isSaving = false,
+                error = "Invalid event date/time. Please choose a valid date."
+            )
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = s.copy(isSaving = true, error = null)
             FeatureExecutionTracker.track("Edit Event") {
@@ -99,7 +123,8 @@ class EventDetailsViewModel : ViewModel() {
                     description = s.editDescription.trim(),
                     provider    = s.editProvider.trim(),
                     clinic      = s.editClinic.trim(),
-                    price       = s.editPrice.toDoubleOrNull()
+                    price       = s.editPrice.toDoubleOrNull(),
+                    date        = isoDate
                 )
             }.fold(
                 onSuccess = { updated ->

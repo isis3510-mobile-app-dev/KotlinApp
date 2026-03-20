@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.ui.components.*
 import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.util.InputTextLimits
 
 
 @Composable
@@ -40,11 +41,15 @@ fun AddVaccineDetailsForm(
 
             TextFieldComponent(
                 name = "Administered By", label = "e.g. Dr. Smith",
-                value = state.administeredBy, onValueChange = viewModel::setAdministeredBy
+                value = state.administeredBy,
+                onValueChange = viewModel::setAdministeredBy,
+                maxLength = InputTextLimits.PROVIDER_OR_CLINIC
             )
             TextFieldComponent(
                 name = "Lot Number (optional)", label = "e.g. LOT123",
-                value = state.lotNumber, onValueChange = viewModel::setLotNumber
+                value = state.lotNumber,
+                onValueChange = viewModel::setLotNumber,
+                maxLength = InputTextLimits.LOT_NUMBER
             )
         }
         Row {
@@ -69,4 +74,3 @@ fun AddVaccineDetailsForm(
         }
     }
 }
-

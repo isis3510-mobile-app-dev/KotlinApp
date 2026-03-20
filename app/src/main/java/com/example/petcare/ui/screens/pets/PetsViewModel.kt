@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.CreatePetRequest
 import com.example.petcare.data.model.Pet
+import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.repository.PetRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -94,6 +95,32 @@ class PetsViewModel(
                 },
                 onFailure = { e ->
                     _uiState.update { it.copy(error = e.message ?: "Error creating pet") }
+                }
+            )
+        }
+    }
+
+    fun toggleLostMode(petId: String) {
+        val currentPet = allPets.firstOrNull { it.id == petId } ?: return
+        val nextStatus = if (currentPet.status.equals("lost", ignoreCase = true)) "healthy" else "lost"
+
+        viewModelScope.launch {
+            FeatureExecutionTracker.track("Toggle Lost Mode") {
+                petRepository.updatePet(
+                    petId = petId,
+                    request = UpdatePetRequest(status = nextStatus)
+                )
+            }.fold(
+                onSuccess = { updatedPet ->
+                    allPets = allPets.map { pet ->
+                        if (pet.id == petId) updatedPet else pet
+                    }
+                    applyFilters()
+                },
+                onFailure = { e ->
+                    _uiState.update {
+                        it.copy(error = e.message ?: "Error updating lost mode")
+                    }
                 }
             )
         }

@@ -119,8 +119,7 @@ fun EditEmailBottomSheet(
             )
 
             Text(
-                text = "A verification link will be sent to the new email. " +
-                        "The change takes effect after verification.",
+                text = "Your email will be updated immediately after password confirmation.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -142,7 +141,7 @@ fun EditEmailBottomSheet(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text("Send verification")
+                    Text("Update email")
                 }
             }
 

@@ -117,6 +117,7 @@ fun SignInScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        /* Recover password button is intentionally disabled for now.
         Box(
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -132,6 +133,7 @@ fun SignInScreen(
                 style = MaterialTheme.typography.bodySmall
             )
         }
+        */
 
         Spacer(modifier = Modifier.height(24.dp))
 

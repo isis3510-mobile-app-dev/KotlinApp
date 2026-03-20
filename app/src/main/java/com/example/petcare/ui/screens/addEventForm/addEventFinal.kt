@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,9 +27,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.ui.components.*
 import com.example.petcare.data.analytics.FeatureClicksTracker
+import com.example.petcare.ui.theme.GrayDark
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.RobotoBold
 import com.example.petcare.ui.theme.RobotoRegular
+import com.example.petcare.util.InputTextLimits
 
 @Composable
 fun AddEventFinalForm(
@@ -38,6 +41,7 @@ fun AddEventFinalForm(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val bannerTextColor = if (isSystemInDarkTheme()) GrayDark else MaterialTheme.colorScheme.tertiary
 
     val fileLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -90,14 +94,14 @@ fun AddEventFinalForm(
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp),
                         fontFamily = RobotoBold,
                         fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.tertiary
+                        color = bannerTextColor
                     )
                     Text(
                         text = "Confirm your event's information and optionally attach documents.",
                         modifier = Modifier.padding(start = 16.dp, top = 4.dp, end = 16.dp),
                         fontFamily = RobotoRegular,
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.tertiary,
+                        color = bannerTextColor,
                         lineHeight = 16.sp
                     )
                 }
@@ -106,7 +110,8 @@ fun AddEventFinalForm(
             // ── Resumen read-only ────────────────────────────────────
             TextFieldComponent(
                 name = "Event Name", label = state.title,
-                value = state.title, onValueChange = viewModel::setTitle
+                value = state.title, onValueChange = viewModel::setTitle,
+                maxLength = InputTextLimits.EVENT_TITLE
             )
             TextFieldComponent(
                 name = "Date", label = state.date,
@@ -114,7 +119,8 @@ fun AddEventFinalForm(
             )
             TextFieldComponent(
                 name = "Description", label = state.description,
-                value = state.description, onValueChange = viewModel::setDescription
+                value = state.description, onValueChange = viewModel::setDescription,
+                maxLength = InputTextLimits.NOTES
             )
 
             // ── Reminder toggle ──────────────────────────────────────

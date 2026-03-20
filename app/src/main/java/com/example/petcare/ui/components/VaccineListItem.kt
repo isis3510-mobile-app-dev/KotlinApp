@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,6 +36,8 @@ import com.example.petcare.ui.theme.InfoContainer
 import com.example.petcare.ui.theme.InfoContent
 import com.example.petcare.ui.theme.SuccessContainer
 import com.example.petcare.ui.theme.SuccessContent
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 data class VaccineListItemData(
     val vaccineName: String,
@@ -73,14 +76,19 @@ fun VaccineListItem(vaccine: VaccineListItemData, onClick: () -> Unit = {}
         Spacer(modifier = Modifier.width((12.dp)))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = vaccine.vaccineName,
+                text = vaccine.vaccineName.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${vaccine.petName} · ${vaccine.clinicName}",
+                text = "${vaccine.petName} · ${vaccine.clinicName}"
+                    .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                 fontSize = 12.sp,
-                color = Color.Gray
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
         Column(horizontalAlignment = Alignment.End) {
@@ -98,9 +106,11 @@ fun VaccineListItem(vaccine: VaccineListItemData, onClick: () -> Unit = {}
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = vaccine.daysText,
+                text = vaccine.daysText.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                 fontSize = 11.sp,
-                color = Color.Gray
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

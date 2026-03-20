@@ -21,15 +21,20 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.petcare.R
+import com.example.petcare.ui.theme.ErrorContainer
+import com.example.petcare.ui.theme.ErrorContent
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.GreenLight
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun PetProfileHeader(
@@ -41,6 +46,7 @@ fun PetProfileHeader(
     gender: String,
     photoPath: String? = null,
     isHealthy: Boolean = true,
+    isLost: Boolean = false,
     isNfcSynched: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -87,23 +93,49 @@ fun PetProfileHeader(
                     }
                 }
 
-                // NFC Badge
-                if (isNfcSynched) {
-                    Box(
+                // Status badges
+                if (isLost || isNfcSynched) {
+                    Row(
                         modifier = Modifier
-                            .offset(x = 8.dp, y = 8.dp)
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(GreenLight)
-                            .border(2.dp, GreenDark, CircleShape),
-                        contentAlignment = Alignment.Center
+                            .align(Alignment.BottomEnd)
+                            .offset(x = 10.dp, y = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Icon(
-                            imageVector        = Icons.Outlined.Contactless,
-                            contentDescription = "NFC Synched",
-                            tint               = GreenDark,
-                            modifier           = Modifier.size(16.dp)
-                        )
+                        if (isLost) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(ErrorContainer)
+                                    .border(2.dp, GreenDark, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "!",
+                                    color = ErrorContent,
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                )
+                            }
+                        }
+                        if (isNfcSynched) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(GreenLight)
+                                    .border(2.dp, GreenDark, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector        = Icons.Outlined.Contactless,
+                                    contentDescription = "NFC Synched",
+                                    tint               = GreenDark,
+                                    modifier           = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -113,10 +145,12 @@ fun PetProfileHeader(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text  = name,
+                        text  = name.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                         color = Color.White,
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        fontSize = 24.sp
+                        fontSize = 24.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     if (isHealthy) {
@@ -133,15 +167,31 @@ fun PetProfileHeader(
                                 fontWeight = FontWeight.Bold
                             )
                         }
+                    } else if (isLost) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(ErrorContainer, RoundedCornerShape(12.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "! Lost",
+                                color = ErrorContent,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text  = "$breed · $species",
+                    text  = "$breed · $species".truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                     color = Color.White.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))

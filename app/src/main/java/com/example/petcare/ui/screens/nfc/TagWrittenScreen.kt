@@ -124,7 +124,6 @@ fun TagWrittenScreen(
                 petNameAndBreed = breedLine,
                 ownerName       = ownerName.ifBlank { "—" },
                 ownerPhone      = ownerPhone.ifBlank { "—" },
-                microchip       = "—"
             )
 
             Spacer(modifier = Modifier.height(48.dp))

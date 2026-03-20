@@ -24,6 +24,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -155,11 +156,13 @@ class MainActivity : ComponentActivity() {
                                 NavBar(
                                     currentRoute = currentRoute ?: Routes.Home,
                                     onItemClick  = { route ->
-                                        navController.navigate(route) {
-                                            launchSingleTop = true
-                                            restoreState    = true
-                                            popUpTo(navController.graph.startDestinationId) {
-                                                saveState = true
+                                        if (currentRoute?.substringBefore("/") != route) {
+                                            navController.navigate(route) {
+                                                launchSingleTop = true
+                                                restoreState = true
+                                                popUpTo(Routes.Home) {
+                                                    saveState = true
+                                                }
                                             }
                                         }
                                     }
@@ -298,6 +301,9 @@ class MainActivity : ComponentActivity() {
                                         onPetSelected       = { petId ->
                                             navController.navigate("petProfile/$petId")
                                         },
+                                        onLostModeSelected  = { petId ->
+                                            petsViewModel.toggleLostMode(petId)
+                                        },
                                         onNfcSelected       = { petId ->
                                             nfcViewModel.prepareWrite(petId, "")
                                             navController.navigate(Routes.NfcScanning)
@@ -395,7 +401,14 @@ class MainActivity : ComponentActivity() {
                                         petCount = petsUiState.pets.size,
                                         onNavigateToLogin = {
                                             authViewModel.logout()
-                                            navController.navigate(Routes.SignIn) { popUpTo(0) }
+                                            if (navController.currentDestination?.route != Routes.SignIn) {
+                                                navController.navigate(Routes.SignIn) {
+                                                    popUpTo(navController.graph.id) {
+                                                        inclusive = true
+                                                    }
+                                                    launchSingleTop = true
+                                                }
+                                            }
                                         }
                                     )
                                 }
@@ -503,7 +516,12 @@ class MainActivity : ComponentActivity() {
                                     ScanNFCScreen(
                                         onBack  = { navController.popBackStack() },
                                         onDone  = { navController.navigate(Routes.NfcScanning) },
-                                        onWrite = { navController.navigate(Routes.NfcWrite) }
+                                        onWrite = {
+                                            navController.navigate(Routes.NfcWrite) {
+                                                popUpTo(Routes.NfcScan) { inclusive = true }
+                                                launchSingleTop = true
+                                            }
+                                        }
                                     )
                                 }
                                 composable(Routes.NfcScanning) {
@@ -523,15 +541,20 @@ class MainActivity : ComponentActivity() {
                                 }
                                 composable(Routes.NfcScanSuccess) {
                                     ScannedSuccessScreen(
-                                        onBack = { navController.navigate(Routes.NfcScan) { popUpTo(Routes.NfcScan) { inclusive = false } } },
-                                        onDone = { navController.navigate(Routes.NfcScan) { popUpTo(Routes.NfcScan) { inclusive = true  } } }
+                                        onBack = { navController.popBackStack() },
+                                        onDone = { navController.popBackStack(Routes.NfcScan, inclusive = true) }
                                     )
                                 }
                                 composable(Routes.NfcWrite) {
                                     WriteNFCScreen(
                                         onBack  = { navController.popBackStack() },
                                         onDone  = { navController.navigate(Routes.NfcWriting) },
-                                        onRead  = { navController.navigate(Routes.NfcScan) }
+                                        onRead  = {
+                                            navController.navigate(Routes.NfcScan) {
+                                                popUpTo(Routes.NfcWrite) { inclusive = true }
+                                                launchSingleTop = true
+                                            }
+                                        }
                                     )
                                 }
                                 composable(Routes.NfcWriting) {
@@ -548,9 +571,9 @@ class MainActivity : ComponentActivity() {
                                 composable(Routes.NfcWriteSuccess) {
                                     val userProfile by authViewModel.userProfile.collectAsStateWithLifecycle()
                                     TagWrittenScreen(
-                                        onBack    = { navController.navigate(Routes.NfcWrite) { popUpTo(Routes.NfcWrite) { inclusive = false } } },
-                                        onDone    = { navController.navigate(Routes.Home)     { popUpTo(Routes.NfcWrite) { inclusive = true  } } },
-                                        onAnother = { navController.navigate(Routes.NfcWrite) { popUpTo(Routes.NfcWrite) { inclusive = true  } } },
+                                        onBack    = { navController.popBackStack() },
+                                        onDone    = { navController.popBackStack(Routes.NfcWrite, inclusive = true) },
+                                        onAnother = { navController.popBackStack() },
                                         ownerName  = userProfile?.name  ?: "",
                                         ownerPhone = userProfile?.phone ?: ""
                                     )
@@ -575,7 +598,7 @@ class MainActivity : ComponentActivity() {
                                     AddPetFinalForm(
                                         viewModel = addPetViewModel,
                                         onBack    = { navController.popBackStack() },
-                                        onclick   = { newPetId ->
+                                        onclick   = { _ ->
                                             addPetViewModel.reset()
                                             // Señalamos a Pets, Home y Profile que recarguen
                                             runCatching { navController.getBackStackEntry(Routes.Pets) }
@@ -584,9 +607,7 @@ class MainActivity : ComponentActivity() {
                                                 .onSuccess { it.savedStateHandle["reload_home"] = true }
                                             runCatching { navController.getBackStackEntry(Routes.Profile) }
                                                 .onSuccess { it.savedStateHandle["reload_profile"] = true }
-                                            navController.navigate("petProfile/$newPetId") {
-                                                popUpTo(Routes.AddPet1) { inclusive = true }
-                                            }
+                                            navController.popBackStack(Routes.AddPet1, inclusive = true)
                                         }
                                     )
                                 }
@@ -612,16 +633,15 @@ class MainActivity : ComponentActivity() {
                                         viewModel = addVaccineViewModel,
                                         onBack    = { navController.popBackStack() },
                                         onclick   = {
-                                            val petId = addVaccineViewModel.state.value.petId
                                             addVaccineViewModel.reset()
-                                            // Señalamos a Records y Home que recarguen
+                                            // Señalamos a Records, Home y PetProfile que recarguen
                                             runCatching { navController.getBackStackEntry(Routes.Records) }
                                                 .onSuccess { it.savedStateHandle["reload_records"] = true }
                                             runCatching { navController.getBackStackEntry(Routes.Home) }
                                                 .onSuccess { it.savedStateHandle["reload_home"] = true }
-                                            navController.navigate("petProfile/$petId") {
-                                                popUpTo(Routes.AddVaccine1) { inclusive = true }
-                                            }
+                                            runCatching { navController.getBackStackEntry(Routes.PetProfile) }
+                                                .onSuccess { it.savedStateHandle["reload_pet"] = true }
+                                            navController.popBackStack(Routes.AddVaccine1, inclusive = true)
                                         }
                                     )
                                 }
@@ -647,16 +667,15 @@ class MainActivity : ComponentActivity() {
                                         viewModel = addEventViewModel,
                                         onBack    = { navController.popBackStack() },
                                         onclick   = {
-                                            val petId = addEventViewModel.state.value.petId
                                             addEventViewModel.reset()
-                                            // Señalamos a Records y Home que recarguen
+                                            // Señalamos a Records, Home y PetProfile que recarguen
                                             runCatching { navController.getBackStackEntry(Routes.Records) }
                                                 .onSuccess { it.savedStateHandle["reload_records"] = true }
                                             runCatching { navController.getBackStackEntry(Routes.Home) }
                                                 .onSuccess { it.savedStateHandle["reload_home"] = true }
-                                            navController.navigate("petProfile/$petId") {
-                                                popUpTo(Routes.AddEvent1) { inclusive = true }
-                                            }
+                                            runCatching { navController.getBackStackEntry(Routes.PetProfile) }
+                                                .onSuccess { it.savedStateHandle["reload_pet"] = true }
+                                            navController.popBackStack(Routes.AddEvent1, inclusive = true)
                                         }
                                     )
                                 }

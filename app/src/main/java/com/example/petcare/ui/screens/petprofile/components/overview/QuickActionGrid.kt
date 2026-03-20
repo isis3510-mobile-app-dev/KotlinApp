@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddModerator
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -22,14 +23,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
 
 import androidx.compose.material.icons.outlined.Contactless
@@ -42,6 +41,7 @@ fun QuickActionGrid(
     onAddVaccineClick: () -> Unit,
     onLostModeClick: () -> Unit,
     onNfcClick: () -> Unit,
+    isLost: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -70,14 +70,14 @@ fun QuickActionGrid(
             modifier = Modifier.fillMaxWidth()
         ) {
             GridButton(
-                vectorIcon = Icons.Default.LocationOn,
-                label = "Lost Mode",
+                vectorIcon = if (isLost) Icons.Default.CheckCircle else Icons.Default.LocationOn,
+                label = if (isLost) "Report as found" else "Report as lost",
                 onClick = onLostModeClick,
                 modifier = Modifier.weight(1f)
             )
             GridButton(
                 vectorIcon = Icons.Outlined.Contactless,
-                label = "NFC Active",
+                label = "Link NFC tag",
                 onClick = onNfcClick,
                 modifier = Modifier.weight(1f)
             )

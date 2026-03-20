@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,6 +38,8 @@ import com.example.petcare.ui.theme.SuccessContainer
 import com.example.petcare.ui.theme.DentalContainer
 import com.example.petcare.ui.theme.ErrorContainer
 import com.example.petcare.ui.theme.InfoContainer
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun EventListItem(
@@ -93,10 +96,12 @@ fun EventListItem(
                     verticalAlignment = Alignment.Top
                 ) {
                     Text(
-                        text = event.title,
+                        text = event.title.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     if (event.price != null) {
                         Text(
@@ -110,27 +115,67 @@ fun EventListItem(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Provider and Date
+                // Provider and Clinic
                 Text(
-                    text = "${event.provider} · ${event.clinic}",
+                    text = "${event.provider} · ${event.clinic}"
+                        .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onTertiary
+                    color = MaterialTheme.colorScheme.onTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = event.date,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onTertiary
-                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Date and Time (split from ISO)
+                val (date, time) = try {
+                    val parts = event.date.split("T")
+                    val datePart = parts[0]
+                    val timePart = if (parts.size > 1) parts[1].take(5) else "00:00"
+
+                    val dP = datePart.split("-")
+                    val formattedDate = if (dP.size == 3) "${dP[2]}/${dP[1]}/${dP[0]}" else datePart
+
+                    val tP = timePart.split(":")
+                    val h = tP[0].toInt()
+                    val m = tP[1].toInt()
+                    val amPm = if (h >= 12) "PM" else "AM"
+                    val h12 = if (h == 0) 12 else if (h > 12) h - 12 else h
+                    val formattedTime = "${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} $amPm"
+
+                    formattedDate to formattedTime
+                } catch (_: Exception) {
+                    event.date to ""
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onTertiary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = (if (time.isNotBlank()) "$date · $time" else date)
+                            .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Description
                 Text(
-                    text = event.description,
+                    text = event.description.truncateForDisplay(DisplayTextLimits.LONG_SNIPPET),
                     style = MaterialTheme.typography.bodyMedium,
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.W500 // Slightly bold
+                    fontWeight = FontWeight.W500, // Slightly bold
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 // Conditionally render Follow-up pill

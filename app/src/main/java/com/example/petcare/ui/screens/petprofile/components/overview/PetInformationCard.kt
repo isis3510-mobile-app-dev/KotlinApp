@@ -26,7 +26,7 @@ fun PetInformationCard(
     weight: String,
     color: String,
     gender: String,
-    microchip: String,
+    isNfcSynced: Boolean,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -63,7 +63,11 @@ fun PetInformationCard(
                 }
                 Row(modifier = Modifier.fillMaxWidth()) {
                     InfoItem(label = "Gender", value = gender, modifier = Modifier.weight(1f))
-                    InfoItem(label = "Microchip", value = microchip, modifier = Modifier.weight(1f))
+                    InfoItem(
+                        label = "NFC Tag",
+                        value = if (isNfcSynced) "Linked" else "Not Linked",
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
@@ -101,7 +105,7 @@ fun PetInformationCardPreview() {
                 weight = "28.5 kg",
                 color = "Golden",
                 gender = "Male",
-                microchip = "XR123456789"
+                isNfcSynced = true
             )
         }
     }

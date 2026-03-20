@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.petcare.util.enforceMaxLength
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +33,7 @@ fun EditFieldBottomSheet(
     currentValue: String,
     placeholder: String = "",
     keyboardType: KeyboardType = KeyboardType.Text,
+    maxLength: Int? = null,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit
 ) {
@@ -56,7 +58,7 @@ fun EditFieldBottomSheet(
 
             OutlinedTextField(
                 value = value,
-                onValueChange = { value = it },
+                onValueChange = { value = enforceMaxLength(it, maxLength) },
                 placeholder = { Text(placeholder) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -65,14 +67,14 @@ fun EditFieldBottomSheet(
                     imeAction = ImeAction.Done
                 ),
                 keyboardActions = KeyboardActions(
-                    onDone = { onSave(value) }
+                    onDone = { onSave(enforceMaxLength(value, maxLength)) }
                 )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { onSave(value) },
+                onClick = { onSave(enforceMaxLength(value, maxLength)) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = value.isNotBlank() && value != currentValue
             ) {

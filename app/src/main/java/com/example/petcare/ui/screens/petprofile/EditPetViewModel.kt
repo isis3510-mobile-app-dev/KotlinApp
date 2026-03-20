@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.repository.RepositoryProvider
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.enforceMaxLength
 import com.google.firebase.Firebase
 import com.google.firebase.storage.storage
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,26 +52,26 @@ class EditPetViewModel(application: Application) : AndroidViewModel(application)
     ) {
         if (_state.value.name.isNotBlank()) return
         _state.value = EditPetState(
-            name           = name,
-            breed          = breed,
+            name           = enforceMaxLength(name, InputTextLimits.PET_NAME),
+            breed          = enforceMaxLength(breed, InputTextLimits.BREED),
             weight         = weight,
-            color          = color,
+            color          = enforceMaxLength(color, InputTextLimits.COLOR),
             birthDate      = birthDate,
-            knownAllergies = knownAllergies,
-            defaultVet     = defaultVet,
-            defaultClinic  = defaultClinic,
+            knownAllergies = enforceMaxLength(knownAllergies, InputTextLimits.NOTES),
+            defaultVet     = enforceMaxLength(defaultVet, InputTextLimits.PROVIDER_OR_CLINIC),
+            defaultClinic  = enforceMaxLength(defaultClinic, InputTextLimits.PROVIDER_OR_CLINIC),
             photoUrl       = photoUrl
         )
     }
 
-    fun setName(v: String)           { _state.value = _state.value.copy(name = v) }
-    fun setBreed(v: String)          { _state.value = _state.value.copy(breed = v) }
+    fun setName(v: String)           { _state.value = _state.value.copy(name = enforceMaxLength(v, InputTextLimits.PET_NAME)) }
+    fun setBreed(v: String)          { _state.value = _state.value.copy(breed = enforceMaxLength(v, InputTextLimits.BREED)) }
     fun setWeight(v: String)         { _state.value = _state.value.copy(weight = v) }
-    fun setColor(v: String)          { _state.value = _state.value.copy(color = v) }
+    fun setColor(v: String)          { _state.value = _state.value.copy(color = enforceMaxLength(v, InputTextLimits.COLOR)) }
     fun setBirthDate(v: String)      { _state.value = _state.value.copy(birthDate = v) }
-    fun setKnownAllergies(v: String) { _state.value = _state.value.copy(knownAllergies = v) }
-    fun setDefaultVet(v: String)     { _state.value = _state.value.copy(defaultVet = v) }
-    fun setDefaultClinic(v: String)  { _state.value = _state.value.copy(defaultClinic = v) }
+    fun setKnownAllergies(v: String) { _state.value = _state.value.copy(knownAllergies = enforceMaxLength(v, InputTextLimits.NOTES)) }
+    fun setDefaultVet(v: String)     { _state.value = _state.value.copy(defaultVet = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
+    fun setDefaultClinic(v: String)  { _state.value = _state.value.copy(defaultClinic = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
     fun setPendingPhotoUri(uri: Uri?) { _state.value = _state.value.copy(pendingPhotoUri = uri) }
     fun clearError()                 { _state.value = _state.value.copy(error = null) }
     fun resetSaved()                 { _state.value = _state.value.copy(isSaved = false) }
