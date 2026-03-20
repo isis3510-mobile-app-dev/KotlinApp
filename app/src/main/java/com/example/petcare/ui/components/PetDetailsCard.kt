@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,6 +54,8 @@ import com.example.petcare.ui.theme.WarningContent
 import com.example.petcare.ui.theme.ErrorContainer
 import com.example.petcare.ui.theme.ErrorContent
 import androidx.compose.ui.platform.LocalContext
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 
 
@@ -161,10 +164,12 @@ fun PetDetailsCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = petName,
+                            text = petName.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Box(
                             modifier = Modifier
@@ -190,7 +195,13 @@ fun PetDetailsCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(5.dp))
-                        Text(text = breed, fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary)
+                        Text(
+                            text = breed.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
 
                     Spacer(modifier = Modifier.size(4.dp))

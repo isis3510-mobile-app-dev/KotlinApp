@@ -11,6 +11,9 @@ import com.example.petcare.data.network.ApiClient
 import com.example.petcare.data.network.ApiService
 import com.example.petcare.data.preferences.AppThemeMode
 import com.example.petcare.data.preferences.UserPreferencesRepository
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.InputValidators
+import com.example.petcare.util.enforceMaxLength
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -107,7 +110,6 @@ class ProfileViewModel(
 
     fun onSignOutClicked() {
         viewModelScope.launch {
-            authRepository.logout()
             _uiEvents.send(UiEvent.NavigateToLogin)
         }
     }
@@ -123,16 +125,31 @@ class ProfileViewModel(
         viewModelScope.launch {
             _userState.value = Triple(current, true, null)
 
+            val sanitizedValue = when (field) {
+                is EditField.Name -> enforceMaxLength(value.trim(), InputTextLimits.USER_NAME)
+                is EditField.Phone -> enforceMaxLength(value.trim(), InputTextLimits.PHONE)
+                is EditField.Address -> enforceMaxLength(value.trim(), InputTextLimits.ADDRESS)
+            }
+
+            if (field is EditField.Phone &&
+                sanitizedValue.isNotBlank() &&
+                !InputValidators.isValidFlexiblePhone(sanitizedValue)
+            ) {
+                _userState.value = Triple(current, false, null)
+                _uiEvents.send(UiEvent.ShowMessage("Invalid phone number format"))
+                return@launch
+            }
+
             val request = when (field) {
                 is EditField.Name -> UpdateUserRequest(
-                    name     = value,
-                    initials = value.split(" ")
+                    name     = sanitizedValue,
+                    initials = sanitizedValue.split(" ")
                         .mapNotNull { it.firstOrNull()?.uppercaseChar() }
                         .take(2)
                         .joinToString("")
                 )
-                is EditField.Phone   -> UpdateUserRequest(phone = value)
-                is EditField.Address -> UpdateUserRequest(address = value)
+                is EditField.Phone   -> UpdateUserRequest(phone = sanitizedValue)
+                is EditField.Address -> UpdateUserRequest(address = sanitizedValue)
             }
 
             FeatureExecutionTracker.track("Update User Profile") {
@@ -151,13 +168,17 @@ class ProfileViewModel(
         val current = _userState.value.first ?: return
         viewModelScope.launch {
             _userState.value = Triple(current, true, null)
-            authRepository.updateEmail(currentPassword, newEmail)
-                .onSuccess { pendingEmail ->
-                    _userState.value = Triple(current, false, null)
-                    _uiEvents.send(UiEvent.ShowMessage(
-                        "Verification email sent to $pendingEmail. " +
-                                "The change takes effect after verification."
-                    ))
+            val sanitizedEmail = newEmail.trim()
+            authRepository.updateEmail(currentPassword, sanitizedEmail)
+                .onSuccess {
+                    userRepository.updateMe(UpdateUserRequest(email = sanitizedEmail))
+                        .onSuccess { updatedUser ->
+                            _userState.value = Triple(updatedUser, false, null)
+                        }
+                        .onFailure {
+                            _userState.value = Triple(current.copy(email = sanitizedEmail), false, null)
+                        }
+                    _uiEvents.send(UiEvent.ShowMessage("Email updated successfully"))
                 }
                 .onFailure { error ->
                     _userState.value = Triple(current, false, null)

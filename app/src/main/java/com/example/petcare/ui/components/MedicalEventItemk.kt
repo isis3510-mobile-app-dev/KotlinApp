@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,6 +41,8 @@ import com.example.petcare.ui.theme.GrayMedium
 import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.PurpleContainer
 import com.example.petcare.ui.theme.PurpleContent
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 data class MedicalEventData(
     val eventType: String,
@@ -89,19 +92,27 @@ fun MedicalEventItem(event: MedicalEventData, onClick: () -> Unit = {}
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = event.eventType,
+                    text = event.eventType.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${event.petName} · ${event.clinicName}",
+                    text = "${event.petName} · ${event.clinicName}"
+                        .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${event.date} · ${event.time} · ${event.cost}",
+                    text = "${event.date} · ${event.time} · ${event.cost}"
+                        .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             Icon(

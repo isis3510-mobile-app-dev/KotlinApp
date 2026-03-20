@@ -9,7 +9,8 @@ import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.EventType
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.util.FirebaseDocumentUploader
-import com.example.petcare.util.UploadedDocument
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.enforceMaxLength
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,14 +57,14 @@ class AddEventViewModel : ViewModel() {
 
     fun setPetId(v: String)            { _state.value = _state.value.copy(petId = v) }
     fun setOwnerId(v: String)          { _state.value = _state.value.copy(ownerId = v) }
-    fun setTitle(v: String)            { _state.value = _state.value.copy(title = v) }
+    fun setTitle(v: String)            { _state.value = _state.value.copy(title = enforceMaxLength(v, InputTextLimits.EVENT_TITLE)) }
     fun setDate(v: String)             { _state.value = _state.value.copy(date = v) }
     fun setTime(v: String)             { _state.value = _state.value.copy(time = v) }
     fun setEventType(v: EventType)     { _state.value = _state.value.copy(eventType = v) }
-    fun setDescription(v: String)      { _state.value = _state.value.copy(description = v) }
+    fun setDescription(v: String)      { _state.value = _state.value.copy(description = enforceMaxLength(v, InputTextLimits.NOTES)) }
     fun setPrice(v: String)            { _state.value = _state.value.copy(price = v) }
-    fun setProvider(v: String)         { _state.value = _state.value.copy(provider = v) }
-    fun setClinic(v: String)           { _state.value = _state.value.copy(clinic = v) }
+    fun setProvider(v: String)         { _state.value = _state.value.copy(provider = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
+    fun setClinic(v: String)           { _state.value = _state.value.copy(clinic = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
     fun setFollowUpDate(v: String)     { _state.value = _state.value.copy(followUpDate = v) }
     fun setReminderEnabled(v: Boolean) { _state.value = _state.value.copy(reminderEnabled = v) }
 

@@ -11,7 +11,8 @@ import com.example.petcare.data.model.Vaccine
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.addEventForm.StagedDocument
 import com.example.petcare.util.FirebaseDocumentUploader
-import com.google.firebase.auth.FirebaseAuth
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.enforceMaxLength
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,8 +67,8 @@ class AddVaccineViewModel : ViewModel() {
     fun setPetId(v: String)             { _state.value = _state.value.copy(petId = v) }
     fun setSelectedVaccine(v: Vaccine?) { _state.value = _state.value.copy(selectedVaccine = v) }
     fun setDateGiven(v: String)         { _state.value = _state.value.copy(dateGiven = v) }
-    fun setAdministeredBy(v: String)    { _state.value = _state.value.copy(administeredBy = v) }
-    fun setLotNumber(v: String)         { _state.value = _state.value.copy(lotNumber = v) }
+    fun setAdministeredBy(v: String)    { _state.value = _state.value.copy(administeredBy = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
+    fun setLotNumber(v: String)         { _state.value = _state.value.copy(lotNumber = enforceMaxLength(v, InputTextLimits.LOT_NUMBER)) }
     fun setNextDueDate(v: String)       { _state.value = _state.value.copy(nextDueDate = v) }
 
     // ── Document staging ──────────────────────────────────────────────────

@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.data.analytics.FeatureClicksTracker
@@ -24,7 +24,7 @@ import com.example.petcare.ui.components.GenderSelector
 import com.example.petcare.ui.components.Stepper
 import com.example.petcare.ui.components.TextFieldComponent
 import com.example.petcare.ui.components.TransparentTopBar
-import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.util.InputTextLimits
 
 @Composable
 fun AddPetDetailsForm(
@@ -62,7 +62,8 @@ fun AddPetDetailsForm(
                 name = "Color / Markings",
                 label = "e.g. Golden, White Chest",
                 value = state.color,
-                onValueChange = viewModel::setColor
+                onValueChange = viewModel::setColor,
+                maxLength = InputTextLimits.COLOR
             )
 
             // NEW: Birth Date field — matches the event form pattern
@@ -71,6 +72,16 @@ fun AddPetDetailsForm(
                 onDateSelected = viewModel::setBirthDate
             )
         }
+
+        state.error?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
         Row {
             ButtonOutline(
                 bgColor = MaterialTheme.colorScheme.background,
@@ -85,8 +96,13 @@ fun AddPetDetailsForm(
                 textColor = MaterialTheme.colorScheme.surface,
                 width = 169.dp, height = 50.57.dp,
                 text = "Continue", onclick = {
-                    FeatureClicksTracker.recordClick()
-                    onclick()
+                    if (state.gender.isBlank()) {
+                        viewModel.setError("Gender is required")
+                    } else {
+                        viewModel.clearError()
+                        FeatureClicksTracker.recordClick()
+                        onclick()
+                    }
                 }
             )
         }

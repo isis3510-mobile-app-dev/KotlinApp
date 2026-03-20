@@ -8,6 +8,7 @@ import com.example.petcare.data.model.GroupedSuggestion
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.model.PetSuggestion
 import com.example.petcare.data.repository.RepositoryProvider
+import com.example.petcare.util.EventDateUtils
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -124,7 +125,8 @@ class HomeViewModel : ViewModel() {
                     _state.value = _state.value.copy(
                         pets                 = pets,
                         recentEvents         = eventResults
-                            .sortedByDescending { it.date }
+                            .filter { EventDateUtils.isTodayOrFuture(it.date) }
+                            .sortedBy { EventDateUtils.parseEventInstant(it.date) ?: java.time.Instant.MAX }
                             .take(5),
                         upcomingVaccines     = upcoming.sortedBy { it.daysUntilDue },
                         overdueVaccinesCount = overdueCount,

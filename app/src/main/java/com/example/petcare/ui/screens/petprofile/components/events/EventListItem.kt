@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,6 +38,8 @@ import com.example.petcare.ui.theme.SuccessContainer
 import com.example.petcare.ui.theme.DentalContainer
 import com.example.petcare.ui.theme.ErrorContainer
 import com.example.petcare.ui.theme.InfoContainer
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun EventListItem(
@@ -93,10 +96,12 @@ fun EventListItem(
                     verticalAlignment = Alignment.Top
                 ) {
                     Text(
-                        text = event.title,
+                        text = event.title.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     if (event.price != null) {
                         Text(
@@ -112,9 +117,12 @@ fun EventListItem(
 
                 // Provider and Clinic
                 Text(
-                    text = "${event.provider} · ${event.clinic}",
+                    text = "${event.provider} · ${event.clinic}"
+                        .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onTertiary
+                    color = MaterialTheme.colorScheme.onTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -149,9 +157,12 @@ fun EventListItem(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (time.isNotBlank()) "$date · $time" else date,
+                        text = (if (time.isNotBlank()) "$date · $time" else date)
+                            .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onTertiary
+                        color = MaterialTheme.colorScheme.onTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
@@ -159,10 +170,12 @@ fun EventListItem(
 
                 // Description
                 Text(
-                    text = event.description,
+                    text = event.description.truncateForDisplay(DisplayTextLimits.LONG_SNIPPET),
                     style = MaterialTheme.typography.bodyMedium,
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.W500 // Slightly bold
+                    fontWeight = FontWeight.W500, // Slightly bold
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 // Conditionally render Follow-up pill

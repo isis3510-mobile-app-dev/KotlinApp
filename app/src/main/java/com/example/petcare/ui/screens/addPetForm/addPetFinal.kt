@@ -22,6 +22,7 @@ import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.RobotoBold
 import com.example.petcare.ui.theme.RobotoRegular
+import com.example.petcare.util.InputTextLimits
 
 @Composable
 fun AddPetFinalForm(
@@ -74,15 +75,21 @@ fun AddPetFinalForm(
 
             TextFieldComponent(
                 name = "Veterinarian", label = "e.g. Dr. Smith",
-                value = state.defaultVet, onValueChange = viewModel::setDefaultVet
+                value = state.defaultVet,
+                onValueChange = viewModel::setDefaultVet,
+                maxLength = InputTextLimits.PROVIDER_OR_CLINIC
             )
             TextFieldComponent(
                 name = "Clinic Name", label = "e.g. Happy Paw Clinic",
-                value = state.defaultClinic, onValueChange = viewModel::setDefaultClinic
+                value = state.defaultClinic,
+                onValueChange = viewModel::setDefaultClinic,
+                maxLength = InputTextLimits.PROVIDER_OR_CLINIC
             )
             TextFieldComponent(
                 name = "Known Allergies", label = "e.g. None",
-                value = state.knownAllergies, onValueChange = viewModel::setKnownAllergies
+                value = state.knownAllergies,
+                onValueChange = viewModel::setKnownAllergies,
+                maxLength = InputTextLimits.NOTES
             )
 
             state.error?.let {

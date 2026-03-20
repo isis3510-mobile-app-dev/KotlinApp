@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -29,6 +30,8 @@ import com.example.petcare.ui.components.*
 import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.screens.auth.AuthViewModel
 import com.example.petcare.ui.theme.*
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun HomeScreen(
@@ -74,10 +77,12 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text       = displayName,
+                    text       = displayName.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                     fontSize   = 32.sp,
                     fontWeight = FontWeight.Bold,
-                    color      = MaterialTheme.colorScheme.onBackground
+                    color      = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     NfcButton(onClick = onNavigateToNfc)

@@ -3,6 +3,7 @@ package com.example.petcare.data.repository
 import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.network.ApiService
+import org.json.JSONObject
 
 class EventRepository(private val api: ApiService) {
 
@@ -20,7 +21,10 @@ class EventRepository(private val api: ApiService) {
 
     suspend fun createEvent(request: CreateEventRequest): Result<Event> = runCatching {
         val response = api.createEvent(request)
-        response.body() ?: error("Failed to create event — HTTP ${response.code()}")
+        if (!response.isSuccessful) {
+            error(parseApiError(response.errorBody()?.string(), response.code(), "create event"))
+        }
+        response.body() ?: error("Failed to create event — empty response")
     }
 
     suspend fun updateEvent(
@@ -41,7 +45,10 @@ class EventRepository(private val api: ApiService) {
             if (price != null) put("price", price)
         }
         val response = api.updateEvent(eventId, body)
-        response.body() ?: error("Failed to update event — HTTP ${response.code()}")
+        if (!response.isSuccessful) {
+            error(parseApiError(response.errorBody()?.string(), response.code(), "update event"))
+        }
+        response.body() ?: error("Failed to update event — empty response")
     }
 
     suspend fun deleteEvent(eventId: String): Result<Unit> = runCatching {
@@ -58,6 +65,24 @@ class EventRepository(private val api: ApiService) {
             if (fileUri != null) put("fileUri", fileUri)
         }
         val response = api.addEventDocument(eventId, body)
-        response.body() ?: error("Failed to add document — HTTP ${response.code()}")
+        if (!response.isSuccessful) {
+            error(parseApiError(response.errorBody()?.string(), response.code(), "add event document"))
+        }
+        response.body() ?: error("Failed to add document — empty response")
+    }
+
+    private fun parseApiError(errorBody: String?, code: Int, action: String): String {
+        if (errorBody.isNullOrBlank()) {
+            return "Failed to $action — HTTP $code"
+        }
+
+        return runCatching {
+            val json = JSONObject(errorBody)
+            json.optString("error")
+                .ifBlank { json.optString("message") }
+                .ifBlank { errorBody }
+        }.getOrDefault(errorBody).let { message ->
+            "Failed to $action — HTTP $code: $message"
+        }
     }
 }

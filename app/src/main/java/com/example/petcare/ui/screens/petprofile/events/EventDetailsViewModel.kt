@@ -7,7 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.repository.RepositoryProvider
+import com.example.petcare.util.EventDateUtils
 import com.example.petcare.util.FirebaseDocumentUploader
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.enforceMaxLength
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,16 +46,17 @@ class EventDetailsViewModel : ViewModel() {
                 RepositoryProvider.eventRepository.getEvent(eventId)
             }.fold(
                 onSuccess = { event ->
+                    val (appDate, appTime) = EventDateUtils.splitToAppDateTime(event.date)
                     _uiState.value = _uiState.value.copy(
                         event           = event,
                         isLoading       = false,
-                        editTitle       = event.title,
-                        editDescription = event.description,
-                        editProvider    = event.provider,
-                        editClinic      = event.clinic,
+                        editTitle       = enforceMaxLength(event.title, InputTextLimits.EVENT_TITLE),
+                        editDescription = enforceMaxLength(event.description, InputTextLimits.NOTES),
+                        editProvider    = enforceMaxLength(event.provider, InputTextLimits.PROVIDER_OR_CLINIC),
+                        editClinic      = enforceMaxLength(event.clinic, InputTextLimits.PROVIDER_OR_CLINIC),
                         editPrice       = event.price?.toString() ?: "",
-                        editDate        = splitIso(event.date).first,
-                        editTime        = splitIso(event.date).second
+                        editDate        = appDate,
+                        editTime        = appTime
                     )
                 },
                 onFailure = { e ->
@@ -85,10 +89,10 @@ class EventDetailsViewModel : ViewModel() {
     fun startEditing()  { _uiState.value = _uiState.value.copy(isEditing = true,  error = null) }
     fun cancelEditing() { _uiState.value = _uiState.value.copy(isEditing = false, error = null) }
 
-    fun setTitle(v: String)       { _uiState.value = _uiState.value.copy(editTitle = v) }
-    fun setDescription(v: String) { _uiState.value = _uiState.value.copy(editDescription = v) }
-    fun setProvider(v: String)    { _uiState.value = _uiState.value.copy(editProvider = v) }
-    fun setClinic(v: String)      { _uiState.value = _uiState.value.copy(editClinic = v) }
+    fun setTitle(v: String)       { _uiState.value = _uiState.value.copy(editTitle = enforceMaxLength(v, InputTextLimits.EVENT_TITLE)) }
+    fun setDescription(v: String) { _uiState.value = _uiState.value.copy(editDescription = enforceMaxLength(v, InputTextLimits.NOTES)) }
+    fun setProvider(v: String)    { _uiState.value = _uiState.value.copy(editProvider = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
+    fun setClinic(v: String)      { _uiState.value = _uiState.value.copy(editClinic = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
     fun setPrice(v: String)       { _uiState.value = _uiState.value.copy(editPrice = v) }
     fun setDate(v: String)        { _uiState.value = _uiState.value.copy(editDate = v) }
     fun setTime(v: String)        { _uiState.value = _uiState.value.copy(editTime = v) }
@@ -96,6 +100,20 @@ class EventDetailsViewModel : ViewModel() {
     fun saveEdits() {
         val event = _uiState.value.event ?: return
         val s     = _uiState.value
+
+        val isoDate = EventDateUtils.toIsoFromAppDateTime(
+            appDate = s.editDate,
+            appTime = s.editTime,
+            fallbackRaw = event.date
+        )
+        if (isoDate == null) {
+            _uiState.value = s.copy(
+                isSaving = false,
+                error = "Invalid event date/time. Please choose a valid date."
+            )
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = s.copy(isSaving = true, error = null)
             FeatureExecutionTracker.track("Edit Event") {
@@ -106,7 +124,7 @@ class EventDetailsViewModel : ViewModel() {
                     provider    = s.editProvider.trim(),
                     clinic      = s.editClinic.trim(),
                     price       = s.editPrice.toDoubleOrNull(),
-                    date        = fromAppFormat(s.editDate, s.editTime)
+                    date        = isoDate
                 )
             }.fold(
                 onSuccess = { updated ->
@@ -166,44 +184,4 @@ class EventDetailsViewModel : ViewModel() {
     }
 
     fun clearError() { _uiState.value = _uiState.value.copy(error = null) }
-
-    private fun splitIso(iso: String): Pair<String, String> {
-        return try {
-            val parts = iso.split("T")
-            val datePart = parts[0]
-            val timePart = if (parts.size > 1) parts[1].take(5) else "00:00"
-
-            val dP = datePart.split("-")
-            val formattedDate = "${dP[2]}/${dP[1]}/${dP[0]}"
-
-            val tP = timePart.split(":")
-            val h = tP[0].toInt()
-            val m = tP[1].toInt()
-            val amPm = if (h >= 12) "PM" else "AM"
-            val h12 = if (h == 0) 12 else if (h > 12) h - 12 else h
-            val formattedTime = "${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} $amPm"
-
-            formattedDate to formattedTime
-        } catch (_: Exception) {
-            "" to ""
-        }
-    }
-
-    private fun fromAppFormat(date: String, time: String): String {
-        return try {
-            val dP = date.split("/")
-            val ymd = "${dP[2]}-${dP[1]}-${dP[0]}"
-
-            val tP = time.split(" ", ":")
-            var h = tP[0].toInt()
-            val m = tP[1].toInt()
-            val ap = tP[2].uppercase()
-            if (ap == "PM" && h < 12) h += 12
-            if (ap == "AM" && h == 12) h = 0
-
-            "${ymd}T${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00Z"
-        } catch (_: Exception) {
-            date
-        }
-    }
 }

@@ -10,6 +10,7 @@ import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
+import com.example.petcare.util.EventDateUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -90,35 +91,39 @@ class PetProfileViewModel : ViewModel() {
             .getOrElse { emptyList() }
             .associateBy { it.id }
 
-        val vaccines = pet.vaccinations.map { v ->
-            val status = when (v.status.lowercase()) {
-                "overdue"  -> VaccineFilterStatus.OVERDUE
-                "upcoming" -> VaccineFilterStatus.UPCOMING
-                else       -> VaccineFilterStatus.COMPLETED
-            }
-            VaccineRecord(
-                id          = v.id,
-                name        = catalogMap[v.vaccineId]?.name ?: v.vaccineId.take(8),
-                provider    = v.administeredBy,
-                dateGiven   = v.dateGiven.take(10),
-                nextDueDate = v.nextDueDate?.take(10),
-                lotNumber   = v.lotNumber.ifBlank { null },
-                status      = status,
-                attachedDocuments = v.attachedDocuments.map { doc ->
-                    com.example.petcare.data.model.AttachedDocument(
-                        id       = doc.id,
-                        fileName = doc.fileName,
-                        fileUri  = doc.fileUri
-                    )
+        val vaccines = pet.vaccinations
+            .map { v ->
+                val status = when (v.status.lowercase()) {
+                    "overdue"  -> VaccineFilterStatus.OVERDUE
+                    "upcoming" -> VaccineFilterStatus.UPCOMING
+                    else       -> VaccineFilterStatus.COMPLETED
                 }
-            )
-        }
+                VaccineRecord(
+                    id          = v.id,
+                    name        = catalogMap[v.vaccineId]?.name ?: v.vaccineId.take(8),
+                    provider    = v.administeredBy,
+                    dateGiven   = v.dateGiven.take(10),
+                    nextDueDate = v.nextDueDate?.take(10),
+                    lotNumber   = v.lotNumber.ifBlank { null },
+                    status      = status,
+                    attachedDocuments = v.attachedDocuments.map { doc ->
+                        com.example.petcare.data.model.AttachedDocument(
+                            id       = doc.id,
+                            fileName = doc.fileName,
+                            fileUri  = doc.fileUri
+                        )
+                    }
+                )
+            }
+            .sortedByDescending { it.dateGiven }
 
-        val events = mutableListOf<Event>()
+        val fetchedEvents = mutableListOf<Event>()
         RepositoryProvider.eventRepository.getEvents(petId = petId).fold(
-            onSuccess = { list -> list.forEach { ev -> events.add(ev.toMedicalEvent()) } },
+            onSuccess = { list -> fetchedEvents.addAll(list) },
             onFailure = { /* non-fatal */ }
         )
+        val events = fetchedEvents.map { it.toMedicalEvent() }
+        val upcomingCount = fetchedEvents.count { EventDateUtils.isTodayOrFuture(it.date) }
 
         val suggestions = mutableListOf<SuggestionDto>()
         RepositoryProvider.petRepository.getPetSmart(petId).fold(
@@ -139,7 +144,7 @@ class PetProfileViewModel : ViewModel() {
             dateOfBirth          = pet.birthDate?.take(10) ?: "",
             isNfcSynched         = pet.isNfcSynced,
             overdueVaccinesCount = vaccines.count { it.status == VaccineFilterStatus.OVERDUE },
-            upcomingEventsCount  = events.size,
+            upcomingEventsCount  = upcomingCount,
             vaccines             = vaccines,
             events               = events,
             suggestions          = suggestions,

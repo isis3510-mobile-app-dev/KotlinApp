@@ -22,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.ui.components.*
 import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.util.InputTextLimits
 
 @Composable
 fun AddVaccineFinalForm(
@@ -74,7 +75,8 @@ fun AddVaccineFinalForm(
                 name = "Vaccine",
                 label = state.selectedVaccine?.name ?: "",
                 value = state.selectedVaccine?.name ?: "",
-                onValueChange = {}
+                onValueChange = {},
+                maxLength = InputTextLimits.EVENT_TITLE
             )
             TextFieldComponent(
                 name = "Date Given",
@@ -86,7 +88,8 @@ fun AddVaccineFinalForm(
                 name = "Administered By",
                 label = state.administeredBy,
                 value = state.administeredBy,
-                onValueChange = viewModel::setAdministeredBy
+                onValueChange = viewModel::setAdministeredBy,
+                maxLength = InputTextLimits.PROVIDER_OR_CLINIC
             )
             DateTextField(
                 name = "Next Due Date (optional)",

@@ -24,6 +24,7 @@ import com.example.petcare.ui.components.Stepper
 import com.example.petcare.ui.components.TextFieldComponent
 import com.example.petcare.ui.components.TransparentTopBar
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.util.InputTextLimits
 
 
 @Composable
@@ -50,15 +51,21 @@ fun AddEventDetailsForm(
 
             TextFieldComponent(
                 name = "Description", label = "e.g. General Check-up",
-                value = state.description, onValueChange = viewModel::setDescription
+                value = state.description,
+                onValueChange = viewModel::setDescription,
+                maxLength = InputTextLimits.NOTES
             )
             TextFieldComponent(
                 name = "Provider / Doctor", label = "e.g. Dr. Smith",
-                value = state.provider, onValueChange = viewModel::setProvider
+                value = state.provider,
+                onValueChange = viewModel::setProvider,
+                maxLength = InputTextLimits.PROVIDER_OR_CLINIC
             )
             TextFieldComponent(
                 name = "Clinic", label = "e.g. Happy Paws Clinic",
-                value = state.clinic, onValueChange = viewModel::setClinic
+                value = state.clinic,
+                onValueChange = viewModel::setClinic,
+                maxLength = InputTextLimits.PROVIDER_OR_CLINIC
             )
             TextFieldComponent(
                 name = "Price (optional)", label = "e.g. 50",

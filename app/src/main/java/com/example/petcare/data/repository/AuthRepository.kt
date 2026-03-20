@@ -59,8 +59,7 @@ class AuthRepository {
         val credential = EmailAuthProvider.getCredential(currentEmail, currentPassword)
         user.reauthenticate(credential).await()
 
-        user.verifyBeforeUpdateEmail(newEmail).await()
-        newEmail
+        user.updateEmail(newEmail).await()
     }
 
     suspend fun resetPassword(email: String): Result<Unit> = runCatching {

@@ -35,6 +35,8 @@ import coil.request.ImageRequest
 import com.example.petcare.ui.components.DateTextField
 import com.example.petcare.ui.theme.GrayBorder
 import com.example.petcare.ui.theme.GreenDark
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.enforceMaxLength
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -201,10 +203,10 @@ fun EditPetBottomSheet(
                 // ── Basic info ────────────────────────────────────────────
                 SectionLabel("BASIC INFO")
 
-                EditField("Name *", "e.g. Buddy", state.name, editViewModel::setName)
-                EditField("Breed", "e.g. Golden Retriever", state.breed, editViewModel::setBreed)
+                EditField("Name *", "e.g. Buddy", state.name, editViewModel::setName, InputTextLimits.PET_NAME)
+                EditField("Breed", "e.g. Golden Retriever", state.breed, editViewModel::setBreed, InputTextLimits.BREED)
                 EditField("Weight (Kg)", "e.g. 4.5", state.weight, editViewModel::setWeight)
-                EditField("Color / Markings", "e.g. Golden, White Chest", state.color, editViewModel::setColor)
+                EditField("Color / Markings", "e.g. Golden, White Chest", state.color, editViewModel::setColor, InputTextLimits.COLOR)
 
                 // Birth date — uses the same DateTextField picker as the add-pet form.
                 // Shows the current stored date as the label so the user knows the existing value.
@@ -217,9 +219,9 @@ fun EditPetBottomSheet(
                 // ── Medical info ──────────────────────────────────────────
                 SectionLabel("MEDICAL INFO")
 
-                EditField("Veterinarian", "e.g. Dr. Smith", state.defaultVet, editViewModel::setDefaultVet)
-                EditField("Clinic", "e.g. Happy Paws Clinic", state.defaultClinic, editViewModel::setDefaultClinic)
-                EditField("Known Allergies", "e.g. Pollen, None", state.knownAllergies, editViewModel::setKnownAllergies)
+                EditField("Veterinarian", "e.g. Dr. Smith", state.defaultVet, editViewModel::setDefaultVet, InputTextLimits.PROVIDER_OR_CLINIC)
+                EditField("Clinic", "e.g. Happy Paws Clinic", state.defaultClinic, editViewModel::setDefaultClinic, InputTextLimits.PROVIDER_OR_CLINIC)
+                EditField("Known Allergies", "e.g. Pollen, None", state.knownAllergies, editViewModel::setKnownAllergies, InputTextLimits.NOTES)
 
                 state.error?.let {
                     Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -275,7 +277,8 @@ private fun EditField(
     label: String,
     placeholder: String,
     value: String,
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
+    maxLength: Int? = null
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -286,7 +289,7 @@ private fun EditField(
         )
         OutlinedTextField(
             value         = value,
-            onValueChange = onValueChange,
+            onValueChange = { onValueChange(enforceMaxLength(it, maxLength)) },
             placeholder   = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
             singleLine    = true,
             modifier      = Modifier.fillMaxWidth(),

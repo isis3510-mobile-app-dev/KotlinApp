@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +31,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.MainActivity
 import com.example.petcare.data.repository.NfcPetPayload
 import com.example.petcare.ui.theme.*
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,10 +169,13 @@ fun ScannedSuccessContent(
 
                                 Column {
                                     Text(
-                                        text       = payload?.petName ?: "Unknown pet",
+                                        text       = (payload?.petName ?: "Unknown pet")
+                                            .truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                                         fontSize   = 19.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color      = Color.White
+                                        color      = Color.White,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     val subtitle = buildString {
                                         if (!payload?.breed.isNullOrBlank())   append(payload!!.breed)
@@ -179,9 +185,12 @@ fun ScannedSuccessContent(
                                     }
                                     if (subtitle.isNotBlank()) {
                                         Text(
-                                            text     = subtitle,
+                                            text     = subtitle
+                                                .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                                             fontSize = 13.sp,
-                                            color    = Color.White.copy(alpha = 0.82f)
+                                            color    = Color.White.copy(alpha = 0.82f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 }
@@ -259,15 +268,21 @@ fun ScannedSuccessContent(
 
                                 Column {
                                     Text(
-                                        text       = payload?.ownerName ?: "—",
+                                        text       = (payload?.ownerName ?: "—")
+                                            .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                                         fontSize   = 16.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color      = MaterialTheme.colorScheme.onBackground
+                                        color      = MaterialTheme.colorScheme.onBackground,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
-                                        text     = payload?.ownerPhone ?: "—",
+                                        text     = (payload?.ownerPhone ?: "—")
+                                            .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                                         fontSize = 14.sp,
-                                        color    = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
@@ -319,9 +334,12 @@ fun ScannedSuccessContent(
                                             )
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Text(
-                                                text     = payload!!.knownAllergies,
+                                                text     = payload!!.knownAllergies
+                                                    .truncateForDisplay(DisplayTextLimits.LONG_SNIPPET),
                                                 fontSize = 13.sp,
-                                                color    = WarningContent
+                                                color    = WarningContent,
+                                                maxLines = 3,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                         }
                                     }
@@ -344,9 +362,12 @@ fun ScannedSuccessContent(
                                                 )
                                                 Spacer(modifier = Modifier.height(2.dp))
                                                 Text(
-                                                    text     = payload!!.defaultVet,
+                                                    text     = payload!!.defaultVet
+                                                        .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                                                     fontSize = 13.sp,
-                                                    color    = MaterialTheme.colorScheme.onBackground
+                                                    color    = MaterialTheme.colorScheme.onBackground,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
                                                 )
                                             }
                                         }
@@ -361,9 +382,12 @@ fun ScannedSuccessContent(
                                                 )
                                                 Spacer(modifier = Modifier.height(2.dp))
                                                 Text(
-                                                    text     = payload!!.defaultClinic,
+                                                    text     = payload!!.defaultClinic
+                                                        .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                                                     fontSize = 13.sp,
-                                                    color    = MaterialTheme.colorScheme.onBackground
+                                                    color    = MaterialTheme.colorScheme.onBackground,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
                                                 )
                                             }
                                         }

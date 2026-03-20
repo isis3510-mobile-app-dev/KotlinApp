@@ -25,6 +25,7 @@ import coil.compose.AsyncImage
 import com.example.petcare.ui.components.*
 import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.util.InputTextLimits
 import java.io.File
 
 @Composable
@@ -155,14 +156,16 @@ fun AddPetInitialForm(
                 name = "Pet Name *",
                 label = "e.g. Buddy",
                 value = state.name,
-                onValueChange = viewModel::setName
+                onValueChange = viewModel::setName,
+                maxLength = InputTextLimits.PET_NAME
             )
 
             TextFieldComponent(
                 name = "Breed",
                 label = "e.g. Golden Retriever",
                 value = state.breed,
-                onValueChange = viewModel::setBreed
+                onValueChange = viewModel::setBreed,
+                maxLength = InputTextLimits.BREED
             )
 
             SpeciesSelector(onOptionSelected = viewModel::setSpecies)
