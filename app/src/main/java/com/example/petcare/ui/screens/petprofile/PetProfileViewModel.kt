@@ -6,6 +6,7 @@ import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.model.SuggestionDto
+import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
@@ -22,8 +23,8 @@ data class PetProfileUiState(
     val weight: String = "",
     val gender: String = "",
     val isHealthy: Boolean = true,
+    val isLost: Boolean = false,
     val color: String = "",
-    val microchip: String = "",
     val dateOfBirth: String = "",
     val overdueVaccinesCount: Int = 0,
     val upcomingEventsCount: Int = 0,
@@ -50,6 +51,7 @@ class PetProfileViewModel : ViewModel() {
     val selectedTabIndex: StateFlow<Int> = _selectedTabIndex.asStateFlow()
 
     private var currentPetId: String = ""
+    private var isUpdatingLostStatus = false
 
     // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -132,8 +134,8 @@ class PetProfileViewModel : ViewModel() {
             weight               = if (pet.weight != null) "${pet.weight} kg" else "",
             gender               = pet.gender.replaceFirstChar { it.uppercase() },
             isHealthy            = pet.status.lowercase() == "healthy",
+            isLost               = pet.status.lowercase() == "lost",
             color                = pet.color,
-            microchip            = "",
             dateOfBirth          = pet.birthDate?.take(10) ?: "",
             isNfcSynched         = pet.isNfcSynced,
             overdueVaccinesCount = vaccines.count { it.status == VaccineFilterStatus.OVERDUE },
@@ -164,7 +166,34 @@ class PetProfileViewModel : ViewModel() {
     fun onVaccineClicked(vaccine: VaccineRecord) {}
     fun onAddEventClicked()   {}
     fun onAddVaccineClicked() {}
-    fun onLostModeClicked()   {}
+    fun onLostModeClicked() {
+        if (currentPetId.isBlank() || isUpdatingLostStatus) return
+
+        val nextStatus = if (_uiState.value.isLost) "healthy" else "lost"
+        isUpdatingLostStatus = true
+
+        viewModelScope.launch {
+            try {
+                FeatureExecutionTracker.track("Toggle Lost Mode") {
+                    RepositoryProvider.petRepository.updatePet(
+                        petId = currentPetId,
+                        request = UpdatePetRequest(status = nextStatus)
+                    )
+                }.fold(
+                    onSuccess = { updatedPet ->
+                        applyPetToState(updatedPet, currentPetId)
+                    },
+                    onFailure = { e ->
+                        _uiState.value = _uiState.value.copy(
+                            error = e.message ?: "Failed to update lost status"
+                        )
+                    }
+                )
+            } finally {
+                isUpdatingLostStatus = false
+            }
+        }
+    }
     fun onNfcActiveClicked()  {}
 
     // ── Delete pet ────────────────────────────────────────────────────────────

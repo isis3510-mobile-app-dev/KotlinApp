@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.petcare.R
+import com.example.petcare.ui.theme.ErrorContainer
+import com.example.petcare.ui.theme.ErrorContent
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.GreenLight
 import com.example.petcare.ui.theme.PetCareTheme
@@ -41,6 +43,7 @@ fun PetProfileHeader(
     gender: String,
     photoPath: String? = null,
     isHealthy: Boolean = true,
+    isLost: Boolean = false,
     isNfcSynched: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -87,23 +90,49 @@ fun PetProfileHeader(
                     }
                 }
 
-                // NFC Badge
-                if (isNfcSynched) {
-                    Box(
+                // Status badges
+                if (isLost || isNfcSynched) {
+                    Row(
                         modifier = Modifier
-                            .offset(x = 8.dp, y = 8.dp)
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(GreenLight)
-                            .border(2.dp, GreenDark, CircleShape),
-                        contentAlignment = Alignment.Center
+                            .align(Alignment.BottomEnd)
+                            .offset(x = 10.dp, y = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Icon(
-                            imageVector        = Icons.Outlined.Contactless,
-                            contentDescription = "NFC Synched",
-                            tint               = GreenDark,
-                            modifier           = Modifier.size(16.dp)
-                        )
+                        if (isLost) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(ErrorContainer)
+                                    .border(2.dp, GreenDark, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "!",
+                                    color = ErrorContent,
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                )
+                            }
+                        }
+                        if (isNfcSynched) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(GreenLight)
+                                    .border(2.dp, GreenDark, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector        = Icons.Outlined.Contactless,
+                                    contentDescription = "NFC Synched",
+                                    tint               = GreenDark,
+                                    modifier           = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -130,6 +159,20 @@ fun PetProfileHeader(
                                 text       = "+ Healthy",
                                 color      = GreenDark,
                                 fontSize   = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else if (isLost) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(ErrorContainer, RoundedCornerShape(12.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "! Lost",
+                                color = ErrorContent,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }

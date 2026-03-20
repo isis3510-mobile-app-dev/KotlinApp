@@ -46,6 +46,7 @@ data class MedicalEventData(
     val petName: String,
     val clinicName: String,
     val date: String,
+    val time: String,
     val cost: String
 )
 
@@ -98,7 +99,7 @@ fun MedicalEventItem(event: MedicalEventData, onClick: () -> Unit = {}
                     color = Color.Gray
                 )
                 Text(
-                    text = "${event.date} · ${event.cost}",
+                    text = "${event.date} · ${event.time} · ${event.cost}",
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
@@ -119,9 +120,9 @@ fun MedicalEventItemPreview() {
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.padding(8.dp)
     ) {
-        MedicalEventItem(MedicalEventData("Checkup", "Max", "Happy Paws Clinic", "Nov 19, 2024", "$120"))
-        MedicalEventItem(MedicalEventData("Checkup", "Luna", "Cat Care Center", "Oct 14, 2024", "$95"))
-        MedicalEventItem(MedicalEventData("Emergency", "Luna", "City Animal Emergency", "Aug 29, 2024", "$340"))
-        MedicalEventItem(MedicalEventData("Dental", "Max", "City Vet Center", "Jun 4, 2024", "$280"))
+        MedicalEventItem(MedicalEventData("Checkup", "Max", "Happy Paws Clinic", "Nov 19, 2024", "10:00 AM", "$120"))
+        MedicalEventItem(MedicalEventData("Checkup", "Luna", "Cat Care Center", "Oct 14, 2024", "02:00 PM", "$95"))
+        MedicalEventItem(MedicalEventData("Emergency", "Luna", "City Animal Emergency", "Aug 29, 2024", "11:30 PM", "$340"))
+        MedicalEventItem(MedicalEventData("Dental", "Max", "City Vet Center", "Jun 4, 2024", "09:15 AM", "$280"))
     }
 }

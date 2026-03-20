@@ -110,7 +110,7 @@ fun AddPetFinalForm(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Set up NFC tag later?",
+                            text = "Set up NFC tag later",
                             textAlign = TextAlign.Start, fontFamily = RobotoBold,
                             fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary
                         )

@@ -26,7 +26,9 @@ data class EventDetailsUiState(
     val editDescription: String = "",
     val editProvider: String    = "",
     val editClinic: String      = "",
-    val editPrice: String       = ""
+    val editPrice: String       = "",
+    val editDate: String        = "",
+    val editTime: String        = ""
 )
 
 class EventDetailsViewModel : ViewModel() {
@@ -48,7 +50,9 @@ class EventDetailsViewModel : ViewModel() {
                         editDescription = event.description,
                         editProvider    = event.provider,
                         editClinic      = event.clinic,
-                        editPrice       = event.price?.toString() ?: ""
+                        editPrice       = event.price?.toString() ?: "",
+                        editDate        = splitIso(event.date).first,
+                        editTime        = splitIso(event.date).second
                     )
                 },
                 onFailure = { e ->
@@ -86,6 +90,8 @@ class EventDetailsViewModel : ViewModel() {
     fun setProvider(v: String)    { _uiState.value = _uiState.value.copy(editProvider = v) }
     fun setClinic(v: String)      { _uiState.value = _uiState.value.copy(editClinic = v) }
     fun setPrice(v: String)       { _uiState.value = _uiState.value.copy(editPrice = v) }
+    fun setDate(v: String)        { _uiState.value = _uiState.value.copy(editDate = v) }
+    fun setTime(v: String)        { _uiState.value = _uiState.value.copy(editTime = v) }
 
     fun saveEdits() {
         val event = _uiState.value.event ?: return
@@ -99,7 +105,8 @@ class EventDetailsViewModel : ViewModel() {
                     description = s.editDescription.trim(),
                     provider    = s.editProvider.trim(),
                     clinic      = s.editClinic.trim(),
-                    price       = s.editPrice.toDoubleOrNull()
+                    price       = s.editPrice.toDoubleOrNull(),
+                    date        = fromAppFormat(s.editDate, s.editTime)
                 )
             }.fold(
                 onSuccess = { updated ->
@@ -159,4 +166,44 @@ class EventDetailsViewModel : ViewModel() {
     }
 
     fun clearError() { _uiState.value = _uiState.value.copy(error = null) }
+
+    private fun splitIso(iso: String): Pair<String, String> {
+        return try {
+            val parts = iso.split("T")
+            val datePart = parts[0]
+            val timePart = if (parts.size > 1) parts[1].take(5) else "00:00"
+
+            val dP = datePart.split("-")
+            val formattedDate = "${dP[2]}/${dP[1]}/${dP[0]}"
+
+            val tP = timePart.split(":")
+            val h = tP[0].toInt()
+            val m = tP[1].toInt()
+            val amPm = if (h >= 12) "PM" else "AM"
+            val h12 = if (h == 0) 12 else if (h > 12) h - 12 else h
+            val formattedTime = "${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} $amPm"
+
+            formattedDate to formattedTime
+        } catch (_: Exception) {
+            "" to ""
+        }
+    }
+
+    private fun fromAppFormat(date: String, time: String): String {
+        return try {
+            val dP = date.split("/")
+            val ymd = "${dP[2]}-${dP[1]}-${dP[0]}"
+
+            val tP = time.split(" ", ":")
+            var h = tP[0].toInt()
+            val m = tP[1].toInt()
+            val ap = tP[2].uppercase()
+            if (ap == "PM" && h < 12) h += 12
+            if (ap == "AM" && h == 12) h = 0
+
+            "${ymd}T${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00Z"
+        } catch (_: Exception) {
+            date
+        }
+    }
 }

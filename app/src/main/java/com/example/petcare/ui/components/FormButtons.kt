@@ -28,10 +28,16 @@ import androidx.compose.material.icons.filled.AccessTime
 fun DateTextField(
     label: String = "dd/mm/yyyy",
     name: String,
+    value: String = "",
     onDateSelected: (String) -> Unit
 ) {
     val context = LocalContext.current
-    var selectedDate by remember { mutableStateOf("") }
+    var selectedDate by remember { mutableStateOf(value) }
+
+    // Sync if parent changes value (e.g. from ViewModel load)
+    LaunchedEffect(value) {
+        selectedDate = value
+    }
 
     val calendar = Calendar.getInstance()
     val year = calendar.get(Calendar.YEAR)
@@ -58,7 +64,10 @@ fun DateTextField(
 
         OutlinedTextField(
             value = selectedDate,
-            onValueChange = { selectedDate = it },
+            onValueChange = {
+                selectedDate = it
+                onDateSelected(it)
+            },
             placeholder = {
                 Text(
                     label,
@@ -112,10 +121,15 @@ fun DateTextFieldPreview() {
 fun TimeTextField(
     label: String = "hh:mm am/pm",
     name: String,
+    value: String = "",
     onTimeSelected: (String) -> Unit
 ) {
     val context = LocalContext.current
-    var selectedTime by remember { mutableStateOf("") }
+    var selectedTime by remember { mutableStateOf(value) }
+
+    LaunchedEffect(value) {
+        selectedTime = value
+    }
 
     val calendar = Calendar.getInstance()
     val hour = calendar.get(Calendar.HOUR_OF_DAY)
@@ -143,7 +157,10 @@ fun TimeTextField(
 
         OutlinedTextField(
             value = selectedTime,
-            onValueChange = { selectedTime = it },
+            onValueChange = {
+                selectedTime = it
+                onTimeSelected(it)
+            },
             placeholder = { Text(label, color = GrayText) },
             trailingIcon = {
                 Icon(

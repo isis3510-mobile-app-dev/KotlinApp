@@ -1,7 +1,6 @@
 package com.example.petcare.ui.components
 
 import android.net.Uri
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,11 +18,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Cake
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Female
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Male
-import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material.icons.outlined.Contactless
 import com.example.petcare.R
 import androidx.compose.material3.Card
@@ -51,10 +50,9 @@ import com.example.petcare.ui.theme.SuccessContainer
 import com.example.petcare.ui.theme.SuccessContent
 import com.example.petcare.ui.theme.WarningContainer
 import com.example.petcare.ui.theme.WarningContent
+import com.example.petcare.ui.theme.ErrorContainer
 import com.example.petcare.ui.theme.ErrorContent
-import com.example.petcare.ui.theme.GrayBackground
 import androidx.compose.ui.platform.LocalContext
-import com.example.petcare.util.UrlUtils
 
 
 
@@ -68,7 +66,6 @@ fun PetAction(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(12.dp)
-            .clickable(onClick = {})
     ) {
 
         Icon(
@@ -99,8 +96,10 @@ fun PetDetailsCard(
     val context = LocalContext.current
     val (statusColor, textStatusColor) = when (status.lowercase()) {
         "healthy" -> Pair(SuccessContainer, SuccessContent)
+        "lost" -> Pair(ErrorContainer, ErrorContent)
         else -> Pair(WarningContainer, WarningContent)
     }
+    val isLost = status.equals("lost", ignoreCase = true)
 
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     val logo = when (species.lowercase()) {
@@ -225,24 +224,21 @@ fun PetDetailsCard(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 Box(
-                    modifier = Modifier.weight(1f).clickable { onVaccineSelect() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    PetAction("Vaccines", Icons.Default.Vaccines, MaterialTheme.colorScheme.secondary)
-                }
-                VerticalDivider(color = MaterialTheme.colorScheme.onPrimary, thickness = 1.dp)
-                Box(
                     modifier = Modifier.weight(1f).clickable { onLostSelect() },
                     contentAlignment = Alignment.Center
                 ) {
-                    PetAction("Lost Mode", Icons.Default.LocationOn, MaterialTheme.colorScheme.tertiary)
+                    PetAction(
+                        text = if (isLost) "Report as Found" else "Report as Lost",
+                        icon = if (isLost) Icons.Default.CheckCircle else Icons.Default.LocationOn,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
                 }
                 VerticalDivider(color = MaterialTheme.colorScheme.onPrimary, thickness = 1.dp)
                 Box(
                     modifier = Modifier.weight(1f).clickable { onNFCSelect() },
                     contentAlignment = Alignment.Center
                 ) {
-                    PetAction("NFC", Icons.Outlined.Contactless, MaterialTheme.colorScheme.onSecondary)
+                    PetAction("NFC", Icons.Outlined.Contactless, MaterialTheme.colorScheme.secondary)
                 }
             }
         }

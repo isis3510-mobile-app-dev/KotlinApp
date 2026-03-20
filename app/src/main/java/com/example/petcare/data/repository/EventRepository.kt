@@ -29,13 +29,15 @@ class EventRepository(private val api: ApiService) {
         description: String,
         provider: String,
         clinic: String,
-        price: Double?
+        price: Double?,
+        date: String
     ): Result<Event> = runCatching {
         val body = buildMap<String, Any?> {
             put("title",       title)
             put("description", description)
             put("provider",    provider)
             put("clinic",      clinic)
+            put("date",        date)
             if (price != null) put("price", price)
         }
         val response = api.updateEvent(eventId, body)

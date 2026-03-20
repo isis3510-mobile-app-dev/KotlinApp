@@ -298,6 +298,9 @@ class MainActivity : ComponentActivity() {
                                         onPetSelected       = { petId ->
                                             navController.navigate("petProfile/$petId")
                                         },
+                                        onLostModeSelected  = { petId ->
+                                            petsViewModel.toggleLostMode(petId)
+                                        },
                                         onNfcSelected       = { petId ->
                                             nfcViewModel.prepareWrite(petId, "")
                                             navController.navigate(Routes.NfcScanning)

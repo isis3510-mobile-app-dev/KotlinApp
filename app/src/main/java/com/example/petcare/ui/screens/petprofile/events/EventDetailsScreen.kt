@@ -25,6 +25,8 @@ import com.example.petcare.ui.components.ActionFooter
 import com.example.petcare.ui.components.AttachedDocumentsCard
 import com.example.petcare.ui.components.ProviderInfoCard
 import com.example.petcare.ui.components.TextFieldComponent
+import com.example.petcare.ui.components.DateTextField
+import com.example.petcare.ui.components.TimeTextField
 import com.example.petcare.ui.theme.ErrorContainer
 import com.example.petcare.ui.theme.ErrorContent
 import com.example.petcare.ui.theme.GreenDark
@@ -282,6 +284,18 @@ fun EventDetailsScreen(
                                 label         = "e.g. Happy Paws Clinic",
                                 value         = uiState.editClinic,
                                 onValueChange = viewModel::setClinic
+                            )
+
+                            DateTextField(
+                                name           = "Event Date *",
+                                value          = uiState.editDate,
+                                onDateSelected = viewModel::setDate
+                            )
+
+                            TimeTextField(
+                                name           = "Event Time",
+                                value          = uiState.editTime,
+                                onTimeSelected = viewModel::setTime
                             )
 
                             // Price

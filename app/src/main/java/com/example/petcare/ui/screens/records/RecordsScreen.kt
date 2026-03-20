@@ -26,7 +26,6 @@ import com.example.petcare.ui.theme.*
 @Composable
 fun HealthRecordsScreen(
     paddingValues: PaddingValues = PaddingValues(0.dp),
-    // ← NUEVOS parámetros para reactividad
     reloadTrigger: Boolean = false,
     onReloadConsumed: () -> Unit = {},
     onNavigateToVaccineDetail: (petId: String, vaccinationId: String) -> Unit = { _, _ -> },

@@ -163,6 +163,7 @@ fun PetProfileScreen(
                 weight       = uiState.weight,
                 gender       = uiState.gender,
                 isHealthy    = uiState.isHealthy,
+                isLost       = uiState.isLost,
                 isNfcSynched = uiState.isNfcSynched,
                 photoPath    = uiState.photoUrl
             )
@@ -272,7 +273,7 @@ private fun LazyListScope.overviewTabContent(
                 weight      = uiState.weight,
                 color       = uiState.color,
                 gender      = uiState.gender,
-                microchip   = uiState.microchip
+                isNfcSynced = uiState.isNfcSynched,
             )
 
             if (uiState.upcomingEventsCount > 0) {
@@ -291,8 +292,12 @@ private fun LazyListScope.overviewTabContent(
                     FeatureClicksTracker.startRoute("Add Vaccine Flow")
                     onAddVaccine()
                 },
-                onLostModeClick   = viewModel::onLostModeClicked,
-                onNfcClick        = onNFCScan
+                onLostModeClick   = {
+                    FeatureClicksTracker.recordClick()
+                    viewModel.onLostModeClicked()
+                },
+                onNfcClick        = onNFCScan,
+                isLost            = uiState.isLost
             )
 
             Spacer(modifier = Modifier.height(32.dp))

@@ -110,18 +110,50 @@ fun EventListItem(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Provider and Date
+                // Provider and Clinic
                 Text(
                     text = "${event.provider} · ${event.clinic}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onTertiary
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = event.date,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onTertiary
-                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Date and Time (split from ISO)
+                val (date, time) = try {
+                    val parts = event.date.split("T")
+                    val datePart = parts[0]
+                    val timePart = if (parts.size > 1) parts[1].take(5) else "00:00"
+
+                    val dP = datePart.split("-")
+                    val formattedDate = if (dP.size == 3) "${dP[2]}/${dP[1]}/${dP[0]}" else datePart
+
+                    val tP = timePart.split(":")
+                    val h = tP[0].toInt()
+                    val m = tP[1].toInt()
+                    val amPm = if (h >= 12) "PM" else "AM"
+                    val h12 = if (h == 0) 12 else if (h > 12) h - 12 else h
+                    val formattedTime = "${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} $amPm"
+
+                    formattedDate to formattedTime
+                } catch (_: Exception) {
+                    event.date to ""
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onTertiary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (time.isNotBlank()) "$date · $time" else date,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onTertiary
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
