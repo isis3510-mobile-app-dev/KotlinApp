@@ -401,11 +401,13 @@ class MainActivity : ComponentActivity() {
                                         petCount = petsUiState.pets.size,
                                         onNavigateToLogin = {
                                             authViewModel.logout()
-                                            navController.navigate(Routes.SignIn) {
-                                                popUpTo(navController.graph.findStartDestination().id) {
-                                                    inclusive = true
+                                            if (navController.currentDestination?.route != Routes.SignIn) {
+                                                navController.navigate(Routes.SignIn) {
+                                                    popUpTo(navController.graph.id) {
+                                                        inclusive = true
+                                                    }
+                                                    launchSingleTop = true
                                                 }
-                                                launchSingleTop = true
                                             }
                                         }
                                     )
