@@ -7,6 +7,7 @@ import com.example.petcare.data.model.Pet
 import com.example.petcare.data.model.SuggestionDto
 import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.model.UpdateVaccinationRequest
+import com.example.petcare.data.model.Vaccine
 import com.example.petcare.data.network.ApiService
 
 class PetRepository(private val api: ApiService) {
@@ -26,9 +27,16 @@ class PetRepository(private val api: ApiService) {
         response.body() ?: error("Failed to create pet")
     }
 
+    suspend fun updatePet(petId: String, request: UpdatePetRequest): Result<Pet> = runCatching {
+        val response = api.updatePet(petId, request)
+        response.body() ?: error("Failed to update pet — HTTP ${response.code()}")
+    }
 
     suspend fun deletePet(petId: String): Result<Unit> = runCatching {
-        api.deletePet(petId)
+        val response = api.deletePet(petId)
+        if (!response.isSuccessful) {
+            error("Failed to delete pet — HTTP ${response.code()}")
+        }
     }
 
     suspend fun addVaccination(petId: String, request: AddVaccinationRequest): Result<Pet> = runCatching {
@@ -63,9 +71,6 @@ class PetRepository(private val api: ApiService) {
         val body = buildMap<String, Any?> {
             put("administeredBy", administeredBy)
             put("lotNumber", lotNumber)
-            // Convert dd/MM/yyyy → yyyy-MM-ddT00:00:00Z before sending to backend.
-            // The DateTextField returns dd/MM/yyyy; stored dates from the API are
-            // already in ISO format (yyyy-MM-dd...) — handle both.
             if (nextDueDate != null) {
                 put("nextDueDate", toIso(nextDueDate))
             }
@@ -111,5 +116,10 @@ class PetRepository(private val api: ApiService) {
         } catch (_: Exception) {
             date
         }
+    }
+
+    suspend fun getVaccineCatalog(): Result<List<Vaccine>> = runCatching {
+        val response = api.getVaccines()
+        response.body() ?: emptyList()
     }
 }

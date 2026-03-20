@@ -29,9 +29,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.petcare.data.model.AttachedDocument
 import com.example.petcare.ui.theme.ErrorContainer
 import com.example.petcare.ui.theme.ErrorContent
 import com.example.petcare.ui.theme.GrayBorder
@@ -43,6 +45,8 @@ import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.SuccessContainer
 import com.example.petcare.ui.theme.SuccessContent
 import com.example.petcare.ui.theme.OffWhite
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 data class VaccineRecord(
     val id: String,
@@ -52,7 +56,8 @@ data class VaccineRecord(
     val nextDueDate: String?,
     val lotNumber: String?,
     val status: VaccineFilterStatus,
-    val attachedDocumentName: String? = null
+    val attachedDocuments: List<AttachedDocument> = emptyList()
+
 )
 
 @Composable
@@ -144,10 +149,12 @@ fun VaccineTimelineItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = vaccine.name,
+                        text = vaccine.name.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     
                     StatusPillSmall(status = vaccine.status)
@@ -157,10 +164,12 @@ fun VaccineTimelineItem(
 
                 // Provider
                 Text(
-                    text = vaccine.provider,
+                    text = vaccine.provider.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -215,16 +224,20 @@ private fun StatusPillSmall(status: VaccineFilterStatus) {
 private fun InfoBlock(label: String, value: String) {
     Column {
         Text(
-            text = label,
+            text = label.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
             fontSize = 12.sp,
-            color = GrayText
+            color = GrayText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = value,
+            text = value.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

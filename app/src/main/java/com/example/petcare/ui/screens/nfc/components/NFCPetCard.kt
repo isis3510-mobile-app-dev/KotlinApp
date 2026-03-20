@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,6 +51,8 @@ import com.example.petcare.ui.theme.SuccessGreen
 import com.example.petcare.ui.theme.WarningContainer
 import com.example.petcare.ui.theme.WarningContent
 import com.example.petcare.ui.theme.WarningYellow
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun NFCPetCard(
@@ -123,15 +126,19 @@ fun NFCPetCard(
                         .align(Alignment.BottomStart)
                 ) {
                     Text(
-                        text = petName,
+                        text = petName.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                         color = Color.White,
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = breedAndSpecies,
+                        text = breedAndSpecies.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                         color = Color.White.copy(alpha = 0.9f),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -166,14 +173,18 @@ fun NFCPetCard(
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text(
-                            text = ownerName,
+                            text = ownerName.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = ownerPhone,
+                            text = ownerPhone.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = GrayDark
+                            color = GrayDark,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -265,9 +276,11 @@ fun NFCPetCard(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = medicalNotes,
+                            text = medicalNotes.truncateForDisplay(DisplayTextLimits.LONG_SNIPPET),
                             color = WarningContent,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }

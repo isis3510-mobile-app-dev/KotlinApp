@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -24,11 +25,17 @@ import com.example.petcare.ui.components.ActionFooter
 import com.example.petcare.ui.components.AttachedDocumentsCard
 import com.example.petcare.ui.components.ProviderInfoCard
 import com.example.petcare.ui.components.TextFieldComponent
+import com.example.petcare.ui.components.DateTextField
+import com.example.petcare.ui.components.TimeTextField
 import com.example.petcare.ui.theme.ErrorContainer
 import com.example.petcare.ui.theme.ErrorContent
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.OffWhite
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun EventDetailsScreen(
@@ -38,6 +45,7 @@ fun EventDetailsScreen(
 ) {
     val viewModel: EventDetailsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     // Load real event data
     LaunchedEffect(eventId) { viewModel.load(eventId) }
@@ -47,15 +55,6 @@ fun EventDetailsScreen(
         if (uiState.isDeleted) onNavigateBack()
     }
 
-    // File picker for document upload
-    val filePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            val fileName = uri.lastPathSegment ?: "document"
-            viewModel.addDocument(fileName, uri.toString())
-        }
-    }
 
     // Delete confirmation dialog
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -69,6 +68,7 @@ fun EventDetailsScreen(
                 TextButton(
                     onClick = {
                         showDeleteDialog = false
+                        FeatureClicksTracker.endRoute()
                         viewModel.deleteEvent()
                     },
                     colors = ButtonDefaults.textButtonColors(
@@ -86,8 +86,14 @@ fun EventDetailsScreen(
         bottomBar = {
             if (!uiState.isEditing) {
                 ActionFooter(
-                    onDeleteClicked = { showDeleteDialog = true },
-                    onEditClicked   = { viewModel.startEditing() },
+                    onDeleteClicked = {
+                        FeatureClicksTracker.startRoute("Delete Event Flow")
+                        showDeleteDialog = true
+                    },
+                    onEditClicked   = {
+                        FeatureClicksTracker.startRoute("Edit Event Flow")
+                        viewModel.startEditing()
+                    },
                     isDeleteEnabled = !uiState.isDeleting
                 )
             } else {
@@ -106,20 +112,23 @@ fun EventDetailsScreen(
                     ) { Text("Cancel") }
 
                     Button(
-                        onClick  = { viewModel.saveEdits() },
+                        onClick  = {
+                            FeatureClicksTracker.endRoute()
+                            viewModel.saveEdits()
+                        },
                         enabled  = !uiState.isSaving,
                         modifier = Modifier.weight(1f).height(52.dp),
                         shape    = RoundedCornerShape(28.dp),
-                        colors   = ButtonDefaults.buttonColors(containerColor = GreenDark)
+                        colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                     ) {
                         if (uiState.isSaving) {
                             CircularProgressIndicator(
                                 modifier    = Modifier.size(18.dp),
-                                color       = Color.White,
+                                color       = MaterialTheme.colorScheme.onSecondary,
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Save", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("Save", color = MaterialTheme.colorScheme.surface, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -134,7 +143,7 @@ fun EventDetailsScreen(
                     modifier         = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = GreenDark)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                 }
             }
 
@@ -160,7 +169,7 @@ fun EventDetailsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(GreenDark)
+                            .background(MaterialTheme.colorScheme.secondary)
                             .padding(horizontal = 8.dp, vertical = 20.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -168,7 +177,7 @@ fun EventDetailsScreen(
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.surface
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -177,21 +186,21 @@ fun EventDetailsScreen(
                                 Icon(
                                     Icons.Default.MedicalServices,
                                     contentDescription = null,
-                                    tint     = Color.White,
+                                    tint     = MaterialTheme.colorScheme.surface,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text       = "Medical Event",
                                     style      = MaterialTheme.typography.titleLarge,
-                                    color      = Color.White,
+                                    color      = MaterialTheme.colorScheme.surface,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                             Text(
-                                text  = event.title,
+                                text  = event.title.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.8f)
+                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
                             )
                         }
                     }
@@ -239,8 +248,11 @@ fun EventDetailsScreen(
                             NotesCard(description = event.description)
 
                             AttachedDocumentsCard(
-                                documents    = event.attachedDocuments,
-                                onAddClicked = { filePicker.launch("*/*") }
+                                documents        = event.attachedDocuments,
+                                isUploading      = uiState.isUploadingDoc,
+                                onDocumentPicked = { uri, _, _ ->
+                                    viewModel.addDocument(context, petId, uri)
+                                }
                             )
 
                             // ── Edit mode ─────────────────────────────────────
@@ -250,7 +262,8 @@ fun EventDetailsScreen(
                                 name          = "Event Name",
                                 label         = "e.g. Vet visit",
                                 value         = uiState.editTitle,
-                                onValueChange = viewModel::setTitle
+                                onValueChange = viewModel::setTitle,
+                                maxLength     = InputTextLimits.EVENT_TITLE
                             )
 
                             // Description
@@ -258,7 +271,8 @@ fun EventDetailsScreen(
                                 name          = "Description",
                                 label         = "e.g. Annual checkup",
                                 value         = uiState.editDescription,
-                                onValueChange = viewModel::setDescription
+                                onValueChange = viewModel::setDescription,
+                                maxLength     = InputTextLimits.NOTES
                             )
 
                             // Provider
@@ -266,7 +280,8 @@ fun EventDetailsScreen(
                                 name          = "Provider / Doctor",
                                 label         = "e.g. Dr. Smith",
                                 value         = uiState.editProvider,
-                                onValueChange = viewModel::setProvider
+                                onValueChange = viewModel::setProvider,
+                                maxLength     = InputTextLimits.PROVIDER_OR_CLINIC
                             )
 
                             // Clinic
@@ -274,7 +289,20 @@ fun EventDetailsScreen(
                                 name          = "Clinic",
                                 label         = "e.g. Happy Paws Clinic",
                                 value         = uiState.editClinic,
-                                onValueChange = viewModel::setClinic
+                                onValueChange = viewModel::setClinic,
+                                maxLength     = InputTextLimits.PROVIDER_OR_CLINIC
+                            )
+
+                            DateTextField(
+                                name           = "Event Date *",
+                                value          = uiState.editDate,
+                                onDateSelected = viewModel::setDate
+                            )
+
+                            TimeTextField(
+                                name           = "Event Time",
+                                value          = uiState.editTime,
+                                onTimeSelected = viewModel::setTime
                             )
 
                             // Price
@@ -287,8 +315,11 @@ fun EventDetailsScreen(
 
                             // Documents still available in edit mode
                             AttachedDocumentsCard(
-                                documents    = event.attachedDocuments,
-                                onAddClicked = { filePicker.launch("*/*") }
+                                documents        = event.attachedDocuments,
+                                isUploading      = uiState.isUploadingDoc,
+                                onDocumentPicked = { uri, _, _ ->
+                                    viewModel.addDocument(context, petId, uri)
+                                }
                             )
                         }
 

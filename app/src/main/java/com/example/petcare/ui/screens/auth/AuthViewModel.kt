@@ -26,6 +26,7 @@ class AuthViewModel(
         object Loading : AuthState()
         data class Success(val user: FirebaseUser) : AuthState()
         data class Error(val message: String) : AuthState()
+        data class ResetEmailSent(val email: String) : AuthState()
     }
 
     private val _state = MutableStateFlow<AuthState>(AuthState.Idle)
@@ -114,6 +115,23 @@ class AuthViewModel(
             }
         }
     }
+    fun resetPassword(email: String) {
+        if (email.isBlank()) {
+            _state.value = AuthState.Error("Please enter your email address")
+            return
+        }
+        viewModelScope.launch {
+            _state.value = AuthState.Loading
+            authRepository.resetPassword(email)
+                .onSuccess {
+                    _state.value = AuthState.ResetEmailSent(email)
+                }
+                .onFailure {
+                    _state.value = AuthState.Error(friendlyError(it))
+                }
+        }
+    }
+
 
     // ── Helpers ───────────────────────────────────────────────────
 

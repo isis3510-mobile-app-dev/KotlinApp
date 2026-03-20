@@ -1,30 +1,46 @@
 package com.example.petcare
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.nfc.NfcAdapter
+import android.os.Build
 import android.os.Bundle
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.petcare.data.nfc.NfcManager
+import com.example.petcare.data.analytics.AnalyticsSeeder
+import com.example.petcare.data.analytics.ScreenTimeTracker
+import com.example.petcare.data.notifications.NotificationDispatcher
+import com.example.petcare.data.notifications.NotificationScheduler
 import com.example.petcare.ui.preferences.AppThemeViewModel
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.components.ExpandableFAB
@@ -55,7 +71,6 @@ import com.example.petcare.ui.screens.nfc.ScannedSuccessScreen
 import com.example.petcare.ui.screens.nfc.ScanningNFCScreen
 import com.example.petcare.ui.screens.nfc.TagWrittenScreen
 import com.example.petcare.ui.screens.nfc.WriteNFCScreen
-import com.example.petcare.ui.screens.notifications.NotificationsScreen
 import com.example.petcare.ui.screens.onboarding.OnBoardingScreen
 import com.example.petcare.ui.screens.petprofile.PetProfileScreen
 import com.example.petcare.ui.screens.petprofile.PetProfileViewModel
@@ -67,17 +82,26 @@ import com.example.petcare.ui.screens.pets.PetsViewModelFactory
 import com.example.petcare.ui.screens.profile.ProfileScreen
 import com.example.petcare.ui.screens.profile.ProfileViewModel
 import com.example.petcare.ui.screens.records.HealthRecordsScreen
+import com.example.petcare.ui.screens.suggestions.SuggestionScreen
 import com.example.petcare.ui.theme.GreenAccentDark
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.LocalAppThemeMode
-import com.example.petcare.ui.theme.OffWhite
 import com.example.petcare.ui.theme.OnboardingBlueEnd
 import com.example.petcare.ui.theme.OnboardingBlueStart
 import com.example.petcare.ui.theme.OnboardingPurpleEnd
 import com.example.petcare.ui.theme.OnboardingPurpleStart
 import com.example.petcare.ui.theme.PetCareTheme
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.time.Instant
 
 class MainActivity : ComponentActivity() {
+
+    private data class PendingNotificationTarget(
+        val route: String,
+        val backendNotificationId: String?
+    )
 
     private val appThemeViewModel: AppThemeViewModel by viewModels {
         val app = application as PetCareApplication
@@ -87,15 +111,20 @@ class MainActivity : ComponentActivity() {
     private lateinit var nfcManager: NfcManager
     val nfcViewModel: NfcViewModel by viewModels()
 
-    // petsViewModel at class level so WriteNFCScreen can access it via LocalActivity
     val petsViewModel: PetsViewModel by viewModels {
         PetsViewModelFactory(RepositoryProvider.petRepository)
     }
+
+    private val pendingNotificationTarget = MutableStateFlow<PendingNotificationTarget?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         nfcManager = NfcManager(this)
+        extractNotificationTarget(intent)?.let {
+            pendingNotificationTarget.value = it
+            intent.action = null
+        }
 
         setContent {
             val themeMode by appThemeViewModel.themeMode.collectAsStateWithLifecycle()
@@ -103,19 +132,85 @@ class MainActivity : ComponentActivity() {
             val backStackEntry by navController.currentBackStackEntryAsState()
             val currentRoute = backStackEntry?.destination?.route
 
-            // ── ViewModels whose lifetime is tied to this Activity ─────────────
             val authViewModel: AuthViewModel = viewModel()
             val homeViewModel: HomeViewModel = viewModel()
             val addPetViewModel: AddPetViewModel = viewModel()
             val addVaccineViewModel: AddVaccineViewModel = viewModel()
             val addEventViewModel: AddEventViewModel = viewModel()
+            val uiScope = rememberCoroutineScope()
+            val notificationsEnabled by (application as PetCareApplication)
+                .userPreferencesRepository
+                .notificationsEnabled
+                .collectAsStateWithLifecycle(initialValue = false)
+            val pendingTarget by pendingNotificationTarget.asStateFlow().collectAsStateWithLifecycle()
+            val notificationPermissionLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission()
+            ) { }
 
-            // Fetch the logged-in user's profile once at startup
-            LaunchedEffect(Unit) {
-                if (authViewModel.isLoggedIn){
+            LaunchedEffect(authViewModel.isLoggedIn) {
+                if (authViewModel.isLoggedIn) {
                     authViewModel.fetchUserProfile()
                     authViewModel.syncEmailWithBackend()
-                 }
+
+                    // ── Analytics: verify+seed metadata for this session ──
+                    AnalyticsSeeder.seedIfNeeded(this@MainActivity)
+                }
+            }
+
+            LaunchedEffect(authViewModel.isLoggedIn, notificationsEnabled) {
+                if (!authViewModel.isLoggedIn || !notificationsEnabled) return@LaunchedEffect
+
+                // Trigger an immediate check so reminders are testable without waiting
+                // for the next periodic WorkManager execution window.
+                NotificationScheduler.runNow(this@MainActivity)
+
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return@LaunchedEffect
+
+                val permissionGranted = ContextCompat.checkSelfPermission(
+                    this@MainActivity,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (!permissionGranted) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+
+            LaunchedEffect(pendingTarget, authViewModel.isLoggedIn) {
+                val target = pendingTarget ?: return@LaunchedEffect
+                if (!authViewModel.isLoggedIn) return@LaunchedEffect
+
+                target.backendNotificationId?.let { notificationId ->
+                    RepositoryProvider.notificationRepository.markNotificationClicked(
+                        notificationId = notificationId,
+                        clickedAtIso = Instant.now().toString()
+                    )
+                }
+
+                navController.navigate(target.route) {
+                    launchSingleTop = true
+                }
+                pendingNotificationTarget.value = null
+            }
+
+            // ── Analytics: track screen time ──
+            val firebaseUserId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+            val screenTimeTracker = remember(authViewModel.isLoggedIn, firebaseUserId) {
+                if (authViewModel.isLoggedIn && !firebaseUserId.isNullOrBlank()) {
+                    ScreenTimeTracker(userId = firebaseUserId)
+                } else {
+                    null
+                }
+            }
+
+            DisposableEffect(navController, screenTimeTracker) {
+                if (screenTimeTracker != null) {
+                    screenTimeTracker.attach(navController)
+                }
+                onDispose {
+                    screenTimeTracker?.detach(navController)
+                    screenTimeTracker?.flush()
+                }
             }
 
             CompositionLocalProvider(LocalAppThemeMode provides themeMode) {
@@ -127,11 +222,13 @@ class MainActivity : ComponentActivity() {
                                 NavBar(
                                     currentRoute = currentRoute ?: Routes.Home,
                                     onItemClick  = { route ->
-                                        navController.navigate(route) {
-                                            launchSingleTop = true
-                                            restoreState    = true
-                                            popUpTo(navController.graph.startDestinationId) {
-                                                saveState = true
+                                        if (currentRoute?.substringBefore("/") != route) {
+                                            navController.navigate(route) {
+                                                launchSingleTop = true
+                                                restoreState = true
+                                                popUpTo(Routes.Home) {
+                                                    saveState = true
+                                                }
                                             }
                                         }
                                     }
@@ -145,403 +242,551 @@ class MainActivity : ComponentActivity() {
                                 startDestination = if (authViewModel.isLoggedIn) Routes.Home else Routes.Onboarding1,
                                 modifier         = Modifier.padding(innerPadding)
                             ) {
-
-                            // ── Onboarding ────────────────────────────────────────────────────────
-                            composable(Routes.Onboarding1) {
-                                OnBoardingScreen(
-                                    page = 1,
-                                    title = "All your pet's health, \n in one place",
-                                    description = "Centralize vaccines, medications, records, and documents.",
-                                    backgroundStart = GreenDark, backgroundEnd = GreenAccentDark,
-                                    image = R.drawable.onboarding_dop,
-                                    onSignInClick  = { navController.navigate(Routes.SignIn) { popUpTo(Routes.Onboarding1) { inclusive = true } } },
-                                    onSkipClick    = { navController.navigate(Routes.SignIn) { popUpTo(Routes.Onboarding1) { inclusive = true } } },
-                                    onContinueClick = { navController.navigate(Routes.Onboarding2) }
-                                )
-                            }
-                            composable(Routes.Onboarding2) {
-                                OnBoardingScreen(
-                                    page = 2,
-                                    title = "Track vaccines & \n medications",
-                                    description = "Timeline-based vaccine history, smart reminders, and overdue alerts.",
-                                    backgroundStart = OnboardingBlueStart, backgroundEnd = OnboardingBlueEnd,
-                                    image = R.drawable.onboarding_vaccine,
-                                    onSignInClick  = { navController.navigate(Routes.SignIn) { popUpTo(Routes.Onboarding2) { inclusive = true } } },
-                                    onSkipClick    = { navController.navigate(Routes.SignIn) { popUpTo(Routes.Onboarding2) { inclusive = true } } },
-                                    onContinueClick = { navController.navigate(Routes.Onboarding3) }
-                                )
-                            }
-                            composable(Routes.Onboarding3) {
-                                OnBoardingScreen(
-                                    page = 3,
-                                    title = "NFC tag \n integration",
-                                    description = "Write your pet's info to an NFC tag.",
-                                    backgroundStart = OnboardingPurpleStart, backgroundEnd = OnboardingPurpleEnd,
-                                    image = R.drawable.onboarding_nfc,
-                                    onSignInClick  = { navController.navigate(Routes.SignIn) { popUpTo(Routes.Onboarding3) { inclusive = true } } },
-                                    onSkipClick    = { navController.navigate(Routes.SignIn) { popUpTo(Routes.Onboarding3) { inclusive = true } } },
-                                    onContinueClick = { navController.navigate(Routes.SignIn) }
-                                )
-                            }
-
-                            // ── Auth ──────────────────────────────────────────────────────────────
-                            composable(Routes.SignIn) {
-                                SignInScreen(
-                                    viewModel = authViewModel,
-                                    onSignInSuccess = {
-                                        authViewModel.fetchUserProfile()
-                                        navController.navigate(Routes.Home) {
-                                            popUpTo(Routes.SignIn) { inclusive = true }
-                                        }
-                                    },
-                                    onGoToSignUp = { navController.navigate(Routes.SignUp) }
-                                )
-                            }
-                            composable(Routes.SignUp) {
-                                LoginScreen(
-                                    onSignUpSuccess = {
-                                        authViewModel.fetchUserProfile()
-                                        navController.navigate(Routes.Home) {
-                                            popUpTo(Routes.SignUp) { inclusive = true }
-                                        }
-                                    },
-                                    onGoToSignIn = { navController.popBackStack() }
-                                )
-                            }
-
-                            // ── Home ──────────────────────────────────────────────────────────────
-                            composable(Routes.Home) {
-                                HomeScreen(
-                                    authViewModel           = authViewModel,
-                                    homeViewModel           = homeViewModel,
-                                    onNavigateToPets        = { navController.navigate(Routes.Pets) },
-                                    onNavigateToNfc         = { navController.navigate(Routes.NfcScan) },
-                                    onNavigateToPetProfile  = { petId -> navController.navigate("petProfile/$petId") },
-                                    onNavigateToAddPet      = { navController.navigate(Routes.AddPet1) },
-                                    onNavigateToVaccine     = { petId, vaccineId -> navController.navigate("vaccineDetails/$petId/$vaccineId") },
-                                    onNavigateToEvent       = { petId, eventId   -> navController.navigate("eventDetails/$petId/$eventId") },
-                                    onNavigateToRecords     = { navController.navigate(Routes.Records) },
-                                    onNavigateToNotifications = { navController.navigate(Routes.Notifications) }
-                                )
-                            }
-
-                            // ── Pets ──────────────────────────────────────────────────────────────
-                            composable(Routes.Pets) {
-                                val uiState by petsViewModel.uiState.collectAsStateWithLifecycle()
-
-                                PetsScreen(
-                                    pets      = uiState.pets,
-                                    isLoading = uiState.isLoading,
-                                    searchQuery = uiState.searchQuery,
-                                    onSearchQueryChange = petsViewModel::updateSearchQuery,
-                                    selectedFilter = uiState.selectedFilter,
-                                    onFilterSelected = petsViewModel::updateSelectedFilter,
-                                    onPetSelected = { petId ->
-                                        navController.navigate("petProfile/$petId")
-                                    },
-                                    onNfcSelected = { petId ->
-                                        nfcViewModel.prepareWrite(petId, "")
-                                        navController.navigate(Routes.NfcScanning)
-                                    }
-                                )
-                            }
-
-                            // ── Records / Calendar / Profile ─────────────────────────────────────
-                            composable(Routes.Records) {
-                                HealthRecordsScreen(
-                                    onNavigateToEventDetail = { petId, eventId ->
-                                        navController.navigate("eventDetails/$petId/$eventId")
-                                    },
-                                    onAddRecordClick = {
-                                        addEventViewModel.reset()
-                                        addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
-                                        navController.navigate(Routes.AddEvent1)
-                                    },
-                                    onAddVaccineClick = {
-                                        addVaccineViewModel.reset()
-                                        navController.navigate(Routes.AddVaccine1)
-                                    },
-                                    onAddEventClick = {
-                                        addEventViewModel.reset()
-                                        addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
-                                        navController.navigate(Routes.AddEvent1)
-                                    }
-                                )
-                            }
-                            composable(Routes.Calendar) {
-                                CalendarScreen(
-                                    onAddEvent = { navController.navigate(Routes.AddEvent1) },
-                                    onNavigateToEvent = { petId, eventId ->
-                                        navController.navigate("eventDetails/$petId/$eventId")
-                                    }
-                                )
-                            }
-                            composable(Routes.Profile) {
-                                LaunchedEffect(Unit) {
-                                    authViewModel.syncEmailWithBackend()
-                                }
-                                val userProfile by authViewModel.userProfile.collectAsStateWithLifecycle()
-
-                                val profileViewModel: ProfileViewModel = viewModel(
-                                    factory = ViewModelFactory(
-                                        repository = (applicationContext as PetCareApplication).userPreferencesRepository,
-                                        initialUser = userProfile
+                                // ── Onboarding ────────────────────────────────────────────
+                                composable(Routes.Onboarding1) {
+                                    OnBoardingScreen(
+                                        page = 1,
+                                        title = "All your pet's health, \n in one place",
+                                        description = "Centralize vaccines, medications, records, and documents.",
+                                        backgroundStart = GreenDark, backgroundEnd = GreenAccentDark,
+                                        image = R.drawable.onboarding_dop,
+                                        onSignInClick  = { navController.navigate(Routes.SignIn) { popUpTo(Routes.Onboarding1) { inclusive = true } } },
+                                        onSkipClick    = { navController.navigate(Routes.SignIn) { popUpTo(Routes.Onboarding1) { inclusive = true } } },
+                                        onContinueClick = { navController.navigate(Routes.Onboarding2) }
                                     )
-                                )
-                                ProfileScreen(
-                                    viewModel = profileViewModel,
-                                    onNavigateToLogin = {
-                                        authViewModel.logout()
-                                        navController.navigate(Routes.SignIn) { popUpTo(0) }
+                                }
+                                composable(Routes.Onboarding2) {
+                                    OnBoardingScreen(
+                                        page = 2,
+                                        title = "Track vaccines & \n medications",
+                                        description = "Timeline-based vaccine history, smart reminders, and overdue alerts.",
+                                        backgroundStart = OnboardingBlueStart, backgroundEnd = OnboardingBlueEnd,
+                                        image = R.drawable.onboarding_vaccine,
+                                        onSignInClick  = { navController.navigate(Routes.SignIn) { popUpTo(Routes.Onboarding2) { inclusive = true } } },
+                                        onSkipClick    = { navController.navigate(Routes.SignIn) { popUpTo(Routes.Onboarding2) { inclusive = true } } },
+                                        onContinueClick = { navController.navigate(Routes.Onboarding3) }
+                                    )
+                                }
+                                composable(Routes.Onboarding3) {
+                                    OnBoardingScreen(
+                                        page = 3,
+                                        title = "NFC tag \n integration",
+                                        description = "Write your pet's info to an NFC tag.",
+                                        backgroundStart = OnboardingPurpleStart, backgroundEnd = OnboardingPurpleEnd,
+                                        image = R.drawable.onboarding_nfc,
+                                        onSignInClick  = { navController.navigate(Routes.SignIn) { popUpTo(Routes.Onboarding3) { inclusive = true } } },
+                                        onSkipClick    = { navController.navigate(Routes.SignIn) { popUpTo(Routes.Onboarding3) { inclusive = true } } },
+                                        onContinueClick = { navController.navigate(Routes.SignIn) }
+                                    )
+                                }
+
+                                // ── Auth ──────────────────────────────────────────────────
+                                composable(Routes.SignIn) {
+                                    SignInScreen(
+                                        viewModel = authViewModel,
+                                        onSignInSuccess = {
+                                            authViewModel.fetchUserProfile()
+                                            uiScope.launch {
+                                                AnalyticsSeeder.seedIfNeeded(this@MainActivity)
+                                            }
+                                            navController.navigate(Routes.Home) {
+                                                popUpTo(Routes.SignIn) { inclusive = true }
+                                            }
+                                        },
+                                        onGoToSignUp = { navController.navigate(Routes.SignUp) }
+                                    )
+                                }
+                                composable(Routes.SignUp) {
+                                    LoginScreen(
+                                        onSignUpSuccess = {
+                                            authViewModel.fetchUserProfile()
+                                            uiScope.launch {
+                                                AnalyticsSeeder.seedIfNeeded(this@MainActivity)
+                                            }
+                                            navController.navigate(Routes.Home) {
+                                                popUpTo(Routes.SignUp) { inclusive = true }
+                                            }
+                                        },
+                                        onGoToSignIn = { navController.popBackStack() }
+                                    )
+                                }
+
+                                // ── Home ──────────────────────────────────────────────────
+                                composable(Routes.Home) { entry ->
+                                    val reloadHome by entry.savedStateHandle
+                                        .getStateFlow("reload_home", false)
+                                        .collectAsStateWithLifecycle()
+
+                                    LaunchedEffect(reloadHome) {
+                                        if (reloadHome) {
+                                            homeViewModel.loadData()
+                                            entry.savedStateHandle["reload_home"] = false
+                                        }
                                     }
-                                )
-                            }
 
-                            // ── Pet Profile ───────────────────────────────────────────────────────
-                            composable(
-                                route = Routes.PetProfile,
-                                arguments = listOf(navArgument("petId") { type = NavType.StringType })
-                            ) { entry ->
-                                val petId = entry.arguments?.getString("petId").orEmpty()
+                                    HomeScreen(
+                                        authViewModel           = authViewModel,
+                                        homeViewModel           = homeViewModel,
+                                        onNavigateToPets        = { navController.navigate(Routes.Pets) },
+                                        onNavigateToNfc         = { navController.navigate(Routes.NfcScan) },
+                                        onNavigateToPetProfile  = { petId -> navController.navigate("petProfile/$petId") },
+                                        onNavigateToAddPet      = { navController.navigate(Routes.AddPet1) },
+                                        onNavigateToVaccine     = { petId, vaccineId ->
+                                            navController.navigate("vaccineDetails/$petId/$vaccineId")
+                                        },
+                                        onNavigateToEvent       = { petId, eventId ->
+                                            navController.navigate("eventDetails/$petId/$eventId")
+                                        },
+                                        onNavigateToRecords     = { navController.navigate(Routes.Records) },
+                                        onNavigateToSuggestions = { navController.navigate(Routes.Suggestions) }
+                                    )
+                                }
 
-                                PetProfileScreen(
-                                    petId        = petId,
-                                    onBack       = { navController.popBackStack() },
-                                    onAddEvent   = {
-                                        addEventViewModel.setPetId(petId)
-                                        addEventViewModel.setOwnerId(
-                                            authViewModel.userProfile.value?.id ?: ""
+                                // ── Pets ──────────────────────────────────────────────────
+                                composable(Routes.Pets) { entry ->
+                                    val reloadPets by entry.savedStateHandle
+                                        .getStateFlow("reload_pets", false)
+                                        .collectAsStateWithLifecycle()
+
+                                    LaunchedEffect(reloadPets) {
+                                        if (reloadPets) {
+                                            petsViewModel.refresh()
+                                            entry.savedStateHandle["reload_pets"] = false
+                                        }
+                                    }
+
+                                    val uiState by petsViewModel.uiState.collectAsStateWithLifecycle()
+
+                                    PetsScreen(
+                                        pets                = uiState.pets,
+                                        isLoading           = uiState.isLoading,
+                                        searchQuery         = uiState.searchQuery,
+                                        onSearchQueryChange = petsViewModel::updateSearchQuery,
+                                        selectedFilter      = uiState.selectedFilter,
+                                        onFilterSelected    = petsViewModel::updateSelectedFilter,
+                                        onPetSelected       = { petId ->
+                                            navController.navigate("petProfile/$petId")
+                                        },
+                                        onLostModeSelected  = { petId ->
+                                            petsViewModel.toggleLostMode(petId)
+                                        },
+                                        onNfcSelected       = { petId ->
+                                            nfcViewModel.prepareWrite(petId, "")
+                                            navController.navigate(Routes.NfcScanning)
+                                        }
+                                    )
+                                }
+
+                                // ── Records ───────────────────────────────────────────────
+                                composable(Routes.Records) { entry ->
+                                    val reloadRecords by entry.savedStateHandle
+                                        .getStateFlow("reload_records", false)
+                                        .collectAsStateWithLifecycle()
+
+                                    HealthRecordsScreen(
+                                        reloadTrigger             = reloadRecords,
+                                        onReloadConsumed          = {
+                                            entry.savedStateHandle["reload_records"] = false
+                                        },
+                                        onNavigateToVaccineDetail = { petId, vaccinationId ->
+                                            navController.navigate("vaccineDetails/$petId/$vaccinationId")
+                                        },
+                                        onNavigateToEventDetail   = { petId, eventId ->
+                                            navController.navigate("eventDetails/$petId/$eventId")
+                                        },
+                                        onAddRecordClick  = {
+                                            addEventViewModel.reset()
+                                            addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
+                                            navController.navigate(Routes.AddEvent1)
+                                        },
+                                        onAddVaccineClick = {
+                                            addVaccineViewModel.reset()
+                                            navController.navigate(Routes.AddVaccine1)
+                                        },
+                                        onAddEventClick   = {
+                                            addEventViewModel.reset()
+                                            addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
+                                            navController.navigate(Routes.AddEvent1)
+                                        }
+                                    )
+                                }
+
+                                // ── Calendar ──────────────────────────────────────────────
+                                composable(Routes.Calendar) {
+                                    CalendarScreen(
+                                        onAddEvent = { navController.navigate(Routes.AddEvent1) },
+                                        onNavigateToEvent = { petId, eventId ->
+                                            navController.navigate("eventDetails/$petId/$eventId")
+                                        }
+                                    )
+                                }
+
+                                // ── Profile ───────────────────────────────────────────────
+                                composable(Routes.Profile) { entry ->
+                                    LaunchedEffect(Unit) {
+                                        authViewModel.syncEmailWithBackend()
+                                    }
+
+                                    val userProfile by authViewModel.userProfile.collectAsStateWithLifecycle()
+                                    val petsUiState by petsViewModel.uiState.collectAsStateWithLifecycle()
+
+                                    val profileViewModel: ProfileViewModel = viewModel(
+                                        factory = ViewModelFactory(
+                                            repository  = (applicationContext as PetCareApplication).userPreferencesRepository,
+                                            initialUser = userProfile
                                         )
-                                        navController.navigate(Routes.AddEvent1)
-                                    },
-                                    onNFCScan    = { navController.navigate(Routes.NfcScan) },
-                                    onAddVaccine = {
-                                        addVaccineViewModel.setPetId(petId)
-                                        navController.navigate(Routes.AddVaccine1)
-                                    },
-                                    // ↓ These two are new
-                                    onNavigateToVaccineDetail = { pId, vaccineId ->
-                                        navController.navigate("vaccineDetails/$pId/$vaccineId")
-                                    },
-                                    onNavigateToEventDetail = { pId, eventId ->
-                                        navController.navigate("eventDetails/$pId/$eventId")
-                                    },
-                                    onSeeAllNotifications = { pid, petName ->
-                                        navController.navigate("notifications/$pid/$petName")
-                                    }
-                                )
-                            }
+                                    )
 
-                            // ── Vaccine / Event detail screens ────────────────────────────────────
-                            composable(
-                                route = Routes.VaccineDetails,
-                                arguments = listOf(
-                                    navArgument("petId")     { type = NavType.StringType },
-                                    navArgument("vaccineId") { type = NavType.StringType }
-                                )
-                            ) { entry ->
-                                VaccineDetailsScreen(
-                                    petId     = entry.arguments?.getString("petId").orEmpty(),
-                                    vaccineId = entry.arguments?.getString("vaccineId").orEmpty(),
-                                    onNavigateBack = { navController.popBackStack() }
-                                )
-                            }
-                            composable(
-                                route = Routes.EventDetails,
-                                arguments = listOf(
-                                    navArgument("petId")    { type = NavType.StringType },
-                                    navArgument("eventId")  { type = NavType.StringType }
-                                )
-                            ) { entry ->
-                                EventDetailsScreen(
-                                    petId   = entry.arguments?.getString("petId").orEmpty(),
-                                    eventId = entry.arguments?.getString("eventId").orEmpty(),
-                                    onNavigateBack = { navController.popBackStack() }
-                                )
-                            }
+                                    // Recarga cuando otra pantalla escribe "reload_profile"
+                                    val reloadProfile by entry.savedStateHandle
+                                        .getStateFlow("reload_profile", false)
+                                        .collectAsStateWithLifecycle()
 
-                            // ── NFC ───────────────────────────────────────────────────────────────
-                            composable(Routes.NfcScan) {
-                                ScanNFCScreen(
-                                    onBack  = { navController.popBackStack() },
-                                    onDone  = { navController.navigate(Routes.NfcScanning) },
-                                    onWrite = { navController.navigate(Routes.NfcWrite) }
-                                )
-                            }
-                            composable(Routes.NfcScanning) {
-                                ScanningNFCScreen(
-                                    onBack         = { navController.popBackStack() },
-                                    onWriteSuccess = {
-                                        navController.navigate(Routes.NfcWriteSuccess) {
-                                            popUpTo(Routes.NfcScanning) { inclusive = true }
-                                        }
-                                    },
-                                    onReadSuccess  = {
-                                        navController.navigate(Routes.NfcScanSuccess) {
-                                            popUpTo(Routes.NfcScanning) { inclusive = true }
+                                    LaunchedEffect(reloadProfile) {
+                                        if (reloadProfile) {
+                                            profileViewModel.loadUserProfile()
+                                            entry.savedStateHandle["reload_profile"] = false
                                         }
                                     }
-                                )
-                            }
-                            composable(Routes.NfcScanSuccess) {
-                                ScannedSuccessScreen(
-                                    onBack = { navController.navigate(Routes.NfcScan) { popUpTo(Routes.NfcScan) { inclusive = false } } },
-                                    onDone = { navController.navigate(Routes.NfcScan) { popUpTo(Routes.NfcScan) { inclusive = true  } } }
-                                )
-                            }
-                            composable(Routes.NfcWrite) {
-                                WriteNFCScreen(
-                                    onBack  = { navController.popBackStack() },
-                                    onDone  = { navController.navigate(Routes.NfcWriting) },
-                                    onRead  = { navController.navigate(Routes.NfcScan) }
-                                )
-                            }
-                            composable(Routes.NfcWriting) {
-                                ScanningNFCScreen(
-                                    onBack         = { navController.popBackStack() },
-                                    onWriteSuccess = {
-                                        navController.navigate(Routes.NfcWriteSuccess) {
-                                            popUpTo(Routes.NfcWriting) { inclusive = true }
-                                        }
-                                    },
-                                    onReadSuccess  = {}
-                                )
-                            }
-                            composable(Routes.NfcWriteSuccess) {
-                                val userProfile by authViewModel.userProfile.collectAsStateWithLifecycle()
-                                TagWrittenScreen(
-                                    onBack    = { navController.navigate(Routes.NfcWrite) { popUpTo(Routes.NfcWrite) { inclusive = false } } },
-                                    onDone    = { navController.navigate(Routes.Home)     { popUpTo(Routes.NfcWrite) { inclusive = true  } } },
-                                    onAnother = { navController.navigate(Routes.NfcWrite) { popUpTo(Routes.NfcWrite) { inclusive = true  } } },
-                                    ownerName  = userProfile?.name  ?: "",
-                                    ownerPhone = userProfile?.phone ?: ""
-                                )
-                            }
 
-                            // ── Add Pet ───────────────────────────────────────────────────────────
-                            composable(Routes.AddPet1) {
-                                AddPetInitialForm(
-                                    viewModel = addPetViewModel,
-                                    onBack    = { navController.popBackStack() },
-                                    onclick   = { navController.navigate(Routes.AddPet2) }
-                                )
-                            }
-                            composable(Routes.AddPet2) {
-                                AddPetDetailsForm(
-                                    viewModel = addPetViewModel,
-                                    onBack    = { navController.popBackStack() },
-                                    onclick   = { navController.navigate(Routes.AddPet3) }
-                                )
-                            }
-                            composable(Routes.AddPet3) {
-                                AddPetFinalForm(
-                                    viewModel = addPetViewModel,
-                                    onBack    = { navController.popBackStack() },
-                                    onclick   = { newPetId ->
-                                        addPetViewModel.reset()
-                                        navController.navigate("petProfile/$newPetId") {
-                                            popUpTo(Routes.AddPet1) { inclusive = true }
+                                    // Recarga cada vez que el usuario navega a esta tab
+                                    DisposableEffect(entry) {
+                                        val observer = LifecycleEventObserver { _, event ->
+                                            if (event == Lifecycle.Event.ON_RESUME) {
+                                                profileViewModel.loadUserProfile()
+                                            }
+                                        }
+                                        entry.lifecycle.addObserver(observer)
+                                        onDispose {
+                                            entry.lifecycle.removeObserver(observer)
                                         }
                                     }
-                                )
-                            }
 
-                            // ── Add Vaccine ───────────────────────────────────────────────────────
-                            composable(Routes.AddVaccine1) {
-                                        AddVaccineInitialForm(
-                                            viewModel = addVaccineViewModel,
-                                            petsViewModel = petsViewModel,
-                                            onBack    = { navController.popBackStack() },
-                                            onclick   = { navController.navigate(Routes.AddVaccine2) }
-                                        )
-                                    }
-                            composable(Routes.AddVaccine2) {
-                                AddVaccineDetailsForm(
-                                    viewModel = addVaccineViewModel,
-                                    onBack    = { navController.popBackStack() },
-                                    onclick   = { navController.navigate(Routes.AddVaccine3) }
-                                )
-                            }
-                            composable(Routes.AddVaccine3) {
-                                AddVaccineFinalForm(
-                                    viewModel = addVaccineViewModel,
-                                    onBack    = { navController.popBackStack() },
-                                    onclick   = {
-                                        val petId = addVaccineViewModel.state.value.petId
-                                        addVaccineViewModel.reset()
-                                        navController.navigate("petProfile/$petId") {
-                                            popUpTo(Routes.AddVaccine1) { inclusive = true }
+                                    ProfileScreen(
+                                        viewModel = profileViewModel,
+                                        petCount = petsUiState.pets.size,
+                                        onNavigateToLogin = {
+                                            authViewModel.logout()
+                                            if (navController.currentDestination?.route != Routes.SignIn) {
+                                                navController.navigate(Routes.SignIn) {
+                                                    popUpTo(navController.graph.id) {
+                                                        inclusive = true
+                                                    }
+                                                    launchSingleTop = true
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
+
+                                // ── Pet Profile ───────────────────────────────────────────
+                                composable(
+                                    route = Routes.PetProfile,
+                                    arguments = listOf(navArgument("petId") { type = NavType.StringType })
+                                ) { entry ->
+                                    val petId = entry.arguments?.getString("petId").orEmpty()
+
+                                    val reloadPet by entry.savedStateHandle
+                                        .getStateFlow("reload_pet", false)
+                                        .collectAsStateWithLifecycle()
+
+                                    val petProfileViewModel: PetProfileViewModel = viewModel(entry)
+
+                                    LaunchedEffect(reloadPet) {
+                                        if (reloadPet) {
+                                            petProfileViewModel.reloadPet()
+                                            entry.savedStateHandle["reload_pet"] = false
                                         }
                                     }
-                                )
-                            }
 
-                            // ── Add Event ─────────────────────────────────────────────────────────
-                            composable(Routes.AddEvent1) {
-                                AddEventInitialForm(
-                                    viewModel = addEventViewModel,
-                                    petsViewModel = petsViewModel,
-                                    onBack    = { navController.popBackStack() },
-                                    onclick   = { navController.navigate(Routes.AddEvent2) }
-                                )
-                            }
-                            composable(Routes.AddEvent2) {
-                                AddEventDetailsForm(
-                                    viewModel = addEventViewModel,
-                                    onBack    = { navController.popBackStack() },
-                                    onclick   = { navController.navigate(Routes.AddEvent3) }
-                                )
-                            }
-                            composable(Routes.AddEvent3) {
-                                AddEventFinalForm(
-                                    viewModel = addEventViewModel,
-                                    onBack    = { navController.popBackStack() },
-                                    onclick   = {
-                                        val petId = addEventViewModel.state.value.petId
-                                        addEventViewModel.reset()
-                                        navController.navigate("petProfile/$petId") {
-                                            popUpTo(Routes.AddEvent1) { inclusive = true }
+                                    PetProfileScreen(
+                                        petId        = petId,
+                                        onBack       = {
+                                            // Señalamos a Pets, Home y Profile que recarguen
+                                            runCatching { navController.getBackStackEntry(Routes.Pets) }
+                                                .onSuccess { it.savedStateHandle["reload_pets"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Home) }
+                                                .onSuccess { it.savedStateHandle["reload_home"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Profile) }
+                                                .onSuccess { it.savedStateHandle["reload_profile"] = true }
+                                            navController.popBackStack()
+                                        },
+                                        onAddEvent   = {
+                                            addEventViewModel.setPetId(petId)
+                                            addEventViewModel.setOwnerId(
+                                                authViewModel.userProfile.value?.id ?: ""
+                                            )
+                                            navController.navigate(Routes.AddEvent1)
+                                        },
+                                        onNFCScan    = { navController.navigate(Routes.NfcScan) },
+                                        onAddVaccine = {
+                                            addVaccineViewModel.setPetId(petId)
+                                            navController.navigate(Routes.AddVaccine1)
+                                        },
+                                        onNavigateToVaccineDetail = { pId, vaccineId ->
+                                            navController.navigate("vaccineDetails/$pId/$vaccineId")
+                                        },
+                                        onNavigateToEventDetail = { pId, eventId ->
+                                            navController.navigate("eventDetails/$pId/$eventId")
+                                        },
+                                        onSeeAllNotifications = { pid, petName ->
+                                            navController.navigate("suggestions/$pid/$petName")
                                         }
-                                    }
-                                )
-                            }
-                            //Notifications route
-                            composable(Routes.Notifications) {
-                                NotificationsScreen(
-                                    onBack = { navController.popBackStack() }
-                                )
+                                    )
+                                }
 
+                                // ── Vaccine Details ───────────────────────────────────────
+                                composable(
+                                    route = Routes.VaccineDetails,
+                                    arguments = listOf(
+                                        navArgument("petId")     { type = NavType.StringType },
+                                        navArgument("vaccineId") { type = NavType.StringType }
+                                    )
+                                ) { entry ->
+                                    VaccineDetailsScreen(
+                                        petId     = entry.arguments?.getString("petId").orEmpty(),
+                                        vaccineId = entry.arguments?.getString("vaccineId").orEmpty(),
+                                        onNavigateBack = {
+                                            val prev = navController.previousBackStackEntry?.savedStateHandle
+                                            prev?.set("reload_pet",      true)
+                                            prev?.set("reload_records",  true)
+                                            prev?.set("reload_home",     true)
+                                            navController.popBackStack()
+                                        }
+                                    )
+                                }
+
+                                // ── Event Details ─────────────────────────────────────────
+                                composable(
+                                    route = Routes.EventDetails,
+                                    arguments = listOf(
+                                        navArgument("petId")    { type = NavType.StringType },
+                                        navArgument("eventId")  { type = NavType.StringType }
+                                    )
+                                ) { entry ->
+                                    EventDetailsScreen(
+                                        petId   = entry.arguments?.getString("petId").orEmpty(),
+                                        eventId = entry.arguments?.getString("eventId").orEmpty(),
+                                        onNavigateBack = {
+                                            val prev = navController.previousBackStackEntry?.savedStateHandle
+                                            prev?.set("reload_pet",      true)
+                                            prev?.set("reload_records",  true)
+                                            prev?.set("reload_home",     true)
+                                            navController.popBackStack()
+                                        }
+                                    )
+                                }
+
+                                // ── NFC ───────────────────────────────────────────────────
+                                composable(Routes.NfcScan) {
+                                    ScanNFCScreen(
+                                        onBack  = { navController.popBackStack() },
+                                        onDone  = { navController.navigate(Routes.NfcScanning) },
+                                        onWrite = {
+                                            navController.navigate(Routes.NfcWrite) {
+                                                popUpTo(Routes.NfcScan) { inclusive = true }
+                                                launchSingleTop = true
+                                            }
+                                        }
+                                    )
+                                }
+                                composable(Routes.NfcScanning) {
+                                    ScanningNFCScreen(
+                                        onBack         = { navController.popBackStack() },
+                                        onWriteSuccess = {
+                                            navController.navigate(Routes.NfcWriteSuccess) {
+                                                popUpTo(Routes.NfcScanning) { inclusive = true }
+                                            }
+                                        },
+                                        onReadSuccess  = {
+                                            navController.navigate(Routes.NfcScanSuccess) {
+                                                popUpTo(Routes.NfcScanning) { inclusive = true }
+                                            }
+                                        }
+                                    )
+                                }
+                                composable(Routes.NfcScanSuccess) {
+                                    ScannedSuccessScreen(
+                                        onBack = { navController.popBackStack() },
+                                        onDone = { navController.popBackStack(Routes.NfcScan, inclusive = true) }
+                                    )
+                                }
+                                composable(Routes.NfcWrite) {
+                                    WriteNFCScreen(
+                                        onBack  = { navController.popBackStack() },
+                                        onDone  = { navController.navigate(Routes.NfcWriting) },
+                                        onRead  = {
+                                            navController.navigate(Routes.NfcScan) {
+                                                popUpTo(Routes.NfcWrite) { inclusive = true }
+                                                launchSingleTop = true
+                                            }
+                                        }
+                                    )
+                                }
+                                composable(Routes.NfcWriting) {
+                                    ScanningNFCScreen(
+                                        onBack         = { navController.popBackStack() },
+                                        onWriteSuccess = {
+                                            navController.navigate(Routes.NfcWriteSuccess) {
+                                                popUpTo(Routes.NfcWriting) { inclusive = true }
+                                            }
+                                        },
+                                        onReadSuccess  = {}
+                                    )
+                                }
+                                composable(Routes.NfcWriteSuccess) {
+                                    val userProfile by authViewModel.userProfile.collectAsStateWithLifecycle()
+                                    TagWrittenScreen(
+                                        onBack    = { navController.popBackStack() },
+                                        onDone    = { navController.popBackStack(Routes.NfcWrite, inclusive = true) },
+                                        onAnother = { navController.popBackStack() },
+                                        ownerName  = userProfile?.name  ?: "",
+                                        ownerPhone = userProfile?.phone ?: ""
+                                    )
+                                }
+
+                                // ── Add Pet ───────────────────────────────────────────────
+                                composable(Routes.AddPet1) {
+                                    AddPetInitialForm(
+                                        viewModel = addPetViewModel,
+                                        onBack    = { navController.popBackStack() },
+                                        onclick   = { navController.navigate(Routes.AddPet2) }
+                                    )
+                                }
+                                composable(Routes.AddPet2) {
+                                    AddPetDetailsForm(
+                                        viewModel = addPetViewModel,
+                                        onBack    = { navController.popBackStack() },
+                                        onclick   = { navController.navigate(Routes.AddPet3) }
+                                    )
+                                }
+                                composable(Routes.AddPet3) {
+                                    AddPetFinalForm(
+                                        viewModel = addPetViewModel,
+                                        onBack    = { navController.popBackStack() },
+                                        onclick   = { _ ->
+                                            addPetViewModel.reset()
+                                            // Señalamos a Pets, Home y Profile que recarguen
+                                            runCatching { navController.getBackStackEntry(Routes.Pets) }
+                                                .onSuccess { it.savedStateHandle["reload_pets"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Home) }
+                                                .onSuccess { it.savedStateHandle["reload_home"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Profile) }
+                                                .onSuccess { it.savedStateHandle["reload_profile"] = true }
+                                            navController.popBackStack(Routes.AddPet1, inclusive = true)
+                                        }
+                                    )
+                                }
+
+                                // ── Add Vaccine ───────────────────────────────────────────
+                                composable(Routes.AddVaccine1) {
+                                    AddVaccineInitialForm(
+                                        viewModel     = addVaccineViewModel,
+                                        petsViewModel = petsViewModel,
+                                        onBack        = { navController.popBackStack() },
+                                        onclick       = { navController.navigate(Routes.AddVaccine2) }
+                                    )
+                                }
+                                composable(Routes.AddVaccine2) {
+                                    AddVaccineDetailsForm(
+                                        viewModel = addVaccineViewModel,
+                                        onBack    = { navController.popBackStack() },
+                                        onclick   = { navController.navigate(Routes.AddVaccine3) }
+                                    )
+                                }
+                                composable(Routes.AddVaccine3) {
+                                    AddVaccineFinalForm(
+                                        viewModel = addVaccineViewModel,
+                                        onBack    = { navController.popBackStack() },
+                                        onclick   = {
+                                            addVaccineViewModel.reset()
+                                            // Señalamos a Records, Home y PetProfile que recarguen
+                                            runCatching { navController.getBackStackEntry(Routes.Records) }
+                                                .onSuccess { it.savedStateHandle["reload_records"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Home) }
+                                                .onSuccess { it.savedStateHandle["reload_home"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.PetProfile) }
+                                                .onSuccess { it.savedStateHandle["reload_pet"] = true }
+                                            navController.popBackStack(Routes.AddVaccine1, inclusive = true)
+                                        }
+                                    )
+                                }
+
+                                // ── Add Event ─────────────────────────────────────────────
+                                composable(Routes.AddEvent1) {
+                                    AddEventInitialForm(
+                                        viewModel     = addEventViewModel,
+                                        petsViewModel = petsViewModel,
+                                        onBack        = { navController.popBackStack() },
+                                        onclick       = { navController.navigate(Routes.AddEvent2) }
+                                    )
+                                }
+                                composable(Routes.AddEvent2) {
+                                    AddEventDetailsForm(
+                                        viewModel = addEventViewModel,
+                                        onBack    = { navController.popBackStack() },
+                                        onclick   = { navController.navigate(Routes.AddEvent3) }
+                                    )
+                                }
+                                composable(Routes.AddEvent3) {
+                                    AddEventFinalForm(
+                                        viewModel = addEventViewModel,
+                                        onBack    = { navController.popBackStack() },
+                                        onclick   = {
+                                            addEventViewModel.reset()
+                                            // Señalamos a Records, Home y PetProfile que recarguen
+                                            runCatching { navController.getBackStackEntry(Routes.Records) }
+                                                .onSuccess { it.savedStateHandle["reload_records"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Home) }
+                                                .onSuccess { it.savedStateHandle["reload_home"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.PetProfile) }
+                                                .onSuccess { it.savedStateHandle["reload_pet"] = true }
+                                            navController.popBackStack(Routes.AddEvent1, inclusive = true)
+                                        }
+                                    )
+                                }
+
+                                // ── Suggestions ───────────────────────────────────────────
+                                composable(Routes.Suggestions) {
+                                    SuggestionScreen(
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable(
+                                    route = Routes.SuggestionPerPet,
+                                    arguments = listOf(
+                                        navArgument("petId")   { type = NavType.StringType },
+                                        navArgument("petName") { type = NavType.StringType }
+                                    )
+                                ) { backStackEntry ->
+                                    SuggestionScreen(
+                                        filterPetId   = backStackEntry.arguments?.getString("petId"),
+                                        filterPetName = backStackEntry.arguments?.getString("petName"),
+                                        onBack        = { navController.popBackStack() }
+                                    )
+                                }
                             }
-                            composable(
-                                route = Routes.NotficationPerPet,
-                                arguments = listOf(
-                                    navArgument("petId")   { type = NavType.StringType },
-                                    navArgument("petName") { type = NavType.StringType }
-                                )
-                            ) { backStackEntry ->
-                                NotificationsScreen(
-                                    filterPetId   = backStackEntry.arguments?.getString("petId"),
-                                    filterPetName = backStackEntry.arguments?.getString("petName"),
-                                    onBack        = { navController.popBackStack() }
-                                )
-                            }
-                        }
-                        
-                        if (currentRoute in bottomBarRoutes) {
-                            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                                ExpandableFAB(
-                                    onAddPet     = { navController.navigate(Routes.AddPet1) },
-                                    onAddVaccine = {
-                                        addVaccineViewModel.reset()
-                                        navController.navigate(Routes.AddVaccine1)
-                                    },
-                                    onAddEvent   = {
-                                        addEventViewModel.reset()
-                                        addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
-                                        navController.navigate(Routes.AddEvent1)
-                                    },
-                                    onScanNFC    = { navController.navigate(Routes.NfcScan) }
-                                )
+
+                            // ── FAB flotante ──────────────────────────────────────────────
+                            if (currentRoute in bottomBarRoutes) {
+                                Box(modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(innerPadding)
+                                ) {
+                                    ExpandableFAB(
+                                        onAddPet     = { navController.navigate(Routes.AddPet1) },
+                                        onAddVaccine = {
+                                            addVaccineViewModel.reset()
+                                            navController.navigate(Routes.AddVaccine1)
+                                        },
+                                        onAddEvent   = {
+                                            addEventViewModel.reset()
+                                            addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
+                                            navController.navigate(Routes.AddEvent1)
+                                        },
+                                        onScanNFC    = { navController.navigate(Routes.NfcScan) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -549,7 +794,16 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}
+
+    private fun extractNotificationTarget(intent: Intent?): PendingNotificationTarget? {
+        if (intent?.action != NotificationDispatcher.ACTION_OPEN_NOTIFICATION) return null
+        val route = intent.getStringExtra(NotificationDispatcher.EXTRA_TARGET_ROUTE) ?: return null
+        val backendNotificationId = intent.getStringExtra(NotificationDispatcher.EXTRA_NOTIFICATION_ID)
+        return PendingNotificationTarget(
+            route = route,
+            backendNotificationId = backendNotificationId
+        )
+    }
 
     // ── NFC lifecycle ─────────────────────────────────────────────────────────
 
@@ -566,6 +820,10 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        extractNotificationTarget(intent)?.let {
+            pendingNotificationTarget.value = it
+            intent.action = null
+        }
         val action = intent.action ?: return
         if (action != NfcAdapter.ACTION_NDEF_DISCOVERED &&
             action != NfcAdapter.ACTION_TAG_DISCOVERED) return

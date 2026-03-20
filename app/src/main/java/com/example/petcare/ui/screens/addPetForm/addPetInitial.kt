@@ -23,7 +23,9 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.petcare.ui.components.*
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.util.InputTextLimits
 import java.io.File
 
 @Composable
@@ -65,132 +67,136 @@ fun AddPetInitialForm(
         }
     }
 
-    PetCareTheme {
+    Column(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.background)
+            .fillMaxSize()
+            .padding(24.dp)
+    ) {
         Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.background)
-                .fillMaxSize()
-                .padding(24.dp)
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(30.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(30.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                TransparentTopBar(title = "Add New Pet", onBackClick = onBack)
+            TransparentTopBar(title = "Add New Pet", onBackClick = {
+                FeatureClicksTracker.cancelRoute()
+                onBack()
+            })
 
-                Stepper(currentStep = 1, stepLabels = listOf("Basic Info", "Details", "Medical"))
+            Stepper(currentStep = 1, stepLabels = listOf("Basic Info", "Details", "Medical"))
 
-                if (state.photoUri != null) {
-                    Box {
-                        AsyncImage(
-                            model = state.photoUri,
-                            contentDescription = "Pet photo",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(180.dp)
-                                .clip(MaterialTheme.shapes.medium),
-                            contentScale = ContentScale.Crop
+            if (state.photoUri != null) {
+                Box {
+                    AsyncImage(
+                        model = state.photoUri,
+                        contentDescription = "Pet photo",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .clip(MaterialTheme.shapes.medium),
+                        contentScale = ContentScale.Crop
+                    )
+                    IconButton(
+                        onClick = { viewModel.clearPhoto() },
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Remove photo",
+                            tint = Color.White
                         )
-                        IconButton(
-                            onClick = { viewModel.clearPhoto() },
-                            modifier = Modifier.align(Alignment.TopEnd)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Remove photo",
-                                tint = Color.White
-                            )
-                        }
                     }
-                } else {
-                    IconCardButton(
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.CameraAlt,
-                                contentDescription = "Photo",
-                                tint = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(40.dp)
+                }
+            } else {
+                IconCardButton(
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = "Photo",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    },
+                    text = "Add Photo",
+                    textBottom = "Tap to upload or take a photo",
+                    onClick = { showPhotoOptions = true }
+                )
+            }
+
+            if (showPhotoOptions) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            showPhotoOptions = false
+                            permissionLauncher.launch(Manifest.permission.CAMERA)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Camera")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            galleryLauncher.launch(
+                                PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
                             )
                         },
-                        text = "Add Photo",
-                        textBottom = "Tap to upload or take a photo",
-                        onClick = { showPhotoOptions = true }
-                    )
-                }
-
-                if (showPhotoOptions) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.weight(1f)
                     ) {
-                        OutlinedButton(
-                            onClick = {
-                                showPhotoOptions = false
-                                permissionLauncher.launch(Manifest.permission.CAMERA)
-                                      },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Camera")
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                galleryLauncher.launch(
-                                    PickVisualMediaRequest(
-                                        ActivityResultContracts.PickVisualMedia.ImageOnly
-                                    )
-                                )
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Gallery")
-                        }
+                        Text("Gallery")
                     }
                 }
-
-                TextFieldComponent(
-                    name = "Pet Name *",
-                    label = "e.g. Buddy",
-                    value = state.name,
-                    onValueChange = viewModel::setName
-                )
-
-                TextFieldComponent(
-                    name = "Breed",
-                    label = "e.g. Golden Retriever",
-                    value = state.breed,
-                    onValueChange = viewModel::setBreed
-                )
-
-                SpeciesSelector(onOptionSelected = viewModel::setSpecies)
             }
 
-            state.error?.let {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
+            TextFieldComponent(
+                name = "Pet Name *",
+                label = "e.g. Buddy",
+                value = state.name,
+                onValueChange = viewModel::setName,
+                maxLength = InputTextLimits.PET_NAME
+            )
 
-            ButtonDefault(
-                bgColor = com.example.petcare.ui.theme.GreenDark,
-                textColor = Color.White,
-                width = 342.dp,
-                height = 56.dp,
-                text = "Continue",
-                onclick = {
-                    if (state.name.isNotBlank() && state.species.isNotBlank()) {
-                        onclick()
-                    } else {
-                        if (state.name.isBlank()) viewModel.setName("")
-                        if (state.species.isBlank()) viewModel.setSpecies("")
-                        viewModel.clearError()
-                    }
-                }
+            TextFieldComponent(
+                name = "Breed",
+                label = "e.g. Golden Retriever",
+                value = state.breed,
+                onValueChange = viewModel::setBreed,
+                maxLength = InputTextLimits.BREED
+            )
+
+            SpeciesSelector(onOptionSelected = viewModel::setSpecies)
+        }
+
+        state.error?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
         }
+
+        ButtonDefault(
+            bgColor = MaterialTheme.colorScheme.secondary,
+            textColor = MaterialTheme.colorScheme.surface,
+            width = 342.dp,
+            height = 56.dp,
+            text = "Continue",
+            onclick = {
+                if (state.name.isNotBlank() && state.species.isNotBlank()) {
+                    FeatureClicksTracker.recordClick()
+                    onclick()
+                } else {
+                    if (state.name.isBlank()) viewModel.setName("")
+                    if (state.species.isBlank()) viewModel.setSpecies("")
+                    viewModel.clearError()
+                }
+            }
+        )
     }
 }
 

@@ -6,7 +6,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.petcare.data.model.VaccineUrgencyLevel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -20,6 +22,8 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
         val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
         val OFFLINE_MODE_ENABLED_KEY = booleanPreferencesKey("offline_mode_enabled")
+        val VACCINE_URGENCY_LEVEL_KEY = stringPreferencesKey("vaccine_urgency_level")
+        val SENT_NOTIFICATION_KEYS = stringSetPreferencesKey("sent_notification_keys")
     }
 
     // Theme Mode
@@ -46,6 +50,28 @@ class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[NOTIFICATIONS_ENABLED_KEY] = enabled
+        }
+    }
+
+    val vaccineUrgencyLevel: Flow<VaccineUrgencyLevel> = dataStore.data.map { preferences ->
+        val raw = preferences[VACCINE_URGENCY_LEVEL_KEY] ?: VaccineUrgencyLevel.DANGER_ONLY.name
+        runCatching { VaccineUrgencyLevel.valueOf(raw) }.getOrDefault(VaccineUrgencyLevel.DANGER_ONLY)
+    }
+
+    suspend fun setVaccineUrgencyLevel(level: VaccineUrgencyLevel) {
+        dataStore.edit { preferences ->
+            preferences[VACCINE_URGENCY_LEVEL_KEY] = level.name
+        }
+    }
+
+    val sentNotificationKeys: Flow<Set<String>> = dataStore.data.map { preferences ->
+        preferences[SENT_NOTIFICATION_KEYS] ?: emptySet()
+    }
+
+    suspend fun addSentNotificationKey(key: String) {
+        dataStore.edit { preferences ->
+            val current = preferences[SENT_NOTIFICATION_KEYS] ?: emptySet()
+            preferences[SENT_NOTIFICATION_KEYS] = current + key
         }
     }
 

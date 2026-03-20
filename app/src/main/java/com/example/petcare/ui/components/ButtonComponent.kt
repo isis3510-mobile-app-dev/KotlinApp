@@ -135,7 +135,7 @@ fun ButtonSwitch(
                     Text(
                         text = text,
                         color = if (isSelected)
-                            MaterialTheme.colorScheme.primary
+                            MaterialTheme.colorScheme.secondary
                         else
                             MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Medium

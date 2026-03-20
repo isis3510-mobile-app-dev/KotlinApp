@@ -2,12 +2,15 @@ package com.example.petcare.ui.screens.petprofile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.model.SuggestionDto
+import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
+import com.example.petcare.util.EventDateUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,8 +24,8 @@ data class PetProfileUiState(
     val weight: String = "",
     val gender: String = "",
     val isHealthy: Boolean = true,
+    val isLost: Boolean = false,
     val color: String = "",
-    val microchip: String = "",
     val dateOfBirth: String = "",
     val overdueVaccinesCount: Int = 0,
     val upcomingEventsCount: Int = 0,
@@ -33,7 +36,11 @@ data class PetProfileUiState(
     val suggestions: List<SuggestionDto> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val photoUrl: String? = null
+    val photoUrl: String? = null,
+    // ── Extra fields for EditPetBottomSheet ──────────────────────────────────
+    val knownAllergies: String = "",
+    val defaultVet: String = "",
+    val defaultClinic: String = ""
 )
 
 class PetProfileViewModel : ViewModel() {
@@ -44,51 +51,80 @@ class PetProfileViewModel : ViewModel() {
     private val _selectedTabIndex = MutableStateFlow(0)
     val selectedTabIndex: StateFlow<Int> = _selectedTabIndex.asStateFlow()
 
+    private var currentPetId: String = ""
+    private var isUpdatingLostStatus = false
+
+    // ── Load ──────────────────────────────────────────────────────────────────
+
     fun loadPet(petId: String) {
+        currentPetId = petId
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-
-            RepositoryProvider.petRepository.getPet(petId).fold(
+            FeatureExecutionTracker.track("Load Pet Profile") {
+                RepositoryProvider.petRepository.getPet(petId)
+            }.fold(
                 onSuccess = { pet -> applyPetToState(pet, petId) },
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = e.message ?: "Failed to load pet"
+                        error     = e.message ?: "Failed to load pet"
                     )
                 }
             )
         }
     }
 
-    private suspend fun applyPetToState(pet: Pet, petId: String) {
-        // Map backend vaccinations → VaccineRecord UI model
-        val vaccines = pet.vaccinations.map { v ->
-            val status = when (v.status.lowercase()) {
-                "overdue"   -> VaccineFilterStatus.OVERDUE
-                "upcoming"  -> VaccineFilterStatus.UPCOMING
-                else        -> VaccineFilterStatus.COMPLETED
-            }
-            VaccineRecord(
-                id          = v.id,
-                name        = v.vaccineId.take(8),  // until catalog lookup is added
-                provider    = v.administeredBy,
-                dateGiven   = v.dateGiven.take(10),
-                nextDueDate = v.nextDueDate?.take(10),
-                lotNumber   = v.lotNumber.ifBlank { null },
-                status      = status
+    /** Silent refresh — used after editing or deleting a vaccination/event */
+    fun reloadPet() {
+        if (currentPetId.isBlank()) return
+        viewModelScope.launch {
+            RepositoryProvider.petRepository.getPet(currentPetId).fold(
+                onSuccess = { pet -> applyPetToState(pet, currentPetId) },
+                onFailure = { /* ignore silent errors */ }
             )
         }
+    }
 
-        // Load events from backend
-        val events = mutableListOf<Event>()
-        RepositoryProvider.eventRepository.getEvents(petId = petId).fold(
-            onSuccess = { list ->
-                list.forEach { ev ->
-                    events.add(ev.toMedicalEvent())
+    private suspend fun applyPetToState(pet: Pet, petId: String) {
+        val catalogMap = RepositoryProvider.petRepository
+            .getVaccineCatalog()
+            .getOrElse { emptyList() }
+            .associateBy { it.id }
+
+        val vaccines = pet.vaccinations
+            .map { v ->
+                val status = when (v.status.lowercase()) {
+                    "overdue"  -> VaccineFilterStatus.OVERDUE
+                    "upcoming" -> VaccineFilterStatus.UPCOMING
+                    else       -> VaccineFilterStatus.COMPLETED
                 }
-            },
-            onFailure = { /* non-fatal — show empty list */ }
+                VaccineRecord(
+                    id          = v.id,
+                    name        = catalogMap[v.vaccineId]?.name ?: v.vaccineId.take(8),
+                    provider    = v.administeredBy,
+                    dateGiven   = v.dateGiven.take(10),
+                    nextDueDate = v.nextDueDate?.take(10),
+                    lotNumber   = v.lotNumber.ifBlank { null },
+                    status      = status,
+                    attachedDocuments = v.attachedDocuments.map { doc ->
+                        com.example.petcare.data.model.AttachedDocument(
+                            id       = doc.id,
+                            fileName = doc.fileName,
+                            fileUri  = doc.fileUri
+                        )
+                    }
+                )
+            }
+            .sortedByDescending { it.dateGiven }
+
+        val fetchedEvents = mutableListOf<Event>()
+        RepositoryProvider.eventRepository.getEvents(petId = petId).fold(
+            onSuccess = { list -> fetchedEvents.addAll(list) },
+            onFailure = { /* non-fatal */ }
         )
+        val events = fetchedEvents.map { it.toMedicalEvent() }
+        val upcomingCount = fetchedEvents.count { EventDateUtils.isTodayOrFuture(it.date) }
+
         val suggestions = mutableListOf<SuggestionDto>()
         RepositoryProvider.petRepository.getPetSmart(petId).fold(
             onSuccess = { suggestions.addAll(it) },
@@ -103,25 +139,28 @@ class PetProfileViewModel : ViewModel() {
             weight               = if (pet.weight != null) "${pet.weight} kg" else "",
             gender               = pet.gender.replaceFirstChar { it.uppercase() },
             isHealthy            = pet.status.lowercase() == "healthy",
+            isLost               = pet.status.lowercase() == "lost",
             color                = pet.color,
-            microchip            = "",
             dateOfBirth          = pet.birthDate?.take(10) ?: "",
             isNfcSynched         = pet.isNfcSynced,
             overdueVaccinesCount = vaccines.count { it.status == VaccineFilterStatus.OVERDUE },
-            upcomingEventsCount  = events.size,
+            upcomingEventsCount  = upcomingCount,
             vaccines             = vaccines,
             events               = events,
-            suggestions = suggestions,
+            suggestions          = suggestions,
             isLoading            = false,
             error                = null,
-            photoUrl             = pet.photoUrl
+            photoUrl             = pet.photoUrl,
+            // ── Extra fields for the edit sheet ───────────────────────────────
+            knownAllergies       = pet.knownAllergies,
+            defaultVet           = pet.defaultVet,
+            defaultClinic        = pet.defaultClinic
         )
     }
 
-    // ── Tab & filter logic (same as before) ──────────────────────────────────
+    // ── Tabs ──────────────────────────────────────────────────────────────────
 
-    fun onTabSelected(index: Int) { _selectedTabIndex.value = index }
-
+    fun onTabSelected(index: Int)           { _selectedTabIndex.value = index }
     fun onVaccineFilterClick(status: VaccineFilterStatus) {
         val current = _uiState.value.vaccineFilter
         _uiState.value = _uiState.value.copy(
@@ -130,17 +169,57 @@ class PetProfileViewModel : ViewModel() {
     }
 
     fun onVaccineClicked(vaccine: VaccineRecord) {}
-    fun onAddEventClicked()  {}
+    fun onAddEventClicked()   {}
     fun onAddVaccineClicked() {}
-    fun onLostModeClicked()  {}
-    fun onNfcActiveClicked() {}
+    fun onLostModeClicked() {
+        if (currentPetId.isBlank() || isUpdatingLostStatus) return
+
+        val nextStatus = if (_uiState.value.isLost) "healthy" else "lost"
+        isUpdatingLostStatus = true
+
+        viewModelScope.launch {
+            try {
+                FeatureExecutionTracker.track("Toggle Lost Mode") {
+                    RepositoryProvider.petRepository.updatePet(
+                        petId = currentPetId,
+                        request = UpdatePetRequest(status = nextStatus)
+                    )
+                }.fold(
+                    onSuccess = { updatedPet ->
+                        applyPetToState(updatedPet, currentPetId)
+                    },
+                    onFailure = { e ->
+                        _uiState.value = _uiState.value.copy(
+                            error = e.message ?: "Failed to update lost status"
+                        )
+                    }
+                )
+            } finally {
+                isUpdatingLostStatus = false
+            }
+        }
+    }
+    fun onNfcActiveClicked()  {}
+
+    // ── Delete pet ────────────────────────────────────────────────────────────
+
+    fun deletePet(petId: String, onNavigatedBack: () -> Unit) {
+        viewModelScope.launch {
+            FeatureExecutionTracker.track("Delete Pet") {
+                RepositoryProvider.petRepository.deletePet(petId)
+            }.fold(
+                onSuccess = { onNavigatedBack() },
+                onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message) }
+            )
+        }
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private fun computeAge(birthDateIso: String?): String {
         if (birthDateIso.isNullOrBlank()) return ""
         return try {
-            val parts = birthDateIso.take(10).split("-")
+            val parts      = birthDateIso.take(10).split("-")
             if (parts.size != 3) return ""
             val birthYear  = parts[0].toInt()
             val birthMonth = parts[1].toInt()
@@ -152,30 +231,18 @@ class PetProfileViewModel : ViewModel() {
             "$years yrs"
         } catch (_: Exception) { "" }
     }
-
-    fun deletePet(petId: String, onNavigatedBack: () -> Unit) {
-        viewModelScope.launch {
-            RepositoryProvider.petRepository.deletePet(petId).fold(
-                onSuccess = { onNavigatedBack() },
-                onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message) }
-            )
-        }
-    }
 }
 
-/** Maps the network Event model to the local MedicalEvent UI model. */
-private fun Event.toMedicalEvent(): Event {
-    return Event(
-        id          = id,
-        petId       = petId,
-        ownerId = ownerId,
-        title       = title,
-        eventType   = eventType,
-        price       = price,
-        provider    = provider,
-        clinic      = clinic,
-        date        = date.take(10),
-        description = description,
-        followUpDate = followUpDate?.take(10)
-    )
-}
+private fun Event.toMedicalEvent(): Event = Event(
+    id           = id,
+    petId        = petId,
+    ownerId      = ownerId,
+    title        = title,
+    eventType    = eventType,
+    price        = price,
+    provider     = provider,
+    clinic       = clinic,
+    date         = date,
+    description  = description,
+    followUpDate = followUpDate
+)

@@ -40,7 +40,7 @@ fun Stepper(currentStep: Int, totalSteps: Int = 3,
                     modifier = Modifier
                         .size(28.dp)
                         .background(
-                            color = if (step <= currentStep) GreenDark else GrayBorder,
+                            color = if (step <= currentStep) MaterialTheme.colorScheme.secondary else GrayBorder,
                             shape = CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -49,12 +49,12 @@ fun Stepper(currentStep: Int, totalSteps: Int = 3,
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Completed",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.surface
                         )
                     } else {
                         Text(
                             text = "$step",
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -63,17 +63,18 @@ fun Stepper(currentStep: Int, totalSteps: Int = 3,
                 Text(
                     text = stepLabels.getOrNull(step - 1) ?: "",
                     fontSize = 10.sp,
-                    color = if (step <= currentStep) GreenDark else GrayBorder
+                    color = if (step <= currentStep) MaterialTheme.colorScheme.secondary else GrayBorder
                 )
             }
 
 
             if (step != totalSteps) {
+                val lineColor = if (step < currentStep) MaterialTheme.colorScheme.secondary else GrayBorder
                 Canvas(modifier = Modifier
                     .weight(1f)
                     .height(3.dp)
                     .padding(horizontal = 6.dp, vertical = 12.dp)) {
-                    val lineColor = if (step < currentStep) GreenDark else GrayBorder
+                    val lineColor = if (step < currentStep) lineColor else GrayBorder
                     val stroke = with(density) { 2.dp.toPx() }
                     drawLine(
                         color = lineColor,

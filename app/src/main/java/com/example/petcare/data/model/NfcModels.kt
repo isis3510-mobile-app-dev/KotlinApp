@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/petcare/data/model/NfcModels.kt
 package com.example.petcare.data.model
 
 import com.google.gson.annotations.SerializedName
@@ -21,7 +20,10 @@ data class NfcPublicReadResponse(
     @SerializedName("photoUrl") val photoUrl: String = "",
     @SerializedName("ownerName") val ownerName: String,
     @SerializedName("ownerPhone") val ownerPhone: String,
-    @SerializedName("ownerInitials") val ownerInitials: String = ""
+    @SerializedName("ownerInitials") val ownerInitials: String = "",
+    @SerializedName("knownAllergies") val knownAllergies: String = "",
+    @SerializedName("defaultVet") val defaultVet: String = "",
+    @SerializedName("defaultClinic") val defaultClinic: String = ""
 )
 
 data class NfcSyncResponse(

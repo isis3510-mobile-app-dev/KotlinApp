@@ -27,9 +27,13 @@ import androidx.compose.ui.graphics.Color
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.GreenLight
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.petcare.ui.theme.Black
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun EventCard(eventName: String,pet:String, date: String){
@@ -57,21 +61,27 @@ fun EventCard(eventName: String,pet:String, date: String){
             Column(modifier = Modifier.weight(1f)) {
 
                 Text(
-                    text = eventName,
+                    text = eventName.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Row {
                     Text (
-                        text = "$pet - ",
+                        text = "${pet.truncateForDisplay(DisplayTextLimits.SUBTITLE_META)} - ",
                         fontSize = 14.sp,
-                        color = Color.Gray
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
 
                     Text (
-                        text = date,
+                        text = date.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                         fontSize = 14.sp,
-                        color = Color.Gray
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )}
             }
             Box(
@@ -82,7 +92,7 @@ fun EventCard(eventName: String,pet:String, date: String){
                     Icon(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = "Event",
-                        tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                        tint = Black,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))

@@ -23,6 +23,9 @@ import com.example.petcare.ui.theme.InfoContainer
 import com.example.petcare.ui.theme.InfoContent
 import com.example.petcare.ui.theme.SuccessContainer
 import com.example.petcare.ui.theme.SuccessContent
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 
 private enum class ActiveSheet { NONE, NAME, PHONE, EMAIL }
@@ -47,12 +50,12 @@ fun AccountSection(
                 iconBackgroundColor = GreenLight.copy(alpha = 0.2f),
                 iconTintColor = MaterialTheme.colorScheme.secondary,
                 title = "Edit Profile",
-                subtitle = userName,
+                subtitle = userName.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                 trailingContent = {
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Edit Profile",
-                        tint = GrayText
+                        tint = MaterialTheme.colorScheme.onTertiary
                     )
                 },
                 onClick = { activeSheet = ActiveSheet.NAME }
@@ -64,12 +67,12 @@ fun AccountSection(
                 iconBackgroundColor = InfoContainer,
                 iconTintColor = InfoContent,
                 title = "Email",
-                subtitle = userEmail,
+                subtitle = userEmail.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                 trailingContent = {
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Edit Email",
-                        tint = GrayText
+                        tint = MaterialTheme.colorScheme.onTertiary
                     )
                 },
                 onClick = {activeSheet = ActiveSheet.EMAIL}
@@ -81,12 +84,13 @@ fun AccountSection(
                 iconBackgroundColor = SuccessContainer,
                 iconTintColor = SuccessContent,
                 title = "Phone",
-                subtitle = userPhone.ifEmpty { "Add phone number" },
+                subtitle = userPhone.ifEmpty { "Add phone number" }
+                    .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                 trailingContent = {
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Edit Phone",
-                        tint = GrayText
+                        tint = MaterialTheme.colorScheme.onTertiary
                     )
                 },
                 onClick = { activeSheet = ActiveSheet.PHONE }
@@ -99,6 +103,7 @@ fun AccountSection(
             title = "Edit name",
             currentValue = userName,
             placeholder = "Full name",
+            maxLength = InputTextLimits.USER_NAME,
             onDismiss = { activeSheet = ActiveSheet.NONE },
             onSave = {
                 onSaveName(it)
@@ -110,6 +115,7 @@ fun AccountSection(
             currentValue = userPhone,
             placeholder = "+57 300 123 4567",
             keyboardType = KeyboardType.Phone,
+            maxLength = InputTextLimits.PHONE,
             onDismiss = { activeSheet = ActiveSheet.NONE },
             onSave = {
                 onSavePhone(it)

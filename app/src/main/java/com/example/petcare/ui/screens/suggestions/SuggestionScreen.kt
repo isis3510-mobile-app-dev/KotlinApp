@@ -1,4 +1,4 @@
-package com.example.petcare.ui.screens.notifications
+package com.example.petcare.ui.screens.suggestions
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -19,11 +20,11 @@ import com.example.petcare.ui.components.GroupedSuggestionCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen(
+fun SuggestionScreen(
     filterPetId: String? = null,
     filterPetName: String? = null,
     onBack: () -> Unit = {},
-    viewModel: NotificationsViewModel = viewModel()
+    viewModel: SuggestionViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -104,14 +105,22 @@ private fun PetFilterRow(
             FilterChip(
                 selected = selectedId == null,
                 onClick  = { onSelect(null) },
-                label    = { Text("All", fontSize = 13.sp) }
+                label    = { Text("All", fontSize = 13.sp) },
+                colors = FilterChipDefaults.filterChipColors(
+                        selectedLabelColor = Color.White,
+                        labelColor = MaterialTheme.colorScheme.tertiary
+            )
             )
         }
         items(chips) { chip ->
             FilterChip(
                 selected = selectedId == chip.petId,
                 onClick  = { onSelect(chip.petId) },
-                label    = { Text("${chip.petName} (${chip.alertCount})", fontSize = 13.sp) }
+                label    = { Text("${chip.petName} (${chip.alertCount})", fontSize = 13.sp) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedLabelColor = Color.White,
+                    labelColor = MaterialTheme.colorScheme.tertiary
+                )
             )
         }
     }

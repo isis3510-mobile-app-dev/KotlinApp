@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.components.MedicalEventData
 import com.example.petcare.ui.components.VaccineListItemData
+import com.example.petcare.util.EventDateUtils
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,11 +14,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.example.petcare.R
 
-// Extended data classes that carry the real IDs needed for navigation
 data class VaccineListItemWithIds(
     val data: VaccineListItemData,
     val petId: String,
-    val vaccinationId: String   // vaccination _id (embedded doc)
+    val vaccinationId: String
 )
 
 data class EventListItemWithIds(
@@ -47,7 +47,6 @@ class HealthRecordsViewModel : ViewModel() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
 
-            // 1. Load user's pets
             val petsResult = RepositoryProvider.petRepository.getPets()
             if (petsResult.isFailure) {
                 _state.value = _state.value.copy(
@@ -58,26 +57,29 @@ class HealthRecordsViewModel : ViewModel() {
             }
             val pets = petsResult.getOrDefault(emptyList())
 
-            // 2. Build vaccine list — include real petId and vaccination _id
+            val catalogMap = RepositoryProvider.petRepository
+                .getVaccineCatalog()
+                .getOrElse { emptyList() }
+                .associateBy { it.id }
+
             val vaccines = pets.flatMap { pet ->
                 pet.vaccinations.map { vacc ->
-                    val daysText = computeDaysText(vacc.nextDueDate, vacc.dateGiven)
                     VaccineListItemWithIds(
                         data = VaccineListItemData(
-                            vaccineName = vacc.vaccineId.take(8),
+                            vaccineName = catalogMap[vacc.vaccineId]?.name ?: vacc.vaccineId.take(8),
                             petName     = pet.name,
                             clinicName  = vacc.administeredBy.ifBlank { "—" },
                             status      = vacc.status,
-                            daysText    = daysText,
+                            daysText    = computeDaysText(vacc.nextDueDate, vacc.dateGiven),
                             photoPath   = R.drawable.pet
                         ),
                         petId         = pet.id,
-                        vaccinationId = vacc.id   // vaccination _id for navigation
+                        // ← vacc.id es el _id del subdocumento (no el vaccineId del catálogo)
+                        vaccinationId = vacc.id
                     )
                 }
             }
 
-            // 3. Load events for all user's pets in parallel — include real petId and eventId
             val eventResults = pets.map { pet ->
                 async {
                     RepositoryProvider.eventRepository
@@ -91,7 +93,8 @@ class HealthRecordsViewModel : ViewModel() {
                                         .replaceFirstChar { it.uppercase() },
                                     petName    = pet.name,
                                     clinicName = event.clinic.ifBlank { event.provider }.ifBlank { "—" },
-                                    date       = event.date.take(10),
+                                    date       = parseDate(event.date),
+                                    time       = parseTime(event.date),
                                     cost       = event.price?.let { "$${"%.0f".format(it)}" } ?: ""
                                 ),
                                 petId   = pet.id,
@@ -124,5 +127,13 @@ class HealthRecordsViewModel : ViewModel() {
         } catch (e: Exception) {
             nextDueDate.take(10)
         }
+    }
+
+    private fun parseDate(iso: String): String {
+        return EventDateUtils.splitToAppDateTime(iso).first.ifBlank { iso.take(10) }
+    }
+
+    private fun parseTime(iso: String): String {
+        return EventDateUtils.splitToAppDateTime(iso).second
     }
 }

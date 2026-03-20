@@ -2,8 +2,10 @@ package com.example.petcare.ui.screens.pets
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.CreatePetRequest
 import com.example.petcare.data.model.Pet
+import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.repository.PetRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,19 +34,24 @@ class PetsViewModel(
         loadPets()
     }
 
+    /** Llamado desde MainActivity cuando regresa de AddPet o PetProfile */
+    fun refresh() = loadPets()
+
     fun loadPets() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            petRepository.getPets().fold(
+            FeatureExecutionTracker.track("Load My Pets") {
+                petRepository.getPets()
+            }.fold(
                 onSuccess = { pets ->
                     allPets = pets
                     applyFilters()
                 },
                 onFailure = { e ->
-                    _uiState.update { 
+                    _uiState.update {
                         it.copy(
                             isLoading = false,
-                            error = e.message ?: "Error loading pets"
+                            error     = e.message ?: "Error loading pets"
                         )
                     }
                 }
@@ -63,17 +70,16 @@ class PetsViewModel(
     }
 
     private fun applyFilters() {
-        val query = _uiState.value.searchQuery
+        val query  = _uiState.value.searchQuery
         val filter = _uiState.value.selectedFilter
         val filtered = allPets.filter { pet ->
             val matchesSearch = pet.name.contains(query, ignoreCase = true) ||
                     pet.breed.contains(query, ignoreCase = true)
-
             val matchesFilter = when (filter) {
-                "Healthy" -> pet.status.equals("healthy", ignoreCase = true)
+                "Healthy"     -> pet.status.equals("healthy", ignoreCase = true)
                 "Vaccine Due" -> pet.status.equals("vaccine due", ignoreCase = true)
-                "Lost" -> pet.status.equals("lost", ignoreCase = true)
-                else -> true
+                "Lost"        -> pet.status.equals("lost", ignoreCase = true)
+                else          -> true
             }
             matchesSearch && matchesFilter
         }
@@ -88,8 +94,32 @@ class PetsViewModel(
                     onSuccess()
                 },
                 onFailure = { e ->
+                    _uiState.update { it.copy(error = e.message ?: "Error creating pet") }
+                }
+            )
+        }
+    }
+
+    fun toggleLostMode(petId: String) {
+        val currentPet = allPets.firstOrNull { it.id == petId } ?: return
+        val nextStatus = if (currentPet.status.equals("lost", ignoreCase = true)) "healthy" else "lost"
+
+        viewModelScope.launch {
+            FeatureExecutionTracker.track("Toggle Lost Mode") {
+                petRepository.updatePet(
+                    petId = petId,
+                    request = UpdatePetRequest(status = nextStatus)
+                )
+            }.fold(
+                onSuccess = { updatedPet ->
+                    allPets = allPets.map { pet ->
+                        if (pet.id == petId) updatedPet else pet
+                    }
+                    applyFilters()
+                },
+                onFailure = { e ->
                     _uiState.update {
-                        it.copy(error = e.message ?: "Error creating pet")
+                        it.copy(error = e.message ?: "Error updating lost mode")
                     }
                 }
             )
@@ -101,9 +131,7 @@ class PetsViewModel(
             petRepository.deletePet(petId).fold(
                 onSuccess = { loadPets() },
                 onFailure = { e ->
-                    _uiState.update {
-                        it.copy(error = e.message ?: "Error deleting pet")
-                    }
+                    _uiState.update { it.copy(error = e.message ?: "Error deleting pet") }
                 }
             )
         }

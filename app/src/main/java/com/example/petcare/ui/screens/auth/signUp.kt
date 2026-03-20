@@ -36,10 +36,10 @@ import com.example.petcare.ui.components.ButtonDefault
 import com.example.petcare.ui.components.ButtonOutline
 import com.example.petcare.ui.components.ButtonSwitch
 import com.example.petcare.ui.components.TextFieldComponent
-import com.example.petcare.ui.theme.PetCareTheme
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Card
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.Image
 import androidx.compose.ui.unit.sp
 import com.example.petcare.ui.theme.RobotoMedium
 import androidx.compose.foundation.layout.Spacer
@@ -59,40 +59,20 @@ import androidx.compose.ui.text.input.VisualTransformation
 @Composable
 fun FeatureCard(
     title: String,
-    subtitle: String,
-    icon: ImageVector
+    subtitle: String
 ) {
     Column (
         horizontalAlignment = Alignment.CenterHorizontally
     ){
-
-        Card(
+        Image(
+            painter = painterResource(id = R.drawable.logo_dog),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
             modifier = Modifier
-                .width(64.dp)
-                .height(64.dp),
-            shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(8.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondary
-            )
-        ) {
+                .size(100.dp)
+                .clip(RoundedCornerShape(24.dp))
+        )
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(45.dp).rotate(45f)
-                )
-
-            }
-        }
         Column (
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(5.dp)
@@ -150,8 +130,7 @@ fun LoginScreen(
         ) {
             FeatureCard(
                 title = "PetCare",
-                subtitle = "Your pet's health companion",
-                icon = Icons.Outlined.Pets
+                subtitle = "Your pet's health companion"
             )
         }
         Spacer(modifier = Modifier.height(30.dp))

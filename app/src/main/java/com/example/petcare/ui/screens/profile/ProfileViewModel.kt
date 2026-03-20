@@ -2,14 +2,19 @@ package com.example.petcare.ui.screens.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.repository.AuthRepository
 import com.example.petcare.data.repository.UserRepository
 import com.example.petcare.data.model.UpdateUserRequest
 import com.example.petcare.data.model.User
+import com.example.petcare.data.model.VaccineUrgencyLevel
 import com.example.petcare.data.network.ApiClient
 import com.example.petcare.data.network.ApiService
 import com.example.petcare.data.preferences.AppThemeMode
 import com.example.petcare.data.preferences.UserPreferencesRepository
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.InputValidators
+import com.example.petcare.util.enforceMaxLength
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,13 +29,13 @@ data class ProfileUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val notificationsEnabled: Boolean = false,
+    val vaccineUrgencyLevel: VaccineUrgencyLevel = VaccineUrgencyLevel.DANGER_ONLY,
     val offlineModeEnabled: Boolean = false,
     val currentThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
-
     val emailUpdateSent: Boolean = false
-    )
+)
 
 sealed interface UiEvent {
     object NavigateToLogin : UiEvent
@@ -53,17 +58,19 @@ class ProfileViewModel(
 
     val uiState: StateFlow<ProfileUiState> = combine(
         repo.notificationsEnabled,
+        repo.vaccineUrgencyLevel,
         repo.offlineModeEnabled,
         repo.themeMode,
         _userState
-    ) { notifications, offlineMode, theme, (user, isLoading, error) ->
+    ) { notifications, vaccineUrgencyLevel, offlineMode, theme, (user, isLoading, error) ->
         ProfileUiState(
-            user = user,
-            isLoading = isLoading,
-            error = error,
+            user                 = user,
+            isLoading            = isLoading,
+            error                = error,
             notificationsEnabled = notifications,
-            offlineModeEnabled = offlineMode,
-            currentThemeMode = theme
+            vaccineUrgencyLevel  = vaccineUrgencyLevel,
+            offlineModeEnabled   = offlineMode,
+            currentThemeMode     = theme
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ProfileUiState())
 
@@ -71,26 +78,34 @@ class ProfileViewModel(
     val uiEvents = _uiEvents.receiveAsFlow()
 
     init {
-        if (initialUser == null) {
-            loadUserProfile()
-        }
+        // Si no se inyectó un usuario inicial, cargamos desde la API
+        // (siempre cargamos para tener el pet_ids actualizado)
+        loadUserProfile()
     }
 
+    /** Recarga el perfil desde la API — llamar cuando el pet count puede haber cambiado */
     fun loadUserProfile() {
         viewModelScope.launch {
-            _userState.value = Triple(null, true, null)
-            userRepository.getMe()
-                .onSuccess { user ->
+            _userState.value = Triple(_userState.value.first, true, null)
+            FeatureExecutionTracker.track("Load User Profile") {
+                userRepository.getMe()
+            }.onSuccess { user ->
                     _userState.value = Triple(user, false, null)
                 }
                 .onFailure { error ->
-                    _userState.value = Triple(null, false, error.message)
+                    // Si falla y ya teníamos un usuario, lo mantenemos (no mostramos error)
+                    val existing = _userState.value.first
+                    _userState.value = Triple(existing, false, if (existing == null) error.message else null)
                 }
         }
     }
 
     fun onNotificationsToggled(enabled: Boolean) {
         viewModelScope.launch { repo.setNotificationsEnabled(enabled) }
+    }
+
+    fun onVaccineUrgencyLevelChanged(level: VaccineUrgencyLevel) {
+        viewModelScope.launch { repo.setVaccineUrgencyLevel(level) }
     }
 
     fun onOfflineModeToggled(enabled: Boolean) {
@@ -103,38 +118,51 @@ class ProfileViewModel(
 
     fun onSignOutClicked() {
         viewModelScope.launch {
-            authRepository.logout()
             _uiEvents.send(UiEvent.NavigateToLogin)
         }
     }
 
-
     sealed class EditField {
-        object Name : EditField()
-        object Phone : EditField()
+        object Name    : EditField()
+        object Phone   : EditField()
         object Address : EditField()
     }
-
 
     fun updateField(field: EditField, value: String) {
         val current = _userState.value.first ?: return
         viewModelScope.launch {
-            _userState.value = Triple(current, true, null) // isLoading = true
+            _userState.value = Triple(current, true, null)
+
+            val sanitizedValue = when (field) {
+                is EditField.Name -> enforceMaxLength(value.trim(), InputTextLimits.USER_NAME)
+                is EditField.Phone -> enforceMaxLength(value.trim(), InputTextLimits.PHONE)
+                is EditField.Address -> enforceMaxLength(value.trim(), InputTextLimits.ADDRESS)
+            }
+
+            if (field is EditField.Phone &&
+                sanitizedValue.isNotBlank() &&
+                !InputValidators.isValidFlexiblePhone(sanitizedValue)
+            ) {
+                _userState.value = Triple(current, false, null)
+                _uiEvents.send(UiEvent.ShowMessage("Invalid phone number format"))
+                return@launch
+            }
 
             val request = when (field) {
-                is EditField.Name    -> UpdateUserRequest(
-                    name = value,
-                    initials = value.split(" ")
+                is EditField.Name -> UpdateUserRequest(
+                    name     = sanitizedValue,
+                    initials = sanitizedValue.split(" ")
                         .mapNotNull { it.firstOrNull()?.uppercaseChar() }
                         .take(2)
                         .joinToString("")
                 )
-                is EditField.Phone   -> UpdateUserRequest(phone = value)
-                is EditField.Address -> UpdateUserRequest(address = value)
+                is EditField.Phone   -> UpdateUserRequest(phone = sanitizedValue)
+                is EditField.Address -> UpdateUserRequest(address = sanitizedValue)
             }
 
-            userRepository.updateMe(request)
-                .onSuccess { updatedUser ->
+            FeatureExecutionTracker.track("Update User Profile") {
+                userRepository.updateMe(request)
+            }.onSuccess { updatedUser ->
                     _userState.value = Triple(updatedUser, false, null)
                     _uiEvents.send(UiEvent.SaveSuccess)
                 }
@@ -144,19 +172,21 @@ class ProfileViewModel(
         }
     }
 
-
-    // ProfileViewModel.kt
     fun updateEmail(currentPassword: String, newEmail: String) {
         val current = _userState.value.first ?: return
         viewModelScope.launch {
             _userState.value = Triple(current, true, null)
-            authRepository.updateEmail(currentPassword, newEmail)
-                .onSuccess { pendingEmail ->
-                    _userState.value = Triple(current, false, null)
-                    _uiEvents.send(UiEvent.ShowMessage(
-                        "Verification email sent to $pendingEmail. " +
-                                "MongoDB will update after you verify."
-                    ))
+            val sanitizedEmail = newEmail.trim()
+            authRepository.updateEmail(currentPassword, sanitizedEmail)
+                .onSuccess {
+                    userRepository.updateMe(UpdateUserRequest(email = sanitizedEmail))
+                        .onSuccess { updatedUser ->
+                            _userState.value = Triple(updatedUser, false, null)
+                        }
+                        .onFailure {
+                            _userState.value = Triple(current.copy(email = sanitizedEmail), false, null)
+                        }
+                    _uiEvents.send(UiEvent.ShowMessage("Email updated successfully"))
                 }
                 .onFailure { error ->
                     _userState.value = Triple(current, false, null)
@@ -181,9 +211,9 @@ class ProfileViewModel(
         val current = _userState.value.first ?: return
         viewModelScope.launch {
             _userState.value = Triple(current, true, null)
-
-            userRepository.deleteMe()
-                .onSuccess {
+            FeatureExecutionTracker.track("Delete Account") {
+                userRepository.deleteMe()
+            }.onSuccess {
                     authRepository.logout()
                     _userState.value = Triple(null, false, null)
                     _uiEvents.send(UiEvent.NavigateToLogin)
@@ -196,6 +226,4 @@ class ProfileViewModel(
                 }
         }
     }
-
-
 }

@@ -32,13 +32,11 @@ fun NFCWriteInfoCard(
     petNameAndBreed: String,
     ownerName: String,
     ownerPhone: String,
-    microchip: String
 ) {
     val storedInfo = listOf(
         "Pet: $petNameAndBreed",
         "Owner: $ownerName",
         "Phone: $ownerPhone",
-        "Microchip: $microchip"
     )
 
     Card(
@@ -91,7 +89,6 @@ fun NFCWriteInfoCardPreview() {
             petNameAndBreed = "Max (Golden Retriever)",
             ownerName = "Sarah Johnson",
             ownerPhone = "+1 (555) 012-3456",
-            microchip = "XR123456789"
         )
     }
 }

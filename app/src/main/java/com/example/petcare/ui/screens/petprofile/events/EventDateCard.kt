@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -22,6 +23,7 @@ import com.example.petcare.ui.theme.GrayMedium
 import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.OffWhite
+import com.example.petcare.util.EventDateUtils
 
 @Composable
 fun EventDateCard(
@@ -29,6 +31,9 @@ fun EventDateCard(
     followUpDate: String?,
     modifier: Modifier = Modifier
 ) {
+    val (date, time) = EventDateUtils.splitToAppDateTime(eventDate)
+    val followUpLabel = followUpDate?.let { EventDateUtils.splitToAppDateTime(it).first }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -36,37 +41,69 @@ fun EventDateCard(
             .background(MaterialTheme.colorScheme.surface)
             .padding(24.dp)
     ) {
-        Text(
-            text = "DATE",
-            style = MaterialTheme.typography.labelMedium,
-            color = GrayText,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
-        )
-        
-        Spacer(modifier = Modifier.height(20.dp))
-        
-        // Event Date Row
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Outlined.CalendarToday,
-                contentDescription = "Event Date",
-                tint = GrayText,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(text = "Event Date", style = MaterialTheme.typography.bodySmall, color = GrayText)
-                Spacer(modifier = Modifier.height(2.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = eventDate,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground
+                    text = "DATE",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onTertiary,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
                 )
+                Spacer(modifier = Modifier.height(20.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.CalendarToday,
+                        contentDescription = "Event Date",
+                        tint = MaterialTheme.colorScheme.onTertiary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(text = "Date", style = MaterialTheme.typography.bodySmall, color = GrayText)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = date,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                }
+            }
+
+            if (time.isNotBlank()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "TIME",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onTertiary,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.AccessTime,
+                            contentDescription = "Event Time",
+                            tint = MaterialTheme.colorScheme.onTertiary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(text = "Time", style = MaterialTheme.typography.bodySmall, color = GrayText)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = time,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                    }
+                }
             }
         }
         
-        if (followUpDate != null) {
+        if (followUpLabel != null) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = GrayMedium, thickness = 1.dp)
             
             // Follow-up Date Row
@@ -74,7 +111,7 @@ fun EventDateCard(
                 Icon(
                     imageVector = Icons.Outlined.CalendarToday,
                     contentDescription = "Follow-up Date",
-                    tint = GrayText,
+                    tint = MaterialTheme.colorScheme.onTertiary,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
@@ -82,7 +119,7 @@ fun EventDateCard(
                     Text(text = "Follow-up Date", style = MaterialTheme.typography.bodySmall, color = GrayText)
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = followUpDate,
+                        text = followUpLabel,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )

@@ -2,7 +2,7 @@ package com.example.petcare.ui.screens.petprofile.components.events
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
@@ -12,10 +12,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.petcare.data.model.Event
-import com.example.petcare.ui.theme.GreenDark
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material3.MaterialTheme
 import com.example.petcare.ui.components.EmptyStateView
 
 fun LazyListScope.eventTabContent(
@@ -37,11 +37,11 @@ fun LazyListScope.eventTabContent(
         return
     }
 
-    items(events) { event ->
+    itemsIndexed(events) { _, event ->
         EventListItem(
             event = event,
             onClick = onEventClick,
-            modifier = Modifier.padding(horizontal = 24.dp)
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
         )
     }
 
@@ -54,15 +54,15 @@ fun LazyListScope.eventTabContent(
                 .padding(start = 24.dp, end = 24.dp, bottom = 80.dp) // padding for FAB
                 .height(56.dp),
             shape = RoundedCornerShape(28.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, GreenDark),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
             colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = GreenDark,
+                contentColor = MaterialTheme.colorScheme.secondary,
                 containerColor = Color.Transparent
             )
         ) {
             Text(
                 text = "+ Add Medical Event",
-                color = GreenDark,
+                color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.Bold
             )
         }

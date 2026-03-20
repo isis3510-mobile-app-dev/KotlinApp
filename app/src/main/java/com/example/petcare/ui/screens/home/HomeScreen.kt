@@ -21,13 +21,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petcare.ui.components.*
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.screens.auth.AuthViewModel
 import com.example.petcare.ui.theme.*
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.EventDateUtils
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun HomeScreen(
@@ -36,12 +41,13 @@ fun HomeScreen(
     onNavigateToNfc: () -> Unit,
     onNavigateToPetProfile: (String) -> Unit,
     onNavigateToAddPet: () -> Unit,
+    // petId + vaccinationId (embedded _id)
     onNavigateToVaccine: (String, String) -> Unit = { _, _ -> },
     onNavigateToRecords: () -> Unit = {},
     onNavigateToEvent: (String, String) -> Unit = { _, _ -> },
     authViewModel: AuthViewModel,
     homeViewModel: HomeViewModel = viewModel(),
-    onNavigateToNotifications: () -> Unit
+    onNavigateToSuggestions: () -> Unit
 ) {
     val homeState   by homeViewModel.state.collectAsStateWithLifecycle()
     val userProfile by authViewModel.userProfile.collectAsStateWithLifecycle()
@@ -64,25 +70,29 @@ fun HomeScreen(
         modifier            = Modifier.fillMaxSize().padding(contentPadding),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // ── Header ────────────────────────────────────────────────────────
+        // ── Header ────────────────────────────────────────────────────────────
         item {
             Row(
-                modifier            = Modifier.fillMaxWidth(),
-                verticalAlignment   = Alignment.CenterVertically,
+                modifier              = Modifier.fillMaxWidth(),
+                verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = displayName,
-                    fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
+                    text       = displayName.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
+                    fontSize   = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color      = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     NfcButton(onClick = onNavigateToNfc)
-                    NotificationButton(onClick = onNavigateToNotifications)
+                    NotificationButton()
                 }
             }
         }
 
-        // ── Loading / Error ───────────────────────────────────────────────
+        // ── Loading / Error ───────────────────────────────────────────────────
         if (homeState.isLoading) {
             item {
                 Box(
@@ -95,11 +105,11 @@ fun HomeScreen(
 
         homeState.error?.let { err ->
             item {
-                Text("⚠ $err", color = Color.Red, modifier = Modifier.padding(horizontal = 8.dp))
+                Text("⚠ $err", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 8.dp))
             }
         }
 
-        // ── My Pets ───────────────────────────────────────────────────────
+        // ── My Pets ───────────────────────────────────────────────────────────
         item {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(
@@ -109,13 +119,17 @@ fun HomeScreen(
                 ) {
                     Text(
                         "My Pets", fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
+                        fontWeight = FontWeight.Bold,
+                        color      = MaterialTheme.colorScheme.onBackground
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier          = Modifier.clickable { onNavigateToPets() }
+                        modifier          = Modifier.clickable {
+                            FeatureClicksTracker.recordClick()
+                            onNavigateToPets()
+                        }
                     ) {
-                        Text("See all", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = GreenDark)
+                        Text("See all", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.secondary)
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = GreenDark)
                     }
                 }
@@ -126,11 +140,14 @@ fun HomeScreen(
                 ) {
                     items(homeState.pets.size) { i ->
                         val pet = homeState.pets[i]
-                        Box(modifier = Modifier.clickable { onNavigateToPetProfile(pet.id) }) {
+                        Box(modifier = Modifier.clickable {
+                            FeatureClicksTracker.recordClick()
+                            onNavigateToPetProfile(pet.id)
+                        }) {
                             PetCard(
-                                photoUrl  = pet.photoUrl,
-                                text   = pet.name,
-                                status = when (pet.status.lowercase()) {
+                                photoUrl = pet.photoUrl,
+                                text     = pet.name,
+                                status   = when (pet.status.lowercase()) {
                                     "healthy" -> PetStatus.SUCCESS
                                     else      -> PetStatus.WARNING
                                 }
@@ -138,7 +155,11 @@ fun HomeScreen(
                         }
                     }
                     item {
-                        Box(modifier = Modifier.clickable { onNavigateToAddPet() }) {
+                        Box(modifier = Modifier.clickable {
+                            FeatureClicksTracker.recordClick()
+                            FeatureClicksTracker.startRoute("Add Pet Flow")
+                            onNavigateToAddPet()
+                        }) {
                             PetCard()
                         }
                     }
@@ -159,23 +180,26 @@ fun HomeScreen(
                             text       = "Health Alerts",
                             fontSize   = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color      = Color.Black
+                            color      = MaterialTheme.colorScheme.onBackground
                         )
                         if (homeState.totalAlertCount >= 1) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier          = Modifier.clickable { onNavigateToNotifications() }
+                                modifier          = Modifier.clickable {
+                                    FeatureClicksTracker.recordClick()
+                                    onNavigateToSuggestions()
+                                }
                             ) {
                                 Text(
                                     text       = "See all ${homeState.totalAlertCount}",
                                     fontSize   = 16.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color      = GreenDark
+                                    color      = MaterialTheme.colorScheme.secondary
                                 )
                                 Icon(
                                     imageVector        = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = null,
-                                    tint               = GreenDark
+                                    tint               = MaterialTheme.colorScheme.secondary
                                 )
                             }
                         }
@@ -185,7 +209,7 @@ fun HomeScreen(
             }
         }
 
-        // ── Upcoming Vaccines (next 30 days) ──────────────────────────────
+        // ── Upcoming Vaccines ─────────────────────────────────────────────────
         if (homeState.upcomingVaccines.isNotEmpty()) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -205,7 +229,10 @@ fun HomeScreen(
                             fontSize   = 16.sp,
                             fontWeight = FontWeight.Medium,
                             color      = GreenDark,
-                            modifier   = Modifier.clickable { onNavigateToRecords() }
+                            modifier   = Modifier.clickable {
+                                FeatureClicksTracker.recordClick()
+                                onNavigateToRecords()
+                            }
                         )
                     }
 
@@ -215,9 +242,14 @@ fun HomeScreen(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(MaterialTheme.colorScheme.surface)
+                                // ← Ahora navega a VaccineDetails con vaccinationId real
                                 .clickable {
-                                    // Navigate to pet profile vaccines tab
-                                    onNavigateToPetProfile(vacc.petId)
+                                    FeatureClicksTracker.recordClick()
+                                    if (vacc.vaccinationId.isNotBlank()) {
+                                        onNavigateToVaccine(vacc.petId, vacc.vaccinationId)
+                                    } else {
+                                        onNavigateToPetProfile(vacc.petId)
+                                    }
                                 }
                                 .padding(16.dp),
                             verticalAlignment     = Alignment.CenterVertically,
@@ -235,10 +267,10 @@ fun HomeScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector     = Icons.Default.Vaccines,
+                                        imageVector        = Icons.Default.Vaccines,
                                         contentDescription = null,
-                                        tint            = if (vacc.daysUntilDue <= 7) ErrorContent else InfoContent,
-                                        modifier        = Modifier.size(24.dp)
+                                        tint               = if (vacc.daysUntilDue <= 7) ErrorContent else InfoContent,
+                                        modifier           = Modifier.size(24.dp)
                                     )
                                 }
                                 Column {
@@ -250,11 +282,10 @@ fun HomeScreen(
                                     Text(
                                         text     = "${vacc.petName} · Due ${vacc.dueDate}",
                                         fontSize = 12.sp,
-                                        color    = Color.Gray
+                                        color    = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
-                            // Days badge
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(50.dp))
@@ -275,7 +306,7 @@ fun HomeScreen(
             }
         }
 
-        // ── Recent Events ─────────────────────────────────────────────────
+        // ── Recent Events ─────────────────────────────────────────────────────
         if (homeState.recentEvents.isNotEmpty()) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -286,25 +317,27 @@ fun HomeScreen(
                     ) {
                         Text(
                             "Active Events", fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground
+                            fontWeight = FontWeight.Bold,
+                            color      = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             "View all",
                             fontSize   = 16.sp,
                             fontWeight = FontWeight.Medium,
-                            color      = GreenDark,
+                            color      = MaterialTheme.colorScheme.secondary,
                             modifier   = Modifier.clickable { onNavigateToRecords() }
                         )
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         homeState.recentEvents.take(3).forEach { event ->
                             Box(modifier = Modifier.clickable {
+                                FeatureClicksTracker.recordClick()
                                 onNavigateToEvent(event.petId, event.id)
                             }) {
                                 EventCard(
                                     eventName = event.title,
                                     pet       = homeState.pets.find { it.id == event.petId }?.name ?: "",
-                                    date      = event.date.take(10)
+                                    date      = EventDateUtils.splitToAppDateTime(event.date).first
                                 )
                             }
                         }

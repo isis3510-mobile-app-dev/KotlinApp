@@ -2,12 +2,13 @@ package com.example.petcare.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.GroupedSuggestion
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.model.PetSuggestion
-import com.example.petcare.data.model.Vaccination
 import com.example.petcare.data.repository.RepositoryProvider
+import com.example.petcare.util.EventDateUtils
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ data class UpcomingVaccine(
     val vaccineName: String,
     val petName: String,
     val petId: String,
+    val vaccinationId: String,   // ← NUEVO: _id del embedded Vaccination
     val dueDate: String,
     val daysUntilDue: Long
 )
@@ -49,9 +51,16 @@ class HomeViewModel : ViewModel() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
 
-            RepositoryProvider.petRepository.getPets().fold(
+            FeatureExecutionTracker.track("Load Home Data") {
+                RepositoryProvider.petRepository.getPets()
+            }.fold(
                 onSuccess = { pets ->
-                    // Events for all pets in parallel
+
+                    val catalogMap = RepositoryProvider.petRepository
+                        .getVaccineCatalog()
+                        .getOrElse { emptyList() }
+                        .associateBy { it.id }
+
                     val eventResults = pets.map { pet ->
                         async {
                             RepositoryProvider.eventRepository
@@ -69,9 +78,8 @@ class HomeViewModel : ViewModel() {
                         }
                     }.awaitAll().flatten()
 
-                    // Upcoming vaccines — next 30 days + overdue
-                    val today     = java.time.LocalDate.now()
-                    val upcoming  = mutableListOf<UpcomingVaccine>()
+                    val today    = java.time.LocalDate.now()
+                    val upcoming = mutableListOf<UpcomingVaccine>()
                     var overdueCount = 0
 
                     pets.forEach { pet ->
@@ -81,38 +89,44 @@ class HomeViewModel : ViewModel() {
                                 val dueDate = java.time.LocalDate.parse(dueDateStr.take(10))
                                 val days    = java.time.temporal.ChronoUnit.DAYS.between(today, dueDate)
                                 when {
-                                    days < 0  -> overdueCount++   // overdue
-                                    days <= 30 -> upcoming.add(   // due within 30 days
+                                    days < 0   -> overdueCount++
+                                    days <= 30 -> upcoming.add(
                                         UpcomingVaccine(
-                                            vaccineName  = vacc.vaccineId.take(8),
-                                            petName      = pet.name,
-                                            petId        = pet.id,
-                                            dueDate      = dueDateStr.take(10),
-                                            daysUntilDue = days
+                                            vaccineName   = catalogMap[vacc.vaccineId]?.name
+                                                ?: vacc.vaccineId.take(8),
+                                            petName       = pet.name,
+                                            petId         = pet.id,
+                                            vaccinationId = vacc.id,   // ← el _id embebido
+                                            dueDate       = dueDateStr.take(10),
+                                            daysUntilDue  = days
                                         )
                                     )
                                 }
-                            } catch (_: Exception) { /* skip malformed date */ }
+                            } catch (_: Exception) { }
                         }
                     }
 
                     val criticalGrouped = allSuggestions
-                        .filter { it.suggestion.type in listOf("danger", "warning") }
                         .groupBy { it.suggestion.title }
                         .map { (title, items) ->
                             GroupedSuggestion(
                                 vaccineTitle = title,
-                                type         = if (items.any { it.suggestion.type == "danger" }) "danger" else "warning",
-                                pets         = items.map { it.petName }.distinct(),
-                                message      = items.first().suggestion.message
+                                type = when {
+                                    items.any { it.suggestion.type == "danger" }  -> "danger"
+                                    items.any { it.suggestion.type == "warning" } -> "warning"
+                                    else -> "info"
+                                },
+                                pets    = items.map { it.petName }.distinct(),
+                                message = items.first().suggestion.message
                             )
                         }
-                        .sortedBy { if (it.type == "danger") 0 else 1 }
+                        .sortedBy { when (it.type) { "danger" -> 0; "warning" -> 1; else -> 2 } }
 
                     _state.value = _state.value.copy(
                         pets                 = pets,
                         recentEvents         = eventResults
-                            .sortedByDescending { it.date }
+                            .filter { EventDateUtils.isTodayOrFuture(it.date) }
+                            .sortedBy { EventDateUtils.parseEventInstant(it.date) ?: java.time.Instant.MAX }
                             .take(5),
                         upcomingVaccines     = upcoming.sortedBy { it.daysUntilDue },
                         overdueVaccinesCount = overdueCount,

@@ -113,7 +113,7 @@ fun TagWrittenScreen(
             Text(
                 text       = "La información de $petName se guardó correctamente en la etiqueta NFC. Cualquier persona que la escanee podrá contactarte al instante.",
                 style      = MaterialTheme.typography.bodyLarge,
-                color      = GrayDark,
+                color      = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign  = TextAlign.Center,
                 lineHeight = 24.sp
             )
@@ -124,7 +124,6 @@ fun TagWrittenScreen(
                 petNameAndBreed = breedLine,
                 ownerName       = ownerName.ifBlank { "—" },
                 ownerPhone      = ownerPhone.ifBlank { "—" },
-                microchip       = "—"
             )
 
             Spacer(modifier = Modifier.height(48.dp))
@@ -136,8 +135,8 @@ fun TagWrittenScreen(
                 Box(modifier = Modifier.weight(1f)) {
                     ButtonOutline(
                         bgColor      = MaterialTheme.colorScheme.surface,
-                        outlineColor = GreenDark,
-                        textColor    = GreenDark,
+                        outlineColor = MaterialTheme.colorScheme.secondary,
+                        textColor    = MaterialTheme.colorScheme.secondary,
                         width        = 200.dp,
                         height       = 56.dp,
                         text         = "Escribir otra",
@@ -149,8 +148,8 @@ fun TagWrittenScreen(
                 }
                 Box(modifier = Modifier.weight(1f)) {
                     ButtonDefault(
-                        bgColor   = GreenDark,
-                        textColor = Color.White,
+                        bgColor   = MaterialTheme.colorScheme.secondary,
+                        textColor = MaterialTheme.colorScheme.onSecondary,
                         width     = 200.dp,
                         height    = 56.dp,
                         text      = "Listo",

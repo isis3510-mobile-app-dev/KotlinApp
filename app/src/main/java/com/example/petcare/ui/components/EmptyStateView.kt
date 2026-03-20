@@ -33,7 +33,7 @@ fun EmptyStateView(
         Icon(
             imageVector = icon,
             contentDescription = message,
-            tint = GreenTextDark,
+            tint = MaterialTheme.colorScheme.secondary,
             modifier = Modifier.size(72.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -45,8 +45,8 @@ fun EmptyStateView(
         if (buttonText != null) {
             Spacer(modifier = Modifier.height(24.dp))
             ButtonDefault(
-                bgColor = GreenDark,
-                textColor = Color.White,
+                bgColor = MaterialTheme.colorScheme.secondary,
+                textColor = MaterialTheme.colorScheme.background,
                 width = 200.dp,
                 height = 48.dp,
                 text = buttonText,

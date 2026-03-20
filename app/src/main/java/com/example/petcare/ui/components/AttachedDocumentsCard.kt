@@ -1,38 +1,111 @@
 package com.example.petcare.ui.components
 
+import android.Manifest
+import android.net.Uri
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.petcare.data.model.AttachedDocument
-import com.example.petcare.ui.theme.GrayBorder
-import com.example.petcare.ui.theme.GrayText
-import com.example.petcare.ui.theme.GreenDark
-import com.example.petcare.ui.theme.PetCareTheme
-import com.example.petcare.ui.theme.OffWhite
+import com.example.petcare.ui.theme.*
+import java.io.File
 
 @Composable
 fun AttachedDocumentsCard(
     documents: List<AttachedDocument>,
-    onAddClicked: () -> Unit,
+    // El caller maneja qué hacer con la Uri seleccionada
+    onDocumentPicked: (uri: Uri, mimeType: String, fileName: String) -> Unit,
+    isUploading: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val context   = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+
+    var showSourceOptions by remember { mutableStateOf(false) }
+    var cameraUri         by remember { mutableStateOf<Uri?>(null) }
+
+    // ── Launchers ──────────────────────────────────────────────────────────
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            cameraUri?.let { uri ->
+                onDocumentPicked(uri, "image/jpeg", "photo_${System.currentTimeMillis()}.jpg")
+            }
+        }
+        showSourceOptions = false
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val file = File(context.cacheDir, "docs/photo_${System.currentTimeMillis()}.jpg")
+                .also { it.parentFile?.mkdirs() }
+            val uri = FileProvider.getUriForFile(
+                context, "${context.packageName}.fileprovider", file
+            )
+            cameraUri = uri
+            cameraLauncher.launch(uri)
+        }
+        showSourceOptions = false
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            val mimeType = context.contentResolver.getType(it) ?: "image/*"
+            val fileName = com.example.petcare.util.FirebaseDocumentUploader
+                .getFileName(context, it) ?: "image_${System.currentTimeMillis()}"
+            onDocumentPicked(it, mimeType, fileName)
+        }
+        showSourceOptions = false
+    }
+
+    val fileLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {}
+            val mimeType = context.contentResolver.getType(it) ?: "application/octet-stream"
+            val fileName = com.example.petcare.util.FirebaseDocumentUploader
+                .getFileName(context, it) ?: "document_${System.currentTimeMillis()}"
+            onDocumentPicked(it, mimeType, fileName)
+        }
+        showSourceOptions = false
+    }
+
+    // ── UI ─────────────────────────────────────────────────────────────────
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -42,61 +115,96 @@ fun AttachedDocumentsCard(
     ) {
         Column {
             Text(
-                text = "ATTACHED DOCUMENTS",
-                style = MaterialTheme.typography.labelMedium,
-                color = GrayText,
-                fontWeight = FontWeight.Bold,
+                text          = "ATTACHED DOCUMENTS",
+                style         = MaterialTheme.typography.labelMedium,
+                color         = GrayText,
+                fontWeight    = FontWeight.Bold,
                 letterSpacing = 1.sp
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            
+
+            Spacer(Modifier.height(16.dp))
+
+            // Lista de documentos existentes
             if (documents.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     documents.forEach { doc ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .border(1.dp, GrayBorder, RoundedCornerShape(12.dp))
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Description,
-                                contentDescription = "Document",
-                                tint = GreenDark,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = doc.fileName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                        DocumentRow(
+                            doc     = doc,
+                            onClick = {
+                                doc.fileUri?.let { url ->
+                                    try { uriHandler.openUri(url) } catch (_: Exception) {}
+                                }
+                            }
+                        )
                     }
                 }
-            } else {
+                Spacer(Modifier.height(16.dp))
+            }
+
+            // Botón principal de adjuntar
+            OutlinedButton(
+                onClick  = { showSourceOptions = !showSourceOptions },
+                enabled  = !isUploading,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape    = RoundedCornerShape(28.dp),
+                border   = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary)
+            ) {
+                if (isUploading) {
+                    CircularProgressIndicator(
+                        modifier    = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color       = MaterialTheme.colorScheme.secondary
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Uploading...", color = MaterialTheme.colorScheme.secondary)
+                } else {
+                    Icon(
+                        Icons.Default.AttachFile,
+                        contentDescription = null,
+                        tint     = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Attach Document", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // Opciones de fuente (cámara / galería / archivo)
+            if (showSourceOptions && !isUploading) {
+                Spacer(Modifier.height(10.dp))
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.clickable { onAddClicked() }
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(GreenDark),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Document", tint = Color.White)
-                    }
-                    Text(
-                        text = "Attach Document.",
-                        fontWeight = FontWeight.Bold,
-                        color = GreenDark,
-                        fontSize = 16.sp
+                    SourceButton(
+                        label    = "Camera",
+                        icon     = Icons.Default.CameraAlt,
+                        modifier = Modifier.weight(1f),
+                        onClick  = {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
+                    )
+                    SourceButton(
+                        label    = "Gallery",
+                        icon     = Icons.Default.Image,
+                        modifier = Modifier.weight(1f),
+                        onClick  = { galleryLauncher.launch("image/*") }
+                    )
+                    SourceButton(
+                        label    = "File",
+                        icon     = Icons.Default.Description,
+                        modifier = Modifier.weight(1f),
+                        onClick  = {
+                            fileLauncher.launch(
+                                arrayOf(
+                                    "application/pdf",
+                                    "application/msword",
+                                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                    "image/*",
+                                    "text/plain"
+                                )
+                            )
+                        }
                     )
                 }
             }
@@ -104,29 +212,113 @@ fun AttachedDocumentsCard(
     }
 }
 
-@Preview(showBackground = false)
 @Composable
-fun AttachedDocumentsCardPreview() {
-    PetCareTheme {
-        Box(modifier = Modifier.background(OffWhite).padding(16.dp)) {
-            AttachedDocumentsCard(
-                documents = listOf(
-                    AttachedDocument(id = "1", fileName = "Rabies_Certificate.pdf")
-                ),
-                onAddClicked = {}
-            )
-        }
+private fun SourceButton(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick  = onClick,
+        modifier = modifier.height(44.dp),
+        shape    = RoundedCornerShape(12.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp)
+    ) {
+        Icon(icon, null, modifier = Modifier.size(14.dp), tint = GreenDark)
+        Spacer(Modifier.width(4.dp))
+        Text(label, style = MaterialTheme.typography.bodySmall, color = GreenDark)
     }
 }
 
-@Preview(showBackground = false)
 @Composable
-fun AttachedDocumentsCardEmptyPreview() {
-    PetCareTheme {
-        Box(modifier = Modifier.background(OffWhite).padding(16.dp)) {
-            AttachedDocumentsCard(
-                documents = emptyList(),
-                onAddClicked = {}
+private fun DocumentRow(doc: AttachedDocument, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val uri     = doc.fileUri
+    val isImage = uri != null && (
+            uri.contains("image") || uri.endsWith(".jpg") ||
+                    uri.endsWith(".jpeg") || uri.endsWith(".png") || uri.endsWith(".webp")
+            )
+    val isPdf = doc.fileName.endsWith(".pdf", ignoreCase = true)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, GrayBorder, RoundedCornerShape(12.dp))
+            .clickable(enabled = uri != null, onClick = onClick)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Thumbnail o ícono
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(
+                    when {
+                        isPdf    -> ErrorContainer
+                        isImage  -> InfoContainer
+                        else     -> MaterialTheme.colorScheme.surfaceVariant
+                    }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isImage && uri != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(Uri.parse(uri))
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = doc.fileName,
+                    contentScale       = ContentScale.Crop,
+                    modifier           = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(8.dp))
+                )
+            } else if (isPdf) {
+                Icon(
+                    Icons.Default.PictureAsPdf,
+                    contentDescription = null,
+                    tint     = ErrorContent,
+                    modifier = Modifier.size(22.dp)
+                )
+            } else {
+                Icon(
+                    Icons.Default.Description,
+                    contentDescription = null,
+                    tint     = GreenDark,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text       = doc.fileName,
+                style      = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color      = MaterialTheme.colorScheme.onSurface,
+                maxLines   = 1,
+                overflow   = TextOverflow.Ellipsis
+            )
+            if (uri != null) {
+                Text(
+                    text  = "Tap to open",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GreenDark
+                )
+            }
+        }
+
+        if (uri != null) {
+            Icon(
+                Icons.Default.OpenInNew,
+                contentDescription = "Open",
+                tint     = GrayText,
+                modifier = Modifier.size(16.dp)
             )
         }
     }

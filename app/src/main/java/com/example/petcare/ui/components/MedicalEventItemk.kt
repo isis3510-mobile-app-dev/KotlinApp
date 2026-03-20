@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,12 +41,15 @@ import com.example.petcare.ui.theme.GrayMedium
 import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.PurpleContainer
 import com.example.petcare.ui.theme.PurpleContent
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 data class MedicalEventData(
     val eventType: String,
     val petName: String,
     val clinicName: String,
     val date: String,
+    val time: String,
     val cost: String
 )
 
@@ -88,19 +92,27 @@ fun MedicalEventItem(event: MedicalEventData, onClick: () -> Unit = {}
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = event.eventType,
+                    text = event.eventType.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${event.petName} · ${event.clinicName}",
+                    text = "${event.petName} · ${event.clinicName}"
+                        .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${event.date} · ${event.cost}",
+                    text = "${event.date} · ${event.time} · ${event.cost}"
+                        .truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             Icon(
@@ -119,9 +131,9 @@ fun MedicalEventItemPreview() {
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.padding(8.dp)
     ) {
-        MedicalEventItem(MedicalEventData("Checkup", "Max", "Happy Paws Clinic", "Nov 19, 2024", "$120"))
-        MedicalEventItem(MedicalEventData("Checkup", "Luna", "Cat Care Center", "Oct 14, 2024", "$95"))
-        MedicalEventItem(MedicalEventData("Emergency", "Luna", "City Animal Emergency", "Aug 29, 2024", "$340"))
-        MedicalEventItem(MedicalEventData("Dental", "Max", "City Vet Center", "Jun 4, 2024", "$280"))
+        MedicalEventItem(MedicalEventData("Checkup", "Max", "Happy Paws Clinic", "Nov 19, 2024", "10:00 AM", "$120"))
+        MedicalEventItem(MedicalEventData("Checkup", "Luna", "Cat Care Center", "Oct 14, 2024", "02:00 PM", "$95"))
+        MedicalEventItem(MedicalEventData("Emergency", "Luna", "City Animal Emergency", "Aug 29, 2024", "11:30 PM", "$340"))
+        MedicalEventItem(MedicalEventData("Dental", "Max", "City Vet Center", "Jun 4, 2024", "09:15 AM", "$280"))
     }
 }

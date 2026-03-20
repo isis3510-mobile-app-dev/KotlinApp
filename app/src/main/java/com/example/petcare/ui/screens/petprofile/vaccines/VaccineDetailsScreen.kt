@@ -33,6 +33,7 @@ import com.example.petcare.ui.components.DateTextField
 import com.example.petcare.ui.components.TextFieldComponent
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
 import com.example.petcare.data.model.AttachedDocument
+import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.*
 
 @Composable
@@ -43,6 +44,7 @@ fun VaccineDetailsScreen(
 ) {
     val viewModel: VaccineDetailsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     // Load real data
     LaunchedEffect(petId, vaccineId) { viewModel.load(petId, vaccineId) }
@@ -50,16 +52,6 @@ fun VaccineDetailsScreen(
     // Navigate back after successful delete
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) onNavigateBack()
-    }
-
-    // File picker for document upload
-    val filePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            val fileName = uri.lastPathSegment ?: "document"
-            viewModel.addDocument(fileName, uri.toString())
-        }
     }
 
     // Confirm-delete dialog state
@@ -76,6 +68,7 @@ fun VaccineDetailsScreen(
                         showDeleteDialog = false
                         val vaccine = uiState.vaccine
                         if (vaccine != null) {
+                            FeatureClicksTracker.endRoute()
                             viewModel.deleteVaccine()
                         }
                     },
@@ -91,16 +84,16 @@ fun VaccineDetailsScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Column(modifier = Modifier.background(GreenDark)) {
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.secondary)) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.surface)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Vaccine Details", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("Vaccine Details", color = MaterialTheme.colorScheme.surface, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
             }
         },
@@ -108,8 +101,14 @@ fun VaccineDetailsScreen(
             if (!uiState.isEditing) {
                 StickyBottomActions(
                     isDeleting = uiState.isDeleting,
-                    onDelete   = { showDeleteDialog = true },
-                    onEdit     = { viewModel.startEditing() }
+                    onDelete   = {
+                        FeatureClicksTracker.startRoute("Delete Vaccination Flow")
+                        showDeleteDialog = true
+                    },
+                    onEdit     = {
+                        FeatureClicksTracker.startRoute("Edit Vaccination Flow")
+                        viewModel.startEditing()
+                    }
                 )
             } else {
                 // Save / Cancel bar
@@ -125,15 +124,16 @@ fun VaccineDetailsScreen(
                     Button(
                         onClick = {
                             val v = uiState.vaccine ?: return@Button
+                            FeatureClicksTracker.endRoute()
                             viewModel.saveEdits()
                         },
                         enabled  = !uiState.isSaving,
                         modifier = Modifier.weight(1f).height(52.dp),
                         shape    = RoundedCornerShape(28.dp),
-                        colors   = ButtonDefaults.buttonColors(containerColor = GreenDark)
+                        colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.surface)
                     ) {
-                        if (uiState.isSaving) CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
-                        else Text("Save", color = Color.White, fontWeight = FontWeight.Bold)
+                        if (uiState.isSaving) CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onSecondary, strokeWidth = 2.dp)
+                        else Text("Save", color = MaterialTheme.colorScheme.surface, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -142,7 +142,7 @@ fun VaccineDetailsScreen(
         when {
             uiState.isLoading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = GreenDark)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                 }
             }
             uiState.vaccine != null -> {
@@ -190,10 +190,11 @@ fun VaccineDetailsScreen(
 
                     // Documents
                     AttachedDocumentsCard(
-                        documents  = vaccine.attachedDocumentName?.let {
-                            listOf(AttachedDocument(id = "1", fileName = it))
-                        } ?: emptyList(),
-                        onAddClicked = { filePicker.launch("*/*") }
+                        documents        = uiState.vaccine?.attachedDocuments ?: emptyList(),
+                        isUploading      = uiState.isUploadingDoc,
+                        onDocumentPicked = { uri, _, _ ->
+                            viewModel.addDocument(context, uri)
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))
@@ -351,14 +352,14 @@ private fun StickyBottomActions(isDeleting: Boolean, onDelete: () -> Unit, onEdi
             modifier = Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(30.dp))
-                .background(GreenDark)
+                .background(MaterialTheme.colorScheme.secondary)
                 .clickable(onClick = onEdit)
                 .padding(vertical = 16.dp),
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                Text("Edit", color = Color.White, fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.surface, modifier = Modifier.size(20.dp))
+                Text("Edit", color = MaterialTheme.colorScheme.surface, fontWeight = FontWeight.Bold)
             }
         }
     }
