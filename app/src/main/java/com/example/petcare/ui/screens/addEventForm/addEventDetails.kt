@@ -67,14 +67,14 @@ fun AddEventDetailsForm(
                 maxLength = InputTextLimits.PROVIDER_OR_CLINIC
             )
 
-            // FIX: price field decimal only, no text allowed
+            // FIX: decimal only + max 10 chars to prevent infinite input
             TextFieldComponent(
                 name = "Price (optional)", label = "e.g. 50",
                 value = state.price,
                 onValueChange = { newValue ->
                     val filtered = newValue.filter { it.isDigit() || it == '.' }
                     val dotCount = filtered.count { it == '.' }
-                    if (dotCount <= 1) viewModel.setPrice(filtered)
+                    if (dotCount <= 1 && filtered.length <= 10) viewModel.setPrice(filtered)
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
