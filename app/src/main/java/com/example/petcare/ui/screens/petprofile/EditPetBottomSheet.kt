@@ -308,7 +308,7 @@ private fun EditField(
     }
 }
 
-// FIX: dedicated decimal field for weight
+// FIX: dedicated decimal field for weight with max length
 @Composable
 private fun EditFieldDecimal(
     label: String,
@@ -326,10 +326,10 @@ private fun EditFieldDecimal(
         OutlinedTextField(
             value         = value,
             onValueChange = { newValue ->
-                // Only allow digits and a single dot
+                // Only allow digits and a single dot, max 7 chars (e.g. "999.999")
                 val filtered = newValue.filter { it.isDigit() || it == '.' }
                 val dotCount = filtered.count { it == '.' }
-                if (dotCount <= 1) onValueChange(filtered)
+                if (dotCount <= 1 && filtered.length <= 7) onValueChange(filtered)
             },
             placeholder   = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
             singleLine    = true,

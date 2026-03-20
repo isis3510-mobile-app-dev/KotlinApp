@@ -53,17 +53,15 @@ fun AddPetDetailsForm(
 
             GenderSelector(onOptionSelected = viewModel::setGender)
 
-            // FIX: Decimal keyboard so only numbers are allowed for weight
+            // FIX: decimal only + max 7 chars to prevent infinite input (e.g. "999.999")
             TextFieldComponent(
                 name = "Weight (Kg)",
                 label = "e.g. 4.5",
                 value = state.weight,
                 onValueChange = { newValue ->
-                    // Only allow valid decimal numbers
                     val filtered = newValue.filter { it.isDigit() || it == '.' }
-                    // Prevent multiple dots
                     val dotCount = filtered.count { it == '.' }
-                    if (dotCount <= 1) viewModel.setWeight(filtered)
+                    if (dotCount <= 1 && filtered.length <= 7) viewModel.setWeight(filtered)
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
