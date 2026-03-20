@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.data.analytics.FeatureClicksTracker
@@ -51,11 +53,19 @@ fun AddPetDetailsForm(
 
             GenderSelector(onOptionSelected = viewModel::setGender)
 
+            // FIX: Decimal keyboard so only numbers are allowed for weight
             TextFieldComponent(
                 name = "Weight (Kg)",
                 label = "e.g. 4.5",
                 value = state.weight,
-                onValueChange = viewModel::setWeight
+                onValueChange = { newValue ->
+                    // Only allow valid decimal numbers
+                    val filtered = newValue.filter { it.isDigit() || it == '.' }
+                    // Prevent multiple dots
+                    val dotCount = filtered.count { it == '.' }
+                    if (dotCount <= 1) viewModel.setWeight(filtered)
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
 
             TextFieldComponent(
@@ -66,10 +76,11 @@ fun AddPetDetailsForm(
                 maxLength = InputTextLimits.COLOR
             )
 
-            // NEW: Birth Date field — matches the event form pattern
+            // FIX: restrict future dates for birth date
             DateTextField(
                 name = "Date of Birth",
-                onDateSelected = viewModel::setBirthDate
+                onDateSelected = viewModel::setBirthDate,
+                allowFutureDates = false
             )
         }
 

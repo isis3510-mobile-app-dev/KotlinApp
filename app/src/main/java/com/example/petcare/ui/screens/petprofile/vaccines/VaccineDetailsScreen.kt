@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
@@ -46,15 +47,12 @@ fun VaccineDetailsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    // Load real data
     LaunchedEffect(petId, vaccineId) { viewModel.load(petId, vaccineId) }
 
-    // Navigate back after successful delete
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) onNavigateBack()
     }
 
-    // Confirm-delete dialog state
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
@@ -111,7 +109,6 @@ fun VaccineDetailsScreen(
                     }
                 )
             } else {
-                // Save / Cancel bar
                 Row(
                     modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(24.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -155,28 +152,26 @@ fun VaccineDetailsScreen(
                         .padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Error banner
                     uiState.error?.let { err ->
                         Card(colors = CardDefaults.cardColors(containerColor = ErrorContainer)) {
                             Text(err, color = ErrorContent, modifier = Modifier.padding(16.dp))
                         }
                     }
 
-                    // Header
                     VaccineHeaderCard(name = vaccine.name, status = vaccine.status)
 
-                    // Timeline — read-only or editable
                     if (uiState.isEditing) {
+                        // FIX: next due date must be after date given + clearable
                         EditableTimelineCard(
-                            dateGiven    = vaccine.dateGiven,
-                            nextDueDate  = uiState.editNextDueDate,
-                            onNextDueDate = viewModel::setNextDueDate
+                            dateGiven     = vaccine.dateGiven,
+                            nextDueDate   = uiState.editNextDueDate,
+                            onNextDueDate = viewModel::setNextDueDate,
+                            onClearNextDueDate = { viewModel.setNextDueDate("") }
                         )
                     } else {
                         TimelineCard(dateGiven = vaccine.dateGiven, nextDueDate = vaccine.nextDueDate)
                     }
 
-                    // Provider — editable
                     if (uiState.isEditing) {
                         EditableProviderCard(
                             administeredBy    = uiState.editAdministeredBy,
@@ -188,7 +183,6 @@ fun VaccineDetailsScreen(
                         ProviderCard(veterinarian = vaccine.provider, clinic = "Happy Paws Clinic")
                     }
 
-                    // Documents
                     AttachedDocumentsCard(
                         documents        = uiState.vaccine?.attachedDocuments ?: emptyList(),
                         isUploading      = uiState.isUploadingDoc,
@@ -204,13 +198,12 @@ fun VaccineDetailsScreen(
     }
 }
 
-// ── Sub-composables ────────────────────────────────────────────────────────
-
 @Composable
 private fun EditableTimelineCard(
     dateGiven: String,
     nextDueDate: String,
-    onNextDueDate: (String) -> Unit
+    onNextDueDate: (String) -> Unit,
+    onClearNextDueDate: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -222,7 +215,32 @@ private fun EditableTimelineCard(
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("TIMELINE", style = MaterialTheme.typography.labelMedium, color = GrayText, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Text("Date given: $dateGiven", style = MaterialTheme.typography.bodyMedium, color = GrayText)
-            DateTextField(name = "Next due date (optional)", onDateSelected = onNextDueDate)
+
+            // FIX: next due date must be strictly after dateGiven
+            DateTextField(
+                name = "Next due date (optional)",
+                value = nextDueDate,
+                onDateSelected = onNextDueDate,
+                allowFutureDates = true,
+                allowPastDates = false,
+                minDateAfter = dateGiven.takeIf { it.isNotBlank() }
+            )
+
+            // FIX: allow clearing the next due date
+            if (nextDueDate.isNotBlank()) {
+                TextButton(
+                    onClick = onClearNextDueDate,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Clear date",
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("Clear date", style = MaterialTheme.typography.bodySmall)
+                }
+            }
         }
     }
 }

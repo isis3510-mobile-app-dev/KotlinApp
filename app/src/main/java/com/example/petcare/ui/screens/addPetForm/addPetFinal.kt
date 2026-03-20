@@ -100,36 +100,7 @@ fun AddPetFinalForm(
                 )
             }
 
-            Card(
-                modifier = Modifier.size(width = 350.dp, height = 68.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(24.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Contactless,
-                        contentDescription = null, tint = GreenDark,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = "Set up NFC tag later",
-                            textAlign = TextAlign.Start, fontFamily = RobotoBold,
-                            fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary
-                        )
-                        Text(
-                            text = "Write your pet's info to an NFC tag from their profile",
-                            textAlign = TextAlign.Start, fontFamily = RobotoRegular,
-                            fontSize = 10.sp, color = MaterialTheme.colorScheme.tertiary,
-                            lineHeight = 16.sp
-                        )
-                    }
-                }
-            }
+
         }
 
         Row {
