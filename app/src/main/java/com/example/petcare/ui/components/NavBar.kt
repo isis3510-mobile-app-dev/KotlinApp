@@ -55,7 +55,7 @@ fun NavBar(
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = GreenDark,
                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    selectedTextColor = GreenDark,
+                    selectedTextColor = MaterialTheme.colorScheme.secondary,
                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     indicatorColor = GreenLight
                 )

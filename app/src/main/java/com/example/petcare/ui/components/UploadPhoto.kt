@@ -36,7 +36,7 @@ fun IconCardButton(
                     .clickable { onClick() },
                 shape = RoundedCornerShape(30.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             ) {
                 Column(
                     modifier = Modifier

@@ -62,7 +62,7 @@ import com.example.petcare.util.UrlUtils
 fun PetAction(
     text: String,
     icon: ImageVector,
-    color: Long
+    color: Color
 ) {
 
     Row(
@@ -75,7 +75,7 @@ fun PetAction(
             imageVector = icon,
             contentDescription = text,
             modifier = Modifier.size(18.dp),
-            tint = Color(color)
+            tint = color
         )
 
         Spacer(modifier = Modifier.width(10.dp))
@@ -83,7 +83,7 @@ fun PetAction(
         Text(
             text = text,
             fontSize = 12.sp,
-            color = Color(color)
+            color = color
         )
     }
 }
@@ -190,7 +190,7 @@ fun PetDetailsCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(5.dp))
-                        Text(text = breed, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = breed, fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary)
                     }
 
                     Spacer(modifier = Modifier.size(4.dp))
@@ -198,15 +198,15 @@ fun PetDetailsCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Cake, contentDescription = null, tint = ErrorContent, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "$age", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = "$age", fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary)
                         Spacer(modifier = Modifier.width(12.dp))
-                        Icon(Icons.Default.Balance, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Default.Balance, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "$weight", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = "$weight", fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary)
                         Spacer(modifier = Modifier.width(12.dp))
                         Icon(genderIcon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = gender, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = gender, fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary)
                     }
                 }
 
@@ -217,7 +217,7 @@ fun PetDetailsCard(
                 )
             }
 
-            HorizontalDivider(color = GrayBackground, thickness = 1.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.onPrimary, thickness = 1.dp)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -227,21 +227,21 @@ fun PetDetailsCard(
                     modifier = Modifier.weight(1f).clickable { onVaccineSelect() },
                     contentAlignment = Alignment.Center
                 ) {
-                    PetAction("Vaccines", Icons.Default.Vaccines, 0xFF006A60)
+                    PetAction("Vaccines", Icons.Default.Vaccines, MaterialTheme.colorScheme.secondary)
                 }
-                VerticalDivider(color = GrayBackground, thickness = 1.dp)
+                VerticalDivider(color = MaterialTheme.colorScheme.onPrimary, thickness = 1.dp)
                 Box(
                     modifier = Modifier.weight(1f).clickable { onLostSelect() },
                     contentAlignment = Alignment.Center
                 ) {
-                    PetAction("Lost Mode", Icons.Default.LocationOn, 0xFF3F4948)
+                    PetAction("Lost Mode", Icons.Default.LocationOn, MaterialTheme.colorScheme.tertiary)
                 }
-                VerticalDivider(color = GrayBackground, thickness = 1.dp)
+                VerticalDivider(color = MaterialTheme.colorScheme.onPrimary, thickness = 1.dp)
                 Box(
                     modifier = Modifier.weight(1f).clickable { onNFCSelect() },
                     contentAlignment = Alignment.Center
                 ) {
-                    PetAction("NFC", Icons.Outlined.Contactless, 0xFF3949AB)
+                    PetAction("NFC", Icons.Outlined.Contactless, MaterialTheme.colorScheme.onSecondary)
                 }
             }
         }

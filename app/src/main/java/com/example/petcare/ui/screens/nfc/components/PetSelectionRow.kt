@@ -48,7 +48,7 @@ fun PetSelectionRow(
         Text(
             text = "Select pet to write:",
             style = MaterialTheme.typography.titleMedium,
-            color = GrayDark,
+            color = MaterialTheme.colorScheme.tertiary,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(horizontal = 24.dp)
         )
@@ -70,7 +70,7 @@ fun PetSelectionRow(
                     Card(
                         modifier = Modifier.size(72.dp),
                         shape = RoundedCornerShape(16.dp),
-                        border = if (isSelected) BorderStroke(3.dp, GreenDark) else null,
+                        border = if (isSelected) BorderStroke(3.dp, MaterialTheme.colorScheme.secondary) else null,
                         elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 0.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                     ) {
@@ -108,7 +108,7 @@ fun PetSelectionRow(
                     Text(
                         text = pet.name,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (isSelected) GreenDark else GrayDark,
+                        color = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                     )
                 }

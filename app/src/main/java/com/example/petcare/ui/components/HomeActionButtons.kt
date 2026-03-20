@@ -40,6 +40,7 @@ fun CircularIconButton(
     hasNotificationDot: Boolean = false,
     useShadow: Boolean = true
 ) {
+
     Box(modifier = Modifier.size(52.dp)) {
         Box(
             modifier = Modifier
@@ -57,7 +58,7 @@ fun CircularIconButton(
                 modifier = Modifier.size(30.dp)
             )
         }
-        
+
         if (hasNotificationDot) {
             Box(
                 modifier = Modifier
@@ -68,11 +69,13 @@ fun CircularIconButton(
                     .offset(x = (-2).dp, y = 2.dp)
             )
         }
+
     }
 }
 
 @Composable
 fun NfcButton(onClick: () -> Unit = {}) {
+
     CircularIconButton(
         icon = Icons.Outlined.Contactless,
         contentDescription = "NFC",
@@ -81,18 +84,21 @@ fun NfcButton(onClick: () -> Unit = {}) {
         onClick = onClick,
         useShadow = false
     )
+
 }
 
 @Composable
 fun NotificationButton(hasNotifications: Boolean = false, onClick: () -> Unit = {}) {
+
     CircularIconButton(
         icon = Icons.Outlined.Notifications,
         contentDescription = "Notifications",
         backgroundColor = MaterialTheme.colorScheme.surface,
-        iconColor = GreenDark,
+        iconColor = MaterialTheme.colorScheme.secondary,
         onClick = onClick,
         hasNotificationDot = hasNotifications
     )
+
 }
 
 @Preview(showBackground = true)

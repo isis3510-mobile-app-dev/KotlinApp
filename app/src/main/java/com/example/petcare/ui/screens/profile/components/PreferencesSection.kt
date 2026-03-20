@@ -45,7 +45,7 @@ fun PreferencesSection(
                             onThemeModeChanged(nextMode)
                         }
                     ) {
-                        androidx.compose.material3.Text("CHANGE", color = GreenDark)
+                        androidx.compose.material3.Text("CHANGE", color = MaterialTheme.colorScheme.secondary)
                     }
                 }
             )

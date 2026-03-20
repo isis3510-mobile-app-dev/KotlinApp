@@ -42,7 +42,7 @@ fun NotesCard(
             Text(
                 text = "NOTES",
                 style = MaterialTheme.typography.labelMedium,
-                color = GrayText,
+                color = MaterialTheme.colorScheme.onTertiary,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
             )

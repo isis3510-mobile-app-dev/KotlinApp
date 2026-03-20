@@ -124,9 +124,9 @@ fun PetProfileScreen(
                     )
                 }
                 Row {
-                    IconButton(onClick = { /* Share */ }) {
-                        Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
-                    }
+                    //IconButton(onClick = { /* Share */ }) {
+                    //    Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
+                    //}
                     // Edit button now opens the bottom sheet
                     IconButton(onClick = { showEditSheet = true }) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
@@ -175,7 +175,7 @@ fun PetProfileScreen(
                             Text(
                                 text     = "See all ${uiState.suggestions.size} alerts",
                                 fontSize = 13.sp,
-                                color    = GreenDark
+                                color    =  MaterialTheme.colorScheme.secondary
                             )
                         }
                     }

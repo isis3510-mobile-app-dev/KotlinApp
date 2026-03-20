@@ -71,7 +71,7 @@ fun NFCInfoCard() {
                     Text(
                         text = benefit,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = GrayDark
+                        color = MaterialTheme.colorScheme.onTertiary
                     )
                 }
             }

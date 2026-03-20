@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.petcare.ui.theme.Black
 
 @Composable
 fun EventCard(eventName: String,pet:String, date: String){
@@ -82,7 +83,7 @@ fun EventCard(eventName: String,pet:String, date: String){
                     Icon(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = "Event",
-                        tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                        tint = Black,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))

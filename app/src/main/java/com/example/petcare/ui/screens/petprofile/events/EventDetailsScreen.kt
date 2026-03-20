@@ -112,7 +112,7 @@ fun EventDetailsScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Save", color = MaterialTheme.colorScheme.onSecondary, fontWeight = FontWeight.Bold)
+                            Text("Save", color = MaterialTheme.colorScheme.surface, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -161,7 +161,7 @@ fun EventDetailsScreen(
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.onSecondary
+                                tint = MaterialTheme.colorScheme.surface
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -170,21 +170,21 @@ fun EventDetailsScreen(
                                 Icon(
                                     Icons.Default.MedicalServices,
                                     contentDescription = null,
-                                    tint     = MaterialTheme.colorScheme.onSecondary,
+                                    tint     = MaterialTheme.colorScheme.surface,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text       = "Medical Event",
                                     style      = MaterialTheme.typography.titleLarge,
-                                    color      = MaterialTheme.colorScheme.onSecondary,
+                                    color      = MaterialTheme.colorScheme.surface,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                             Text(
                                 text  = event.title,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.8f)
+                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
                             )
                         }
                     }

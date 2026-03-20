@@ -119,7 +119,7 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier          = Modifier.clickable { onNavigateToPets() }
                     ) {
-                        Text("See all", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = GreenDark)
+                        Text("See all", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.secondary)
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = GreenDark)
                     }
                 }
@@ -174,12 +174,12 @@ fun HomeScreen(
                                     text       = "See all ${homeState.totalAlertCount}",
                                     fontSize   = 16.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color      = GreenDark
+                                    color      = MaterialTheme.colorScheme.secondary
                                 )
                                 Icon(
                                     imageVector        = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = null,
-                                    tint               = GreenDark
+                                    tint               = MaterialTheme.colorScheme.secondary
                                 )
                             }
                         }
@@ -300,7 +300,7 @@ fun HomeScreen(
                             "View all",
                             fontSize   = 16.sp,
                             fontWeight = FontWeight.Medium,
-                            color      = GreenDark,
+                            color      = MaterialTheme.colorScheme.secondary,
                             modifier   = Modifier.clickable { onNavigateToRecords() }
                         )
                     }
