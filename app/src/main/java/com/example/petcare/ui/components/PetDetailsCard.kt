@@ -102,9 +102,10 @@ fun PetDetailsCard(
         else -> Pair(WarningContainer, WarningContent)
     }
 
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     val logo = when (species.lowercase()) {
-        "dog" -> R.drawable.dog_logo
-        else -> R.drawable.cat_logo
+        "dog" -> if (isDark) R.drawable.dog_logo_white else R.drawable.dog_logo
+        else -> if (isDark) R.drawable.cat_logo_white else R.drawable.cat_logo
     }
 
     val genderIcon = when (gender.lowercase()) {
