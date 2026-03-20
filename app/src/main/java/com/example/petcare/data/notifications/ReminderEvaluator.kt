@@ -1,6 +1,7 @@
 package com.example.petcare.data.notifications
 
 import com.example.petcare.data.model.Event
+import com.example.petcare.data.model.EventType
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.model.ReminderWindow
 import com.example.petcare.data.model.SuggestionDto
@@ -14,6 +15,7 @@ private const val WEEK_HOURS = 24L * 7L
 private const val DAY_HOURS = 24L
 private const val H2_HOURS = 2L
 private const val H12_HOURS = 12L
+private const val VET_VISIT_ALERT_DAYS = 60L
 
 data class ReminderCandidate(
     val dedupeKey: String,
@@ -58,6 +60,14 @@ class ReminderEvaluator {
                     targetRoute = "eventDetails/${event.petId}/${event.id}"
                 )
             }
+
+            evaluateVetVisitRecency(
+                petId = petId,
+                petName = petName,
+                events = events,
+                sentKeys = sentKeys,
+                now = now
+            )?.let { candidates += it }
         }
 
         suggestionsByPetId.forEach { (petId, suggestions) ->
@@ -80,6 +90,39 @@ class ReminderEvaluator {
         }
 
         return candidates
+    }
+
+    private fun evaluateVetVisitRecency(
+        petId: String,
+        petName: String,
+        events: List<Event>,
+        sentKeys: Set<String>,
+        now: Instant
+    ): ReminderCandidate? {
+        val latestVisit = events
+            .asSequence()
+            .filter { isVetVisitEvent(it) }
+            .mapNotNull { event ->
+                EventDateUtils.parseEventInstant(event.date)?.let { event to it }
+            }
+            .filter { (_, whenHappened) -> !whenHappened.isAfter(now) }
+            .maxByOrNull { (_, whenHappened) -> whenHappened }
+            ?: return null
+
+        val elapsed = Duration.between(latestVisit.second, now)
+        if (elapsed <= Duration.ofDays(VET_VISIT_ALERT_DAYS)) return null
+        val daysSinceLastVisit = elapsed.toDays()
+
+        val dedupeKey = "vetVisit:$petId:last:${latestVisit.first.id}:${latestVisit.second.epochSecond}"
+        if (dedupeKey in sentKeys) return null
+
+        return ReminderCandidate(
+            dedupeKey = dedupeKey,
+            backendType = "VET_VISIT_STALE",
+            header = "Time for a new vet checkup",
+            text = "It has been $daysSinceLastVisit days since the last recorded vet visit for $petName.",
+            targetRoute = "petProfile/$petId"
+        )
     }
 
     private fun resolveCurrentWindow(rawDate: String?, now: Instant): ReminderWindow? {
@@ -106,6 +149,13 @@ class ReminderEvaluator {
                 suggestion.type.equals("warning", ignoreCase = true)
         }
         VaccineUrgencyLevel.MISSING_ONLY -> suggestion.title.startsWith("Missing vaccine", ignoreCase = true)
+    }
+
+    private fun isVetVisitEvent(event: Event): Boolean {
+        if (event.eventType == EventType.CHECKUP) return true
+
+        val normalizedTitle = event.title.trim().lowercase()
+        return "vet" in normalizedTitle || "check" in normalizedTitle
     }
 
     private fun shortHash(value: String): String {

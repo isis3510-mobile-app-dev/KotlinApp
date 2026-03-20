@@ -126,8 +126,8 @@ class AddEventViewModel : ViewModel() {
 
     fun submit(onSuccess: (eventId: String) -> Unit) {
         val s = _state.value
-        if (s.petId.isBlank() || s.title.isBlank() || s.date.isBlank()) {
-            _state.value = s.copy(error = "Pet, title and date are required")
+        if (s.petId.isBlank() || s.ownerId.isBlank() || s.title.isBlank() || s.date.isBlank()) {
+            _state.value = s.copy(error = "Pet, user profile, title and date are required")
             return
         }
         // Esperar a que terminen los uploads pendientes
