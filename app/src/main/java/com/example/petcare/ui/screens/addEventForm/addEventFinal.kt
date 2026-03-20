@@ -185,7 +185,7 @@ fun AddEventFinalForm(
             Spacer(modifier = Modifier.width(10.dp))
             ButtonDefault(
                 bgColor = MaterialTheme.colorScheme.secondary,
-                textColor = MaterialTheme.colorScheme.onSecondary,
+                textColor = MaterialTheme.colorScheme.surface,
                 width = 169.dp, height = 50.57.dp,
                 text = if (state.isLoading) "Saving…" else "Add Event",
                 onclick = {

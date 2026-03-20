@@ -52,7 +52,7 @@ fun AccountSection(
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Edit Profile",
-                        tint = GrayText
+                        tint = MaterialTheme.colorScheme.onTertiary
                     )
                 },
                 onClick = { activeSheet = ActiveSheet.NAME }
@@ -69,7 +69,7 @@ fun AccountSection(
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Edit Email",
-                        tint = GrayText
+                        tint = MaterialTheme.colorScheme.onTertiary
                     )
                 },
                 onClick = {activeSheet = ActiveSheet.EMAIL}
@@ -86,7 +86,7 @@ fun AccountSection(
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Edit Phone",
-                        tint = GrayText
+                        tint = MaterialTheme.colorScheme.onTertiary
                     )
                 },
                 onClick = { activeSheet = ActiveSheet.PHONE }

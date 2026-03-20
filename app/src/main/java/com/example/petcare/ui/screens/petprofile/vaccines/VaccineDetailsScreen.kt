@@ -90,10 +90,10 @@ fun VaccineDetailsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSecondary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.surface)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Vaccine Details", color = MaterialTheme.colorScheme.onSecondary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("Vaccine Details", color = MaterialTheme.colorScheme.surface, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
             }
         },
@@ -130,10 +130,10 @@ fun VaccineDetailsScreen(
                         enabled  = !uiState.isSaving,
                         modifier = Modifier.weight(1f).height(52.dp),
                         shape    = RoundedCornerShape(28.dp),
-                        colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                        colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.surface)
                     ) {
                         if (uiState.isSaving) CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onSecondary, strokeWidth = 2.dp)
-                        else Text("Save", color = MaterialTheme.colorScheme.onSecondary, fontWeight = FontWeight.Bold)
+                        else Text("Save", color = MaterialTheme.colorScheme.surface, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -358,8 +358,8 @@ private fun StickyBottomActions(isDeleting: Boolean, onDelete: () -> Unit, onEdi
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondary, modifier = Modifier.size(20.dp))
-                Text("Edit", color = MaterialTheme.colorScheme.onSecondary, fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.surface, modifier = Modifier.size(20.dp))
+                Text("Edit", color = MaterialTheme.colorScheme.surface, fontWeight = FontWeight.Bold)
             }
         }
     }

@@ -16,6 +16,7 @@ import com.example.petcare.ui.theme.GreenDark
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material3.MaterialTheme
 import com.example.petcare.ui.components.EmptyStateView
 
 fun LazyListScope.eventTabContent(
@@ -54,15 +55,15 @@ fun LazyListScope.eventTabContent(
                 .padding(start = 24.dp, end = 24.dp, bottom = 80.dp) // padding for FAB
                 .height(56.dp),
             shape = RoundedCornerShape(28.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, GreenDark),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
             colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = GreenDark,
+                contentColor = MaterialTheme.colorScheme.secondary,
                 containerColor = Color.Transparent
             )
         ) {
             Text(
                 text = "+ Add Medical Event",
-                color = GreenDark,
+                color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.Bold
             )
         }

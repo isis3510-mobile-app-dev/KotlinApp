@@ -198,7 +198,7 @@ fun AddVaccineInitialForm(
 
         ButtonDefault(
             bgColor = MaterialTheme.colorScheme.secondary,
-            textColor = MaterialTheme.colorScheme.onSecondary,
+            textColor = MaterialTheme.colorScheme.surface,
             width = 342.dp,
             height = 56.dp,
             text = "Continue",

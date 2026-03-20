@@ -82,7 +82,7 @@ fun AddPetDetailsForm(
             Spacer(modifier = Modifier.width(10.dp))
             ButtonDefault(
                 bgColor = MaterialTheme.colorScheme.secondary,
-                textColor = MaterialTheme.colorScheme.onSecondary,
+                textColor = MaterialTheme.colorScheme.surface,
                 width = 169.dp, height = 50.57.dp,
                 text = "Continue", onclick = {
                     FeatureClicksTracker.recordClick()

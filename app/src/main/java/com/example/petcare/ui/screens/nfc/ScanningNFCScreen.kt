@@ -119,7 +119,7 @@ fun ScanningNFCScreen(
                     Text(
                         text = message,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = GrayDark,
+                        color = MaterialTheme.colorScheme.onTertiary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -134,7 +134,7 @@ fun ScanningNFCScreen(
                     Text(
                         text = "Hold still — processing tag",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = GrayDark
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                 }
                 else -> {
@@ -148,7 +148,7 @@ fun ScanningNFCScreen(
                     Text(
                         text = "Hold your device near the NFC tag",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = GrayDark
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                 }
             }

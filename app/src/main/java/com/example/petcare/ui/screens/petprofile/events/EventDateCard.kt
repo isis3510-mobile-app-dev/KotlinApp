@@ -39,7 +39,7 @@ fun EventDateCard(
         Text(
             text = "DATE",
             style = MaterialTheme.typography.labelMedium,
-            color = GrayText,
+            color = MaterialTheme.colorScheme.onTertiary,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.sp
         )
@@ -51,7 +51,7 @@ fun EventDateCard(
             Icon(
                 imageVector = Icons.Outlined.CalendarToday,
                 contentDescription = "Event Date",
-                tint = GrayText,
+                tint = MaterialTheme.colorScheme.onTertiary,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -74,7 +74,7 @@ fun EventDateCard(
                 Icon(
                     imageVector = Icons.Outlined.CalendarToday,
                     contentDescription = "Follow-up Date",
-                    tint = GrayText,
+                    tint = MaterialTheme.colorScheme.onTertiary,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))

@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -104,14 +105,22 @@ private fun PetFilterRow(
             FilterChip(
                 selected = selectedId == null,
                 onClick  = { onSelect(null) },
-                label    = { Text("All", fontSize = 13.sp) }
+                label    = { Text("All", fontSize = 13.sp) },
+                colors = FilterChipDefaults.filterChipColors(
+                        selectedLabelColor = Color.White,
+                        labelColor = MaterialTheme.colorScheme.tertiary
+            )
             )
         }
         items(chips) { chip ->
             FilterChip(
                 selected = selectedId == chip.petId,
                 onClick  = { onSelect(chip.petId) },
-                label    = { Text("${chip.petName} (${chip.alertCount})", fontSize = 13.sp) }
+                label    = { Text("${chip.petName} (${chip.alertCount})", fontSize = 13.sp) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedLabelColor = Color.White,
+                    labelColor = MaterialTheme.colorScheme.tertiary
+                )
             )
         }
     }

@@ -33,6 +33,7 @@ import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
 
 import androidx.compose.material.icons.outlined.Contactless
+import androidx.compose.material3.MaterialTheme
 import com.example.petcare.ui.theme.OffWhite
 
 @Composable
@@ -108,21 +109,21 @@ private fun GridButton(
                 Icon(
                     painter = painter,
                     contentDescription = label,
-                    tint = GreenDark,
+                    tint =  MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(20.dp)
                 )
             } else if (vectorIcon != null) {
                 Icon(
                     imageVector = vectorIcon,
                     contentDescription = label,
-                    tint = GreenDark,
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(20.dp)
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = label,
-                color = GreenDark,
+                color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )

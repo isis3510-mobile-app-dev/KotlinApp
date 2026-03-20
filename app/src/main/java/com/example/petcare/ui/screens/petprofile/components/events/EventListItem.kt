@@ -96,7 +96,7 @@ fun EventListItem(
                         text = event.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     if (event.price != null) {
                         Text(
@@ -114,13 +114,13 @@ fun EventListItem(
                 Text(
                     text = "${event.provider} · ${event.clinic}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = GrayDark
+                    color = MaterialTheme.colorScheme.onTertiary
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = event.date,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = GrayDark
+                    color = MaterialTheme.colorScheme.onTertiary
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
