@@ -39,6 +39,7 @@ import com.example.petcare.ui.theme.DentalContainer
 import com.example.petcare.ui.theme.ErrorContainer
 import com.example.petcare.ui.theme.InfoContainer
 import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.EventDateUtils
 import com.example.petcare.util.truncateForDisplay
 
 @Composable
@@ -128,25 +129,7 @@ fun EventListItem(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // Date and Time (split from ISO)
-                val (date, time) = try {
-                    val parts = event.date.split("T")
-                    val datePart = parts[0]
-                    val timePart = if (parts.size > 1) parts[1].take(5) else "00:00"
-
-                    val dP = datePart.split("-")
-                    val formattedDate = if (dP.size == 3) "${dP[2]}/${dP[1]}/${dP[0]}" else datePart
-
-                    val tP = timePart.split(":")
-                    val h = tP[0].toInt()
-                    val m = tP[1].toInt()
-                    val amPm = if (h >= 12) "PM" else "AM"
-                    val h12 = if (h == 0) 12 else if (h > 12) h - 12 else h
-                    val formattedTime = "${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} $amPm"
-
-                    formattedDate to formattedTime
-                } catch (_: Exception) {
-                    event.date to ""
-                }
+                val (date, time) = EventDateUtils.splitToAppDateTime(event.date)
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(

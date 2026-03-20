@@ -100,6 +100,8 @@ fun ProfileScreen(
                 onThemeModeChanged = viewModel::onThemeModeChanged,
                 notificationsEnabled = uiState.notificationsEnabled,
                 onNotificationsToggled = viewModel::onNotificationsToggled,
+                vaccineUrgencyLevel = uiState.vaccineUrgencyLevel,
+                onVaccineUrgencyLevelChanged = viewModel::onVaccineUrgencyLevelChanged,
                 //offlineModeEnabled = uiState.offlineModeEnabled,
                 //onOfflineModeToggled = viewModel::onOfflineModeToggled
             )
@@ -162,6 +164,8 @@ fun ProfileScreenPreviewStub() {
                     onThemeModeChanged = {},
                     notificationsEnabled = true,
                     onNotificationsToggled = {},
+                    vaccineUrgencyLevel = com.example.petcare.data.model.VaccineUrgencyLevel.DANGER_ONLY,
+                    onVaccineUrgencyLevelChanged = {},
                     //offlineModeEnabled = false,
                     //onOfflineModeToggled = {}
                 )

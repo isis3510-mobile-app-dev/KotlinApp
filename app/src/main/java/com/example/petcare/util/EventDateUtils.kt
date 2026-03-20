@@ -37,8 +37,10 @@ object EventDateUtils {
         runCatching { return OffsetDateTime.parse(value).toInstant() }
         runCatching { return ZonedDateTime.parse(value).toInstant() }
         runCatching {
+            // Backend can return naive ISO timestamps (no timezone suffix).
+            // Treat them as UTC to avoid +/− local timezone shifts in UI.
             val local = LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-            return local.atZone(ZoneId.systemDefault()).toInstant()
+            return local.atOffset(ZoneOffset.UTC).toInstant()
         }
         return null
     }
@@ -49,6 +51,15 @@ object EventDateUtils {
     }
 
     fun splitToAppDateTime(raw: String?): Pair<String, String> {
+        if (isUtcMidnightTimestamp(raw)) {
+            val utcDate = runCatching {
+                OffsetDateTime.parse(raw?.trim()).toLocalDate()
+            }.getOrNull()
+            if (utcDate != null) {
+                return utcDate.format(appDateFormatter) to "12:00 AM"
+            }
+        }
+
         val instant = parseEventInstant(raw)
         if (instant != null) {
             val localDateTime = instant.atZone(ZoneId.systemDefault())
@@ -118,5 +129,13 @@ object EventDateUtils {
         return runCatching {
             LocalTime.parse(raw.uppercase(Locale.US), appTimeFormatter)
         }.getOrElse { LocalTime.MIDNIGHT }
+    }
+
+    private fun isUtcMidnightTimestamp(raw: String?): Boolean {
+        val value = raw?.trim().orEmpty()
+        if (value.isBlank()) return false
+        val offsetDateTime = runCatching { OffsetDateTime.parse(value) }.getOrNull() ?: return false
+        val utc = offsetDateTime.withOffsetSameInstant(ZoneOffset.UTC)
+        return utc.hour == 0 && utc.minute == 0 && utc.second == 0
     }
 }

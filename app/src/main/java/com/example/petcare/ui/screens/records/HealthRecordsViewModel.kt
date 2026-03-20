@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.components.MedicalEventData
 import com.example.petcare.ui.components.VaccineListItemData
+import com.example.petcare.util.EventDateUtils
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -129,24 +130,10 @@ class HealthRecordsViewModel : ViewModel() {
     }
 
     private fun parseDate(iso: String): String {
-        return try {
-            val datePart = iso.split("T")[0]
-            val dP = datePart.split("-")
-            "${dP[2]}/${dP[1]}/${dP[0]}"
-        } catch (_: Exception) { iso.take(10) }
+        return EventDateUtils.splitToAppDateTime(iso).first.ifBlank { iso.take(10) }
     }
 
     private fun parseTime(iso: String): String {
-        return try {
-            val parts = iso.split("T")
-            if (parts.size < 2) return ""
-            val timePart = parts[1].take(5)
-            val tP = timePart.split(":")
-            val h = tP[0].toInt()
-            val m = tP[1].toInt()
-            val ap = if (h >= 12) "PM" else "AM"
-            val h12 = if (h == 0) 12 else if (h > 12) h - 12 else h
-            "${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} $ap"
-        } catch (_: Exception) { "" }
+        return EventDateUtils.splitToAppDateTime(iso).second
     }
 }

@@ -7,6 +7,7 @@ import com.example.petcare.data.repository.AuthRepository
 import com.example.petcare.data.repository.UserRepository
 import com.example.petcare.data.model.UpdateUserRequest
 import com.example.petcare.data.model.User
+import com.example.petcare.data.model.VaccineUrgencyLevel
 import com.example.petcare.data.network.ApiClient
 import com.example.petcare.data.network.ApiService
 import com.example.petcare.data.preferences.AppThemeMode
@@ -28,6 +29,7 @@ data class ProfileUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val notificationsEnabled: Boolean = false,
+    val vaccineUrgencyLevel: VaccineUrgencyLevel = VaccineUrgencyLevel.DANGER_ONLY,
     val offlineModeEnabled: Boolean = false,
     val currentThemeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val isSaving: Boolean = false,
@@ -56,15 +58,17 @@ class ProfileViewModel(
 
     val uiState: StateFlow<ProfileUiState> = combine(
         repo.notificationsEnabled,
+        repo.vaccineUrgencyLevel,
         repo.offlineModeEnabled,
         repo.themeMode,
         _userState
-    ) { notifications, offlineMode, theme, (user, isLoading, error) ->
+    ) { notifications, vaccineUrgencyLevel, offlineMode, theme, (user, isLoading, error) ->
         ProfileUiState(
             user                 = user,
             isLoading            = isLoading,
             error                = error,
             notificationsEnabled = notifications,
+            vaccineUrgencyLevel  = vaccineUrgencyLevel,
             offlineModeEnabled   = offlineMode,
             currentThemeMode     = theme
         )
@@ -98,6 +102,10 @@ class ProfileViewModel(
 
     fun onNotificationsToggled(enabled: Boolean) {
         viewModelScope.launch { repo.setNotificationsEnabled(enabled) }
+    }
+
+    fun onVaccineUrgencyLevelChanged(level: VaccineUrgencyLevel) {
+        viewModelScope.launch { repo.setVaccineUrgencyLevel(level) }
     }
 
     fun onOfflineModeToggled(enabled: Boolean) {

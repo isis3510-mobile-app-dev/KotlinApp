@@ -23,6 +23,7 @@ import com.example.petcare.ui.theme.GrayMedium
 import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.OffWhite
+import com.example.petcare.util.EventDateUtils
 
 @Composable
 fun EventDateCard(
@@ -30,25 +31,8 @@ fun EventDateCard(
     followUpDate: String?,
     modifier: Modifier = Modifier
 ) {
-    val (date, time) = try {
-        val parts = eventDate.split("T")
-        val datePart = parts[0]
-        val timePart = if (parts.size > 1) parts[1].take(5) else "00:00"
-
-        val dP = datePart.split("-")
-        val formattedDate = if (dP.size == 3) "${dP[2]}/${dP[1]}/${dP[0]}" else datePart
-
-        val tP = timePart.split(":")
-        val h = tP[0].toInt()
-        val m = tP[1].toInt()
-        val amPm = if (h >= 12) "PM" else "AM"
-        val h12 = if (h == 0) 12 else if (h > 12) h - 12 else h
-        val formattedTime = "${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} $amPm"
-
-        formattedDate to formattedTime
-    } catch (_: Exception) {
-        eventDate to ""
-    }
+    val (date, time) = EventDateUtils.splitToAppDateTime(eventDate)
+    val followUpLabel = followUpDate?.let { EventDateUtils.splitToAppDateTime(it).first }
 
     Column(
         modifier = modifier
@@ -119,7 +103,7 @@ fun EventDateCard(
             }
         }
         
-        if (followUpDate != null) {
+        if (followUpLabel != null) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = GrayMedium, thickness = 1.dp)
             
             // Follow-up Date Row
@@ -135,7 +119,7 @@ fun EventDateCard(
                     Text(text = "Follow-up Date", style = MaterialTheme.typography.bodySmall, color = GrayText)
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = followUpDate,
+                        text = followUpLabel,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )

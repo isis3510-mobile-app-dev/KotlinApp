@@ -91,4 +91,5 @@ dependencies {
     //Camera
     implementation(libs.coil.compose)
     implementation(libs.firebase.storage)
+    implementation(libs.androidx.work.runtime.ktx)
 }

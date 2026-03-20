@@ -1,12 +1,17 @@
 package com.example.petcare
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.nfc.NfcAdapter
+import android.os.Build
 import android.os.Bundle
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -19,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,6 +39,8 @@ import androidx.navigation.navArgument
 import com.example.petcare.data.nfc.NfcManager
 import com.example.petcare.data.analytics.AnalyticsSeeder
 import com.example.petcare.data.analytics.ScreenTimeTracker
+import com.example.petcare.data.notifications.NotificationDispatcher
+import com.example.petcare.data.notifications.NotificationScheduler
 import com.example.petcare.ui.preferences.AppThemeViewModel
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.components.ExpandableFAB
@@ -83,9 +91,17 @@ import com.example.petcare.ui.theme.OnboardingBlueStart
 import com.example.petcare.ui.theme.OnboardingPurpleEnd
 import com.example.petcare.ui.theme.OnboardingPurpleStart
 import com.example.petcare.ui.theme.PetCareTheme
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 class MainActivity : ComponentActivity() {
+
+    private data class PendingNotificationTarget(
+        val route: String,
+        val backendNotificationId: String?
+    )
 
     private val appThemeViewModel: AppThemeViewModel by viewModels {
         val app = application as PetCareApplication
@@ -99,10 +115,16 @@ class MainActivity : ComponentActivity() {
         PetsViewModelFactory(RepositoryProvider.petRepository)
     }
 
+    private val pendingNotificationTarget = MutableStateFlow<PendingNotificationTarget?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         nfcManager = NfcManager(this)
+        extractNotificationTarget(intent)?.let {
+            pendingNotificationTarget.value = it
+            intent.action = null
+        }
 
         setContent {
             val themeMode by appThemeViewModel.themeMode.collectAsStateWithLifecycle()
@@ -116,6 +138,14 @@ class MainActivity : ComponentActivity() {
             val addVaccineViewModel: AddVaccineViewModel = viewModel()
             val addEventViewModel: AddEventViewModel = viewModel()
             val uiScope = rememberCoroutineScope()
+            val notificationsEnabled by (application as PetCareApplication)
+                .userPreferencesRepository
+                .notificationsEnabled
+                .collectAsStateWithLifecycle(initialValue = false)
+            val pendingTarget by pendingNotificationTarget.asStateFlow().collectAsStateWithLifecycle()
+            val notificationPermissionLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission()
+            ) { }
 
             LaunchedEffect(authViewModel.isLoggedIn) {
                 if (authViewModel.isLoggedIn) {
@@ -125,6 +155,42 @@ class MainActivity : ComponentActivity() {
                     // ── Analytics: verify+seed metadata for this session ──
                     AnalyticsSeeder.seedIfNeeded(this@MainActivity)
                 }
+            }
+
+            LaunchedEffect(authViewModel.isLoggedIn, notificationsEnabled) {
+                if (!authViewModel.isLoggedIn || !notificationsEnabled) return@LaunchedEffect
+
+                // Trigger an immediate check so reminders are testable without waiting
+                // for the next periodic WorkManager execution window.
+                NotificationScheduler.runNow(this@MainActivity)
+
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return@LaunchedEffect
+
+                val permissionGranted = ContextCompat.checkSelfPermission(
+                    this@MainActivity,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (!permissionGranted) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+
+            LaunchedEffect(pendingTarget, authViewModel.isLoggedIn) {
+                val target = pendingTarget ?: return@LaunchedEffect
+                if (!authViewModel.isLoggedIn) return@LaunchedEffect
+
+                target.backendNotificationId?.let { notificationId ->
+                    RepositoryProvider.notificationRepository.markNotificationClicked(
+                        notificationId = notificationId,
+                        clickedAtIso = Instant.now().toString()
+                    )
+                }
+
+                navController.navigate(target.route) {
+                    launchSingleTop = true
+                }
+                pendingNotificationTarget.value = null
             }
 
             // ── Analytics: track screen time ──
@@ -729,6 +795,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun extractNotificationTarget(intent: Intent?): PendingNotificationTarget? {
+        if (intent?.action != NotificationDispatcher.ACTION_OPEN_NOTIFICATION) return null
+        val route = intent.getStringExtra(NotificationDispatcher.EXTRA_TARGET_ROUTE) ?: return null
+        val backendNotificationId = intent.getStringExtra(NotificationDispatcher.EXTRA_NOTIFICATION_ID)
+        return PendingNotificationTarget(
+            route = route,
+            backendNotificationId = backendNotificationId
+        )
+    }
+
     // ── NFC lifecycle ─────────────────────────────────────────────────────────
 
     override fun onResume() {
@@ -744,6 +820,10 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        extractNotificationTarget(intent)?.let {
+            pendingNotificationTarget.value = it
+            intent.action = null
+        }
         val action = intent.action ?: return
         if (action != NfcAdapter.ACTION_NDEF_DISCOVERED &&
             action != NfcAdapter.ACTION_TAG_DISCOVERED) return

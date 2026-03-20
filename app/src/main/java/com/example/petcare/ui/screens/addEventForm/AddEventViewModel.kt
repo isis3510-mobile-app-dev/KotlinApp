@@ -8,6 +8,7 @@ import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.EventType
 import com.example.petcare.data.repository.RepositoryProvider
+import com.example.petcare.util.EventDateUtils
 import com.example.petcare.util.FirebaseDocumentUploader
 import com.example.petcare.util.InputTextLimits
 import com.example.petcare.util.enforceMaxLength
@@ -143,14 +144,14 @@ class AddEventViewModel : ViewModel() {
                 ownerId      = s.ownerId,
                 title        = s.title.trim(),
                 eventType    = s.eventType.name.lowercase(),
-                date         = toIso(s.date),
+                date         = toIso(s.date, s.time),
                 price        = s.price.toDoubleOrNull(),
                 provider     = s.provider.trim(),
                 clinic       = s.clinic.trim(),
                 description  = s.description.trim(),
                 followUpDate = s.followUpDate
                     .takeIf { it.isNotBlank() }
-                    ?.let { toIso(it) }
+                    ?.let { toIso(it, "12:00 AM") }
             )
 
             FeatureExecutionTracker.track("Create Event") {
@@ -185,8 +186,9 @@ class AddEventViewModel : ViewModel() {
     fun clearError() { _state.value = _state.value.copy(error = null) }
     fun reset()      { _state.value = AddEventFormState() }
 
-    private fun toIso(date: String): String = try {
-        val p = date.split("/")
-        if (p.size == 3) "${p[2]}-${p[1]}-${p[0]}T00:00:00Z" else date
-    } catch (_: Exception) { date }
+    private fun toIso(date: String, time: String): String =
+        EventDateUtils.toIsoFromAppDateTime(
+            appDate = date,
+            appTime = time
+        ) ?: date
 }
