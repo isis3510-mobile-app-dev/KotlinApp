@@ -242,7 +242,7 @@ private fun Event.toMedicalEvent(): Event = Event(
     price        = price,
     provider     = provider,
     clinic       = clinic,
-    date         = date.take(10),
+    date         = date,
     description  = description,
-    followUpDate = followUpDate?.take(10)
+    followUpDate = followUpDate
 )

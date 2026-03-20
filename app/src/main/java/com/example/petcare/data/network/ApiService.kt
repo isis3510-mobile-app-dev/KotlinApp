@@ -3,13 +3,16 @@ package com.example.petcare.data.network
 import com.example.petcare.data.model.AddDocumentRequest
 import com.example.petcare.data.model.AddVaccinationRequest
 import com.example.petcare.data.model.CreateEventRequest
+import com.example.petcare.data.model.CreateNotificationRequest
 import com.example.petcare.data.model.CreatePetRequest
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.NfcPayloadResponse
 import com.example.petcare.data.model.NfcPublicReadResponse
 import com.example.petcare.data.model.NfcSyncResponse
+import com.example.petcare.data.model.AppNotification
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.model.PetSmartResponse
+import com.example.petcare.data.model.UpdateNotificationRequest
 import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.model.UpdateUserRequest
 import com.example.petcare.data.model.UpdateVaccinationRequest
@@ -129,6 +132,24 @@ interface ApiService {
         @Path("eventId") eventId: String,
         @Body body: Map<String, @JvmSuppressWildcards Any?>
     ): Response<Event>
+
+    // ── Notifications ────────────────────────────────────────────────────────
+
+    @GET("notifications/")
+    suspend fun getNotifications(
+        @Query("user_id") userId: String? = null
+    ): Response<List<AppNotification>>
+
+    @POST("notifications/")
+    suspend fun createNotification(
+        @Body body: CreateNotificationRequest
+    ): Response<AppNotification>
+
+    @PUT("notifications/{notificationId}/")
+    suspend fun updateNotification(
+        @Path("notificationId") notificationId: String,
+        @Body body: UpdateNotificationRequest
+    ): Response<AppNotification>
 
     // ── NFC ───────────────────────────────────────────────────────────────
 

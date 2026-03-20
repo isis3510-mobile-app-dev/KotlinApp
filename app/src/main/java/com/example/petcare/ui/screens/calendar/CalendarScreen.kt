@@ -22,6 +22,7 @@ import com.example.petcare.ui.components.EventCard
 import com.example.petcare.ui.components.Filters
 import com.example.petcare.ui.theme.GreenTextDark
 import com.example.petcare.ui.theme.PetCareTheme
+import com.example.petcare.util.EventDateUtils
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -46,16 +47,14 @@ fun CalendarScreen(
     // Events that fall on selected date(s)
     val eventsForRange = remember(uiState.events, startDate, endDate, selectedFilter) {
         uiState.events.filter { event ->
-            try {
-                val eventDate = LocalDate.parse(event.date.take(10))
-                val inRange   = !eventDate.isBefore(startDate) && !eventDate.isAfter(endDate)
-                val matchFilter = when (selectedFilter) {
-                    "Vaccines"     -> event.eventType.name == "VACCINE"
-                    "Appointments" -> event.eventType.name != "VACCINE"
-                    else           -> true
-                }
-                inRange && matchFilter
-            } catch (e: Exception) { false }
+            val eventDate = EventDateUtils.parseEventDate(event.date) ?: return@filter false
+            val inRange   = !eventDate.isBefore(startDate) && !eventDate.isAfter(endDate)
+            val matchFilter = when (selectedFilter) {
+                "Vaccines"     -> event.eventType.name == "VACCINE"
+                "Appointments" -> event.eventType.name != "VACCINE"
+                else           -> true
+            }
+            inRange && matchFilter
         }
     }
 
@@ -149,7 +148,10 @@ fun CalendarScreen(
 
         // Vaccine due dates
         vaccinesForRange.forEach { vacc ->
-            val dateLabel = vacc.nextDueDate?.take(10) ?: vacc.dateGiven.take(10)
+            val sourceDate = vacc.nextDueDate ?: vacc.dateGiven
+            val dateLabel = EventDateUtils.parseEventDate(sourceDate)
+                ?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                ?: sourceDate.take(10)
             EventCard(
                 eventName = "Vaccine due: ${vacc.vaccineId.take(8)}",
                 pet       = vacc.petName,
@@ -166,7 +168,7 @@ fun CalendarScreen(
                 EventCard(
                     eventName = event.title,
                     pet       = uiState.petNames[event.petId] ?: "",
-                    date      = event.date.take(10)
+                    date      = EventDateUtils.splitToAppDateTime(event.date).first
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))

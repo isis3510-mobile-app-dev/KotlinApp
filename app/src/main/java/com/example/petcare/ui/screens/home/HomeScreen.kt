@@ -31,6 +31,7 @@ import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.screens.auth.AuthViewModel
 import com.example.petcare.ui.theme.*
 import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.EventDateUtils
 import com.example.petcare.util.truncateForDisplay
 
 @Composable
@@ -336,7 +337,7 @@ fun HomeScreen(
                                 EventCard(
                                     eventName = event.title,
                                     pet       = homeState.pets.find { it.id == event.petId }?.name ?: "",
-                                    date      = event.date.take(10)
+                                    date      = EventDateUtils.splitToAppDateTime(event.date).first
                                 )
                             }
                         }

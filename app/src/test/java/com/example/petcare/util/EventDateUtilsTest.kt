@@ -3,8 +3,10 @@ package com.example.petcare.util
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
+import java.util.TimeZone
 
 class EventDateUtilsTest {
 
@@ -30,5 +32,25 @@ class EventDateUtilsTest {
             fallbackRaw = null
         )
         assertTrue(iso == null)
+    }
+
+    @Test
+    fun `splitToAppDateTime keeps UTC midnight timestamps as date-only`() {
+        val (appDate, appTime) = EventDateUtils.splitToAppDateTime("2026-03-20T00:00:00Z")
+        assertEquals("20/03/2026", appDate)
+        assertEquals("12:00 AM", appTime)
+    }
+
+    @Test
+    fun `splitToAppDateTime treats naive backend datetimes as UTC`() {
+        val originalTz = TimeZone.getDefault()
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("America/Bogota"))
+            val (appDate, appTime) = EventDateUtils.splitToAppDateTime("2026-03-20T16:00:00")
+            assertEquals("20/03/2026", appDate)
+            assertEquals("11:00 AM", appTime)
+        } finally {
+            TimeZone.setDefault(originalTz)
+        }
     }
 }

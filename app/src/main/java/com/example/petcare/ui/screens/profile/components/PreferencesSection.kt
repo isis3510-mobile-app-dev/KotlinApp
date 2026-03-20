@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.example.petcare.data.preferences.AppThemeMode
+import com.example.petcare.data.model.VaccineUrgencyLevel
 import com.example.petcare.ui.components.SettingsListItem
 import com.example.petcare.ui.components.SettingsSection
 import com.example.petcare.ui.theme.*
@@ -22,6 +23,8 @@ fun PreferencesSection(
     onThemeModeChanged: (AppThemeMode) -> Unit,
     notificationsEnabled: Boolean,
     onNotificationsToggled: (Boolean) -> Unit,
+    vaccineUrgencyLevel: VaccineUrgencyLevel,
+    onVaccineUrgencyLevelChanged: (VaccineUrgencyLevel) -> Unit,
     // offlineModeEnabled: Boolean,
     // onOfflineModeToggled: (Boolean) -> Unit
 ) {
@@ -71,6 +74,29 @@ fun PreferencesSection(
                 }
             )
         },
+        {
+            SettingsListItem(
+                icon = Icons.Default.Notifications,
+                iconBackgroundColor = WarningContainer,
+                iconTintColor = WarningContent,
+                title = "Vaccine Alert Level",
+                subtitle = "Level: ${vaccineUrgencyLevel.label()}",
+                trailingContent = {
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            val next = when (vaccineUrgencyLevel) {
+                                VaccineUrgencyLevel.DANGER_ONLY -> VaccineUrgencyLevel.DANGER_AND_WARNING
+                                VaccineUrgencyLevel.DANGER_AND_WARNING -> VaccineUrgencyLevel.MISSING_ONLY
+                                VaccineUrgencyLevel.MISSING_ONLY -> VaccineUrgencyLevel.DANGER_ONLY
+                            }
+                            onVaccineUrgencyLevelChanged(next)
+                        }
+                    ) {
+                        androidx.compose.material3.Text("CHANGE", color = MaterialTheme.colorScheme.secondary)
+                    }
+                }
+            )
+        },
         /**
         {
             SettingsListItem(
@@ -94,4 +120,10 @@ fun PreferencesSection(
         }
         **/
     ))
+}
+
+private fun VaccineUrgencyLevel.label(): String = when (this) {
+    VaccineUrgencyLevel.DANGER_ONLY -> "Danger only"
+    VaccineUrgencyLevel.DANGER_AND_WARNING -> "Danger + warning"
+    VaccineUrgencyLevel.MISSING_ONLY -> "Missing only"
 }

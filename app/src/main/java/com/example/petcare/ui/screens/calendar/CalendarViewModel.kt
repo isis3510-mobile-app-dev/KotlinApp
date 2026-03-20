@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.repository.RepositoryProvider
+import com.example.petcare.util.EventDateUtils
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,12 +78,12 @@ class CalendarViewModel : ViewModel() {
 
             // 4. Pre-compute marked dates for the calendar dots
             val eventDates = events.mapNotNull { event ->
-                try { LocalDate.parse(event.date.take(10)) } catch (e: Exception) { null }
+                EventDateUtils.parseEventDate(event.date)
             }.toSet()
 
             val vaccineDates = vaccinations.mapNotNull { v ->
                 val dateStr = v.nextDueDate ?: v.dateGiven
-                try { LocalDate.parse(dateStr.take(10)) } catch (e: Exception) { null }
+                EventDateUtils.parseEventDate(dateStr)
             }.toSet()
 
             _uiState.value = _uiState.value.copy(
