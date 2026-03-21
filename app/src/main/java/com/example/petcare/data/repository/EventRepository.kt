@@ -85,9 +85,6 @@ class EventRepository(private val api: ApiService) {
             if (fileUri != null) put("fileUri", fileUri)
         }
         val response = api.addEventDocument(eventId, body)
-        if (!response.isSuccessful) {
-            error(parseApiError(response.errorBody()?.string(), response.code(), "add event document"))
-        }
         response.body() ?: error("Failed to add document — empty response")
     }
 

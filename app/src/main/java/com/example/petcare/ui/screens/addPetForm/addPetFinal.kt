@@ -61,13 +61,13 @@ fun AddPetFinalForm(
                         text = "Almost done!",
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp),
                         textAlign = TextAlign.Start, fontFamily = RobotoBold,
-                        fontSize = 14.sp, color = MaterialTheme.colorScheme.tertiary
+                        fontSize = 14.sp, color = Color.Black
                     )
                     Text(
                         text = "Add optional medical info. You can always update this later from the pet's profile.",
                         modifier = Modifier.padding(start = 16.dp, top = 4.dp, end = 16.dp),
                         textAlign = TextAlign.Start, fontFamily = RobotoRegular,
-                        fontSize = 12.sp, color = MaterialTheme.colorScheme.tertiary,
+                        fontSize = 12.sp, color = Color.Black,
                         lineHeight = 16.sp
                     )
                 }

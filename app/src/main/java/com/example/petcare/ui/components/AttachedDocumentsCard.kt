@@ -176,14 +176,7 @@ fun AttachedDocumentsCard(
                     modifier              = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    SourceButton(
-                        label    = "Camera",
-                        icon     = Icons.Default.CameraAlt,
-                        modifier = Modifier.weight(1f),
-                        onClick  = {
-                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                        }
-                    )
+
                     SourceButton(
                         label    = "Gallery",
                         icon     = Icons.Default.Image,

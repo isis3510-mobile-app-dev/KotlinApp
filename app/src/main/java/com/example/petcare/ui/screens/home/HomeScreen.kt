@@ -87,7 +87,7 @@ fun HomeScreen(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     NfcButton(onClick = onNavigateToNfc)
-                    NotificationButton()
+                    NotificationButton(onClick = onNavigateToSuggestions)
                 }
             }
         }
