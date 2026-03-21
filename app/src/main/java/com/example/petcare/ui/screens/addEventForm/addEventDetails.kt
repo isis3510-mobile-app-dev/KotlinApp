@@ -8,13 +8,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.data.analytics.FeatureClicksTracker
@@ -23,7 +23,6 @@ import com.example.petcare.ui.components.ButtonOutline
 import com.example.petcare.ui.components.Stepper
 import com.example.petcare.ui.components.TextFieldComponent
 import com.example.petcare.ui.components.TransparentTopBar
-import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.util.InputTextLimits
 
 
@@ -67,9 +66,17 @@ fun AddEventDetailsForm(
                 onValueChange = viewModel::setClinic,
                 maxLength = InputTextLimits.PROVIDER_OR_CLINIC
             )
+
+            // FIX: decimal only + max 10 chars to prevent infinite input
             TextFieldComponent(
                 name = "Price (optional)", label = "e.g. 50",
-                value = state.price, onValueChange = viewModel::setPrice
+                value = state.price,
+                onValueChange = { newValue ->
+                    val filtered = newValue.filter { it.isDigit() || it == '.' }
+                    val dotCount = filtered.count { it == '.' }
+                    if (dotCount <= 1 && filtered.length <= 10) viewModel.setPrice(filtered)
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
         }
         Row {
@@ -94,15 +101,3 @@ fun AddEventDetailsForm(
         }
     }
 }
-
-/**
-@Preview
-@Composable
-fun AddEventDetailsFormPreview(){
-    AddEventDetailsForm(
-        onclick = {},
-        onBack = {},
-        viewModel = AddEventViewModel()
-    )
-}
-**/

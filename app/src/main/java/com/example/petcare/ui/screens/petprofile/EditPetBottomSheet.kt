@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
@@ -107,7 +109,6 @@ fun EditPetBottomSheet(
         sheetState       = sheetState,
         dragHandle       = {}
     ) {
-        // No PetCareTheme wrapper — inherits theme from MainActivity
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -170,7 +171,6 @@ fun EditPetBottomSheet(
                             }
                         }
 
-                        // Green camera badge
                         Box(
                             modifier = Modifier
                                 .offset(x = 4.dp, y = 4.dp)
@@ -205,15 +205,23 @@ fun EditPetBottomSheet(
 
                 EditField("Name *", "e.g. Buddy", state.name, editViewModel::setName, InputTextLimits.PET_NAME)
                 EditField("Breed", "e.g. Golden Retriever", state.breed, editViewModel::setBreed, InputTextLimits.BREED)
-                EditField("Weight (Kg)", "e.g. 4.5", state.weight, editViewModel::setWeight)
+
+                // FIX: weight field uses decimal keyboard only
+                EditFieldDecimal(
+                    label = "Weight (Kg)",
+                    placeholder = "e.g. 4.5",
+                    value = state.weight,
+                    onValueChange = editViewModel::setWeight
+                )
+
                 EditField("Color / Markings", "e.g. Golden, White Chest", state.color, editViewModel::setColor, InputTextLimits.COLOR)
 
-                // Birth date — uses the same DateTextField picker as the add-pet form.
-                // Shows the current stored date as the label so the user knows the existing value.
+                // FIX: birth date cannot be in the future
                 DateTextField(
-                    name          = "Date of Birth",
-                    label         = state.birthDate.ifBlank { "dd/mm/yyyy" },
-                    onDateSelected = editViewModel::setBirthDate
+                    name           = "Date of Birth",
+                    label          = state.birthDate.ifBlank { "dd/mm/yyyy" },
+                    onDateSelected = editViewModel::setBirthDate,
+                    allowFutureDates = false
                 )
 
                 // ── Medical info ──────────────────────────────────────────
@@ -259,8 +267,6 @@ fun EditPetBottomSheet(
     }
 }
 
-// ── Private helpers ───────────────────────────────────────────────────────────
-
 @Composable
 private fun SectionLabel(text: String) {
     Text(
@@ -292,6 +298,42 @@ private fun EditField(
             onValueChange = { onValueChange(enforceMaxLength(it, maxLength)) },
             placeholder   = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
             singleLine    = true,
+            modifier      = Modifier.fillMaxWidth(),
+            shape         = RoundedCornerShape(20.dp),
+            colors        = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor   = GreenDark,
+                unfocusedBorderColor = GrayBorder
+            )
+        )
+    }
+}
+
+// FIX: dedicated decimal field for weight with max length
+@Composable
+private fun EditFieldDecimal(
+    label: String,
+    placeholder: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text     = label,
+            style    = MaterialTheme.typography.bodySmall,
+            color    = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+        OutlinedTextField(
+            value         = value,
+            onValueChange = { newValue ->
+                // Only allow digits and a single dot, max 7 chars (e.g. "999.999")
+                val filtered = newValue.filter { it.isDigit() || it == '.' }
+                val dotCount = filtered.count { it == '.' }
+                if (dotCount <= 1 && filtered.length <= 7) onValueChange(filtered)
+            },
+            placeholder   = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+            singleLine    = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier      = Modifier.fillMaxWidth(),
             shape         = RoundedCornerShape(20.dp),
             colors        = OutlinedTextFieldDefaults.colors(

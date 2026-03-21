@@ -60,20 +60,6 @@ fun AttachedDocumentsCard(
         showSourceOptions = false
     }
 
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            val file = File(context.cacheDir, "docs/photo_${System.currentTimeMillis()}.jpg")
-                .also { it.parentFile?.mkdirs() }
-            val uri = FileProvider.getUriForFile(
-                context, "${context.packageName}.fileprovider", file
-            )
-            cameraUri = uri
-            cameraLauncher.launch(uri)
-        }
-        showSourceOptions = false
-    }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -176,14 +162,7 @@ fun AttachedDocumentsCard(
                     modifier              = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    SourceButton(
-                        label    = "Camera",
-                        icon     = Icons.Default.CameraAlt,
-                        modifier = Modifier.weight(1f),
-                        onClick  = {
-                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                        }
-                    )
+
                     SourceButton(
                         label    = "Gallery",
                         icon     = Icons.Default.Image,
@@ -225,9 +204,9 @@ private fun SourceButton(
         shape    = RoundedCornerShape(12.dp),
         contentPadding = PaddingValues(horizontal = 8.dp)
     ) {
-        Icon(icon, null, modifier = Modifier.size(14.dp), tint = GreenDark)
+        Icon(icon, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.secondary)
         Spacer(Modifier.width(4.dp))
-        Text(label, style = MaterialTheme.typography.bodySmall, color = GreenDark)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
     }
 }
 
@@ -287,7 +266,7 @@ private fun DocumentRow(doc: AttachedDocument, onClick: () -> Unit) {
                 Icon(
                     Icons.Default.Description,
                     contentDescription = null,
-                    tint     = GreenDark,
+                    tint     = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -308,7 +287,7 @@ private fun DocumentRow(doc: AttachedDocument, onClick: () -> Unit) {
                 Text(
                     text  = "Tap to open",
                     style = MaterialTheme.typography.bodySmall,
-                    color = GreenDark
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
         }
@@ -317,7 +296,7 @@ private fun DocumentRow(doc: AttachedDocument, onClick: () -> Unit) {
             Icon(
                 Icons.Default.OpenInNew,
                 contentDescription = "Open",
-                tint     = GrayText,
+                tint     = MaterialTheme.colorScheme.onSecondary,
                 modifier = Modifier.size(16.dp)
             )
         }

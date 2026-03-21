@@ -51,8 +51,28 @@ class EventRepository(private val api: ApiService) {
         response.body() ?: error("Failed to update event — empty response")
     }
 
-    suspend fun deleteEvent(eventId: String): Result<Unit> = runCatching {
-        api.deleteEvent(eventId)
+    suspend fun deleteEvent(eventId: String): Result<Unit> {
+        // Retrofit throws "HTTP 204 had non-zero Content-Length" when the backend
+        // returns a 204 with a body (e.g. JsonResponse({}, status=204) sends 2 bytes).
+        // We catch that specific exception and treat it as success since the deletion
+        // did complete on the server (204 = No Content = success).
+        return try {
+            val response = api.deleteEvent(eventId)
+            if (response.isSuccessful || response.code() == 204) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to delete event — HTTP ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            val message = e.message ?: ""
+            // "HTTP 204 had non-zero Content-Length" means the delete succeeded but
+            // the server incorrectly included a body. Treat as success.
+            if (message.contains("204") && message.contains("Content-Length")) {
+                Result.success(Unit)
+            } else {
+                Result.failure(e)
+            }
+        }
     }
 
     suspend fun addDocument(
