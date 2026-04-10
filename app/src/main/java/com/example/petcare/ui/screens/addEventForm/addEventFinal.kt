@@ -124,6 +124,7 @@ fun AddEventFinalForm(
             )
 
             // ── Reminder toggle ──────────────────────────────────────
+            /**
             SettingsListItem(
                 icon = Icons.Default.Notifications,
                 iconBackgroundColor = Color(0x99FFECB3),
@@ -144,6 +145,7 @@ fun AddEventFinalForm(
                     )
                 }
             )
+            **/
 
             // ── Documentos adjuntos ──────────────────────────────────
             AttachedDocumentsCard(
