@@ -40,7 +40,8 @@ fun SuggestionScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                windowInsets = WindowInsets(0)
             )
         }
     ) { padding ->
@@ -54,7 +55,7 @@ fun SuggestionScreen(
             else -> {
                 LazyColumn(
                     modifier              = Modifier.fillMaxSize().padding(padding),
-                    contentPadding        = PaddingValues(start = 16.dp, bottom = 24.dp, end = 16.dp),
+                    contentPadding        = PaddingValues(start = 16.dp, bottom = 24.dp, end = 16.dp, top = 8.dp,),
                     verticalArrangement   = Arrangement.spacedBy(10.dp)
                 ) {
 

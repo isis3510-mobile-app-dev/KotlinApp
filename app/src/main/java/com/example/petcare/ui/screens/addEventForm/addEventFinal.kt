@@ -155,17 +155,8 @@ fun AddEventFinalForm(
                     )
                 },
                 isUploading = state.stagedDocuments.any { it.isUploading },
-                onDocumentPicked = { _, _, _ ->
-                    fileLauncher.launch(
-                        arrayOf(
-                            "image/*",
-                            "application/pdf",
-                            "application/msword",
-                            "application/vnd.openxmlformats-officedocument" +
-                                    ".wordprocessingml.document",
-                            "text/plain"
-                        )
-                    )
+                onDocumentPicked = { uri, mimeType, fileName ->
+                    viewModel.addDocument(context, uri, mimeType, fileName)
                 }
             )
 

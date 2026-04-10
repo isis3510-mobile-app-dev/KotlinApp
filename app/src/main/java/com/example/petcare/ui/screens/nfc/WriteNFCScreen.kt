@@ -3,6 +3,7 @@ package com.example.petcare.ui.screens.nfc
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -95,7 +96,8 @@ fun WriteNFCScreen(
                     navigationIconContentColor = Color.Unspecified,
                     titleContentColor          = Color.Unspecified,
                     actionIconContentColor     = Color.Unspecified
-                )
+                ),
+                windowInsets = WindowInsets(0)
             )
         }
     ) { paddingValues ->
