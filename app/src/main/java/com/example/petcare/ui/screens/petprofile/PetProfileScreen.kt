@@ -79,7 +79,10 @@ fun PetProfileScreen(
                 TextButton(onClick = {
                     FeatureClicksTracker.cancelRoute()
                     showDeleteDialog = false
-                }) { Text("Cancel") }
+                },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.secondary
+                    )) { Text("Cancel") }
             }
         )
     }

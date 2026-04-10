@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petcare.ui.components.ActionFooter
@@ -166,7 +167,37 @@ fun EventDetailsScreen(
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.secondary)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.surface)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.MedicalServices,
+                                contentDescription = null,
+                                tint     = MaterialTheme.colorScheme.surface,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text       = "Medical Event",
+                                style      = MaterialTheme.typography.titleLarge,
+                                color      = MaterialTheme.colorScheme.surface,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        },
     ) { paddingValues ->
 
         when {
@@ -197,45 +228,7 @@ fun EventDetailsScreen(
                         .padding(paddingValues)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // ── Top App Bar ───────────────────────────────────────
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.secondary)
-                            .padding(horizontal = 8.dp, vertical = 20.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.surface
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.MedicalServices,
-                                    contentDescription = null,
-                                    tint     = MaterialTheme.colorScheme.surface,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text       = "Medical Event",
-                                    style      = MaterialTheme.typography.titleLarge,
-                                    color      = MaterialTheme.colorScheme.surface,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Text(
-                                text  = event.title.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
-                            )
-                        }
-                    }
+
 
                     // ── Body ──────────────────────────────────────────────
                     Column(

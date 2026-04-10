@@ -226,7 +226,7 @@ class MainActivity : ComponentActivity() {
                                             navController.navigate(route) {
                                                 launchSingleTop = true
                                                 restoreState = true
-                                                popUpTo(Routes.Home) {
+                                                popUpTo(navController.graph.startDestinationId) {
                                                     saveState = true
                                                 }
                                             }
@@ -345,13 +345,13 @@ class MainActivity : ComponentActivity() {
                                 // ── Pets ──────────────────────────────────────────────────
                                 composable(Routes.Pets) { entry ->
                                     val reloadPets by entry.savedStateHandle
-                                        .getStateFlow("reload_pets", false)
+                                        .getStateFlow("reload_pets", true)
                                         .collectAsStateWithLifecycle()
 
                                     LaunchedEffect(reloadPets) {
                                         if (reloadPets) {
                                             petsViewModel.refresh()
-                                            entry.savedStateHandle["reload_pets"] = false
+                                            entry.savedStateHandle["reload_pets"] = true
                                         }
                                     }
 

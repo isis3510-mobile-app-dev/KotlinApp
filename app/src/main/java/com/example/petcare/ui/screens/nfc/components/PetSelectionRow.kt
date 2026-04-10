@@ -31,7 +31,9 @@ import com.example.petcare.ui.theme.GrayDark
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
 import android.net.Uri
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -109,7 +111,10 @@ fun PetSelectionRow(
                         text = pet.name,
                         style = MaterialTheme.typography.labelMedium,
                         color = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 72.dp)
                     )
                 }
             }

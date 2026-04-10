@@ -3,6 +3,7 @@ package com.example.petcare.ui.screens.nfc
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -62,15 +63,16 @@ fun ScanNFCScreen(
                     navigationIconContentColor = Color.Unspecified,
                     titleContentColor = Color.Unspecified,
                     actionIconContentColor = Color.Unspecified
-                )
+                ),
+                windowInsets = WindowInsets(0)
             )
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 24.dp)
+                .padding(paddingValues),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(16.dp))
