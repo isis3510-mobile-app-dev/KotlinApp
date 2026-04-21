@@ -39,6 +39,7 @@ import androidx.navigation.navArgument
 import com.example.petcare.data.nfc.NfcManager
 import com.example.petcare.data.analytics.AnalyticsSeeder
 import com.example.petcare.data.analytics.ScreenTimeTracker
+import com.example.petcare.data.network.ApiClient
 import com.example.petcare.data.notifications.NotificationDispatcher
 import com.example.petcare.data.notifications.NotificationScheduler
 import com.example.petcare.ui.preferences.AppThemeViewModel
@@ -95,6 +96,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 
 class MainActivity : ComponentActivity() {
 
@@ -146,6 +153,8 @@ class MainActivity : ComponentActivity() {
             val notificationPermissionLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestPermission()
             ) { }
+            val sessionExpired by ApiClient.sessionExpiredFlow.collectAsStateWithLifecycle()
+
 
             LaunchedEffect(authViewModel.isLoggedIn) {
                 if (authViewModel.isLoggedIn) {
@@ -790,6 +799,41 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+
+                    if (sessionExpired) {
+                        AlertDialog(
+                            onDismissRequest = { },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.secondary
+                                )
+                            },
+                            title = {
+                                Text("Session closed")
+                            },
+                            text = {
+                                Text("Your session has expired. Please sign in again to continue.")
+                            },
+                            confirmButton = {
+                                Button(
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary,
+                                        contentColor = MaterialTheme.colorScheme.onSecondary,
+                                        disabledContainerColor = MaterialTheme.colorScheme.secondary,
+                                        disabledContentColor = MaterialTheme.colorScheme.onSecondary
+                                    ),
+                                    onClick = {
+                                    ApiClient.sessionExpiredFlow.value = false
+                                    authViewModel.logout()
+                                }) {
+                                    Text(text = "Close",
+                                        color = MaterialTheme.colorScheme.surface)
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -804,6 +848,8 @@ class MainActivity : ComponentActivity() {
             backendNotificationId = backendNotificationId
         )
     }
+
+
 
     // ── NFC lifecycle ─────────────────────────────────────────────────────────
 
