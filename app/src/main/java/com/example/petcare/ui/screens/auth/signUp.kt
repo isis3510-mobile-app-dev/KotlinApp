@@ -43,6 +43,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.unit.sp
 import com.example.petcare.ui.theme.RobotoMedium
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.IconButton
@@ -122,6 +124,7 @@ fun LoginScreen(
     Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)
         .fillMaxSize()
         .padding(24.dp)
+        .verticalScroll(rememberScrollState())
     ) {
         Spacer(modifier = Modifier.height(100.dp))
         Box(

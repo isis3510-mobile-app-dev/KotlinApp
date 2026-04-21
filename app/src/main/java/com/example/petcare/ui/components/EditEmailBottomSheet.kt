@@ -20,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -72,21 +73,46 @@ fun EditEmailBottomSheet(
             )
 
             // Nuevo email
+            val emailRegex = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
+            val isEmailValid = newEmail.matches(emailRegex)
+
             OutlinedTextField(
                 value = newEmail,
-                onValueChange = { newEmail = it },
+                onValueChange = { val regex = Regex("^[a-zA-Z0-9@._-]*$")
+                                    if (it.matches(regex)) {
+                                        newEmail = it
+                                    }
+                                },
                 label = { Text("New email") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next
+                ),
+                isError = newEmail.isNotEmpty() && !isEmailValid,
+                supportingText = {
+                    if (newEmail.isNotEmpty() && !isEmailValid) {
+                        Text("Invalid email format")
+                    }
+                },
+
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.secondary,
+                    focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                    cursorColor = MaterialTheme.colorScheme.secondary
                 )
             )
 
             OutlinedTextField(
                 value = currentPassword,
-                onValueChange = { currentPassword = it },
+                onValueChange = { val filtered = it.filter { char ->
+                                        char.code in 32..126
+                                    }.take(64)
+
+                                        currentPassword = filtered
+                                },
                 label = { Text("Current password") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -115,11 +141,17 @@ fun EditEmailBottomSheet(
                             onSave(newEmail, currentPassword)
                         }
                     }
+                ),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.secondary,
+                    focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                    cursorColor = MaterialTheme.colorScheme.secondary
                 )
             )
 
             Text(
-                text = "Your email will be updated immediately after password confirmation.",
+                text = "You will receive a confirmation email on the new email. Please verify to complete the change. You will need to Sign In again once this operation is completed.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -132,13 +164,19 @@ fun EditEmailBottomSheet(
                 enabled = newEmail.isNotBlank() &&
                         currentPassword.isNotBlank() &&
                         newEmail != currentEmail &&
-                        !isLoading
+                        !isLoading,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                    disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
+                    disabledContentColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.5f)
+                )
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 } else {
                     Text("Update email")
@@ -147,7 +185,10 @@ fun EditEmailBottomSheet(
 
             TextButton(
                 onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.secondary
+                )
             ) {
                 Text("Cancel")
             }

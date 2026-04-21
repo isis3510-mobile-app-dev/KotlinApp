@@ -18,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -123,6 +124,12 @@ fun ForgotPasswordBottomSheet(
                     ),
                     keyboardActions = KeyboardActions(
                         onDone = { if (email.isNotBlank()) onSend(email) }
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                        cursorColor = MaterialTheme.colorScheme.secondary
                     )
                 )
 
@@ -131,13 +138,19 @@ fun ForgotPasswordBottomSheet(
                 Button(
                     onClick = { onSend(email) },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = email.isNotBlank() && !isLoading
+                    enabled = email.isNotBlank() && !isLoading,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.surface,
+                        disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
+                        disabledContentColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.5f)
+                    )
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
                             strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = MaterialTheme.colorScheme.surface
                         )
                     } else {
                         Text("Send reset link")
@@ -146,7 +159,10 @@ fun ForgotPasswordBottomSheet(
 
                 TextButton(
                     onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.secondary
+                    )
                 ) {
                     Text("Cancel")
                 }
