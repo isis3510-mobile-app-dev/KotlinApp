@@ -58,7 +58,7 @@ class NfcManager(private val activity: Activity) {
         jsonPayload: String
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val ndefMessage = buildNdefMessage(petId, jsonPayload)
+            val ndefMessage = buildNdefMessage(jsonPayload)
 
             val ndef = Ndef.get(tag)
             if (ndef != null) {
@@ -98,7 +98,7 @@ class NfcManager(private val activity: Activity) {
     }
 
     fun inspectTagForWrite(tag: Tag, petId: String, jsonPayload: String): NfcWriteInspection {
-        val requiredBytes = buildNdefMessage(petId, jsonPayload).toByteArray().size
+        val requiredBytes = buildNdefMessage(jsonPayload).toByteArray().size
         val ndef = Ndef.get(tag)
 
         if (ndef != null) {
@@ -149,15 +149,17 @@ class NfcManager(private val activity: Activity) {
             val message = ndef.ndefMessage
             ndef.close()
 
-            message?.records
-                ?.asSequence()
-                ?.mapNotNull { record ->
-                    // NdefRecord.toUri() handles TNF_WELL_KNOWN+RTD_URI
-                    // and TNF_ABSOLUTE_URI transparently
-                    record.toUri()?.toString()
-                }
-                ?.firstOrNull { it.startsWith("petcare://pet/") }
-                ?.removePrefix("petcare://pet/")
+            NfcPayloadCodec.extractPetId(
+                message?.records
+                    ?.asSequence()
+                    ?.map { record ->
+                        NfcPayloadCodec.ContractRecord(
+                            payload = record.payload,
+                            isTextRecord = isTextRecord(record)
+                        )
+                    }
+                    ?: emptySequence()
+            )
         } catch (e: Exception) {
             null
         }
@@ -181,25 +183,23 @@ class NfcManager(private val activity: Activity) {
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    private fun buildNdefMessage(petId: String, jsonPayload: String): NdefMessage {
-        // Record 1 — URI (deep-link)
-        val uriRecord = NdefRecord.createUri("petcare://pet/$petId")
+    private fun buildNdefMessage(jsonPayload: String): NdefMessage {
+        val records = NfcPayloadCodec.buildWriteRecords(jsonPayload)
+            .map { record ->
+                NdefRecord(
+                    NdefRecord.TNF_WELL_KNOWN,
+                    NdefRecord.RTD_TEXT,
+                    ByteArray(0),
+                    record.payload
+                )
+            }
+            .toTypedArray()
 
-        // Record 2 — Text (UTF-8, language "en")
-        val langBytes  = "en".toByteArray(Charsets.US_ASCII)
-        val textBytes  = jsonPayload.toByteArray(Charsets.UTF_8)
-        val textPayload = ByteArray(1 + langBytes.size + textBytes.size).also { buf ->
-            buf[0] = langBytes.size.toByte()                              // status byte
-            System.arraycopy(langBytes, 0, buf, 1, langBytes.size)
-            System.arraycopy(textBytes, 0, buf, 1 + langBytes.size, textBytes.size)
-        }
-        val textRecord = NdefRecord(
-            NdefRecord.TNF_WELL_KNOWN,
-            NdefRecord.RTD_TEXT,
-            ByteArray(0),
-            textPayload
-        )
+        return NdefMessage(records)
+    }
 
-        return NdefMessage(arrayOf(uriRecord, textRecord))
+    private fun isTextRecord(record: NdefRecord): Boolean {
+        return record.tnf == NdefRecord.TNF_WELL_KNOWN &&
+            record.type.contentEquals(NdefRecord.RTD_TEXT)
     }
 }

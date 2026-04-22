@@ -164,24 +164,23 @@ class NfcViewModel(
         if (!readModeActive) return
         _uiState.value = NfcUiState.ProcessingTag
         viewModelScope.launch {
-            when (val inspection = nfcManager.inspectTagForRead(tag)) {
-                NfcReadInspection.NonPetCareTag -> {
-                    _uiState.value = NfcUiState.Error("Tag detected, but it isn't a PetCare tag.")
-                }
-                is NfcReadInspection.PetCareTag -> {
-                    repository.fetchPublicPetInfo(inspection.petId).fold(
-                        onSuccess = { payload ->
-                            readModeActive = false
-                            _uiState.value = NfcUiState.ReadSuccess(payload)
-                        },
-                        onFailure = { e ->
-                            _uiState.value = NfcUiState.Error(
-                                e.message ?: "Could not load pet information."
-                            )
-                        }
+            val petId = nfcManager.readPetIdFromTag(tag)
+            if (petId == null) {
+                _uiState.value = NfcUiState.Error(
+                    "This NFC tag doesn't contain a valid PetCare payload.\nMake sure it was written with the current app format."
+                )
+                return@launch
+            }
+            repository.fetchPublicPetInfo(petId).fold(
+                onSuccess = { payload ->
+                    _uiState.value = NfcUiState.ReadSuccess(payload)
+                },
+                onFailure = { e ->
+                    _uiState.value = NfcUiState.Error(
+                        e.message ?: "Could not load pet information."
                     )
                 }
-            }
+            )
         }
     }
 

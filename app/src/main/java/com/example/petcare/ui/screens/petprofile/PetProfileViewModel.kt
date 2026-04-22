@@ -203,12 +203,12 @@ class PetProfileViewModel : ViewModel() {
 
     // ── Delete pet ────────────────────────────────────────────────────────────
 
-    fun deletePet(petId: String, onNavigatedBack: () -> Unit) {
+    fun deletePet(petId: String, onDeleted: () -> Unit) {
         viewModelScope.launch {
             FeatureExecutionTracker.track("Delete Pet") {
                 RepositoryProvider.petRepository.deletePet(petId)
             }.fold(
-                onSuccess = { onNavigatedBack() },
+                onSuccess = { onDeleted() },
                 onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message) }
             )
         }

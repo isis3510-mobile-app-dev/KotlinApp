@@ -563,14 +563,18 @@ class MainActivity : ComponentActivity() {
                                             navController.popBackStack()
                                         },
                                         onPetDeleted = {
-                                            // Señalamos a Home y Pets que recarguen
-                                            runCatching { navController.getBackStackEntry(Routes.Home) }
-                                                .onSuccess { it.savedStateHandle["reload_home"] = true }
                                             runCatching { navController.getBackStackEntry(Routes.Pets) }
                                                 .onSuccess { it.savedStateHandle["reload_pets"] = true }
-
+                                            runCatching { navController.getBackStackEntry(Routes.Home) }
+                                                .onSuccess { it.savedStateHandle["reload_home"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Profile) }
+                                                .onSuccess { it.savedStateHandle["reload_profile"] = true }
+                                            homeViewModel.removeDeletedPet(petId)
+                                            petsViewModel.removeDeletedPet(petId)
                                             navController.navigate(Routes.Home) {
-                                                popUpTo(Routes.Home) { inclusive = false }
+                                                popUpTo(navController.graph.startDestinationId) {
+                                                    inclusive = false
+                                                }
                                                 launchSingleTop = true
                                             }
                                         },
@@ -729,7 +733,9 @@ class MainActivity : ComponentActivity() {
                                     AddPetFinalForm(
                                         viewModel = addPetViewModel,
                                         onBack    = { navController.popBackStack() },
-                                        onclick   = { _ ->
+                                        onclick   = { pet ->
+                                            petsViewModel.addOrReplacePet(pet)
+                                            homeViewModel.addOrReplacePet(pet)
                                             addPetViewModel.reset()
                                             // Señalamos a Pets, Home y Profile que recarguen
                                             runCatching { navController.getBackStackEntry(Routes.Pets) }
