@@ -93,11 +93,19 @@ fun sanitizeForEditing(
                         reject("Only digits and one decimal point are allowed.")
                     isEmojiCodePoint(codePoint) ->
                         reject("Emojis are not allowed.")
-                    Character.isDigit(codePoint) ->
+                    Character.isDigit(codePoint) -> {
                         builder.appendCodePoint(codePoint)
+                        if (maxNumericValue != null && builder.toString().toDoubleOrNull()?.let { it > maxNumericValue } == true) {
+                            builder.deleteAt(builder.lastIndex)
+                        }
+                    }
                     codePoint == '.'.code && !seenDecimalSeparator -> {
                         seenDecimalSeparator = true
                         builder.append('.')
+                        if (maxNumericValue != null && builder.toString().toDoubleOrNull()?.let { it > maxNumericValue } == true) {
+                            builder.deleteAt(builder.lastIndex)
+                            seenDecimalSeparator = false
+                        }
                     }
                     codePoint == '.'.code ->
                         reject("Only one decimal point is allowed.")
@@ -110,14 +118,6 @@ fun sanitizeForEditing(
     var value = builder.toString()
     if (maxLength != null && maxLength > 0 && value.length > maxLength) {
         value = value.take(maxLength)
-    }
-
-    if (fieldPolicy == InputFieldPolicy.DECIMAL &&
-        !value.isBlank() &&
-        maxNumericValue != null &&
-        value.toDoubleOrNull()?.let { it > maxNumericValue } == true
-    ) {
-        reject("Value must be ${formatMaxNumericValue(maxNumericValue)} or less.")
     }
 
     return SanitizedInput(value = value, rejectionMessage = rejectionMessage)

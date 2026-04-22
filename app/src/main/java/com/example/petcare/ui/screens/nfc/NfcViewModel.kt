@@ -180,7 +180,7 @@ class NfcViewModel(
                         e.message ?: "Could not load pet information."
                     )
                 }
-            }
+            )
         }
     }
 

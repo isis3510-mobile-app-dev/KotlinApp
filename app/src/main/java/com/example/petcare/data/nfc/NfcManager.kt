@@ -98,7 +98,7 @@ class NfcManager(private val activity: Activity) {
     }
 
     fun inspectTagForWrite(tag: Tag, petId: String, jsonPayload: String): NfcWriteInspection {
-        val requiredBytes = buildNdefMessage(petId, jsonPayload).toByteArray().size
+        val requiredBytes = buildNdefMessage(jsonPayload).toByteArray().size
         val ndef = Ndef.get(tag)
 
         if (ndef != null) {
