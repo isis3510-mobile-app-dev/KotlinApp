@@ -1,9 +1,5 @@
 package com.example.petcare.ui.screens.petprofile.events
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -37,6 +33,7 @@ import com.example.petcare.ui.theme.OffWhite
 import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
 import com.example.petcare.util.truncateForDisplay
 
@@ -287,6 +284,7 @@ fun EventDetailsScreen(
                                 label         = "e.g. Vet visit",
                                 value         = uiState.editTitle,
                                 onValueChange = viewModel::setTitle,
+                                fieldPolicy   = InputFieldPolicy.GENERAL_TEXT,
                                 maxLength     = InputTextLimits.EVENT_TITLE
                             )
 
@@ -295,6 +293,7 @@ fun EventDetailsScreen(
                                 label         = "e.g. Annual checkup",
                                 value         = uiState.editDescription,
                                 onValueChange = viewModel::setDescription,
+                                fieldPolicy   = InputFieldPolicy.GENERAL_TEXT,
                                 maxLength     = InputTextLimits.NOTES
                             )
 
@@ -303,6 +302,7 @@ fun EventDetailsScreen(
                                 label         = "e.g. Dr. Smith",
                                 value         = uiState.editProvider,
                                 onValueChange = viewModel::setProvider,
+                                fieldPolicy   = InputFieldPolicy.GENERAL_TEXT,
                                 maxLength     = InputTextLimits.PROVIDER_OR_CLINIC
                             )
 
@@ -311,6 +311,7 @@ fun EventDetailsScreen(
                                 label         = "e.g. Happy Paws Clinic",
                                 value         = uiState.editClinic,
                                 onValueChange = viewModel::setClinic,
+                                fieldPolicy   = InputFieldPolicy.GENERAL_TEXT,
                                 maxLength     = InputTextLimits.PROVIDER_OR_CLINIC
                             )
 
@@ -326,17 +327,13 @@ fun EventDetailsScreen(
                                 onTimeSelected = viewModel::setTime
                             )
 
-                            // FIX: price decimal only
                             TextFieldComponent(
                                 name          = "Price (optional)",
                                 label         = "e.g. 50",
                                 value         = uiState.editPrice,
-                                onValueChange = { newValue ->
-                                    val filtered = newValue.filter { it.isDigit() || it == '.' }
-                                    val dotCount = filtered.count { it == '.' }
-                                    if (dotCount <= 1) viewModel.setPrice(filtered)
-                                },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                                onValueChange = viewModel::setPrice,
+                                maxLength     = InputTextLimits.PRICE,
+                                fieldPolicy   = InputFieldPolicy.DECIMAL
                             )
 
                             AttachedDocumentsCard(

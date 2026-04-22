@@ -251,17 +251,18 @@ fun HomeScreen(
                                         onNavigateToPetProfile(vacc.petId)
                                     }
                                 }
-                                .padding(16.dp),
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment     = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(
                                 verticalAlignment     = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.weight(1f)
                             ) {
                                 Box(
                                     modifier         = Modifier
-                                        .size(44.dp)
+                                        .size(40.dp)
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(if (vacc.daysUntilDue <= 7) ErrorContainer else InfoContainer),
                                     contentAlignment = Alignment.Center
@@ -273,29 +274,37 @@ fun HomeScreen(
                                         modifier           = Modifier.size(24.dp)
                                     )
                                 }
-                                Column {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
                                     Text(
                                         text       = vacc.vaccineName,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontSize   = 14.sp
+                                        fontSize   = 14.sp,
+                                        maxLines   = 1,
+                                        overflow   = TextOverflow.Ellipsis
                                     )
                                     Text(
                                         text     = "${vacc.petName} · Due ${vacc.dueDate}",
                                         fontSize = 12.sp,
-                                        color    = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
+                            Spacer(modifier = Modifier.width(8.dp))
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(50.dp))
                                     .background(if (vacc.daysUntilDue <= 7) ErrorContainer else InfoContainer)
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
                             ) {
                                 Text(
                                     text       = if (vacc.daysUntilDue == 0L) "Today"
                                     else "in ${vacc.daysUntilDue}d",
-                                    fontSize   = 12.sp,
+                                    fontSize   = 11.sp,
                                     color      = if (vacc.daysUntilDue <= 7) ErrorContent else InfoContent,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -342,6 +351,20 @@ fun HomeScreen(
                             }
                         }
                     }
+                }
+            }
+        }
+        if (homeState.mostUrgentPet.isNotEmpty() && homeState.topAlert == null) {
+            val petName = homeState.pets.find { it.id == homeState.mostUrgentPet }?.name ?: ""
+            val (daysSince, lastDate) = homeState.lastVetVisits[homeState.mostUrgentPet] ?: Pair(0, "")
+
+            if (daysSince > 0) {
+                item {
+                    LastVetVisitCard(
+                        daysSince = daysSince,
+                        petName = petName,
+                        lastDate = lastDate
+                    )
                 }
             }
         }

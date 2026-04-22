@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.petcare.data.model.EventType
+import java.time.LocalDate
+import java.time.Period
 
 data class UpcomingVaccine(
     val vaccineName: String,
@@ -35,7 +38,9 @@ data class HomeUiState(
     val topAlert: GroupedSuggestion? = null,
     val totalAlertCount: Int = 0,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val lastVetVisits: Map<String, Pair<Int, String>> = emptyMap(), // petId -> (daysSince, date)
+    val mostUrgentPet: String = ""
 )
 
 class HomeViewModel : ViewModel() {
@@ -47,6 +52,34 @@ class HomeViewModel : ViewModel() {
         _state.value = _state.value.copy(userName = name, userId = userId)
     }
 
+    fun clearSessionData() {
+        _state.value = HomeUiState()
+    }
+
+    fun removeDeletedPet(petId: String) {
+        val currentPetName = _state.value.pets.firstOrNull { it.id == petId }?.name
+
+        _state.value = _state.value.copy(
+            pets = _state.value.pets.filterNot { it.id == petId },
+            recentEvents = _state.value.recentEvents.filterNot { it.petId == petId },
+            upcomingVaccines = _state.value.upcomingVaccines.filterNot { it.petId == petId },
+            topAlert = _state.value.topAlert
+                ?.let { alert ->
+                    val filteredPets = currentPetName
+                        ?.let { deletedPetName -> alert.pets.filterNot { it == deletedPetName } }
+                        ?: alert.pets
+
+                    if (filteredPets.isEmpty()) null else alert.copy(pets = filteredPets)
+                }
+        )
+    }
+
+    fun addOrReplacePet(pet: Pet) {
+        _state.value = _state.value.copy(
+            pets = (_state.value.pets.filterNot { it.id == pet.id } + pet).distinctBy { it.id }
+        )
+    }
+
     fun loadData() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
@@ -55,19 +88,41 @@ class HomeViewModel : ViewModel() {
                 RepositoryProvider.petRepository.getPets()
             }.fold(
                 onSuccess = { pets ->
+                    val uniquePets = pets.distinctBy { it.id }
 
                     val catalogMap = RepositoryProvider.petRepository
                         .getVaccineCatalog()
                         .getOrElse { emptyList() }
                         .associateBy { it.id }
 
-                    val eventResults = pets.map { pet ->
+                    val eventResults = uniquePets.map { pet ->
                         async {
                             RepositoryProvider.eventRepository
                                 .getEvents(petId = pet.id)
                                 .getOrElse { emptyList() }
                         }
                     }.awaitAll().flatten()
+
+                    val lastVetVisits = mutableMapOf<String, Pair<Int, String>>()
+                    var mostUrgentPetId = ""
+                    var maxDays = 0
+
+                    pets.forEach { pet ->
+                        val petEvents = eventResults.filter { it.petId == pet.id }
+                        val lastCheckup = petEvents
+                            .filter { it.eventType == EventType.CHECKUP }
+                            .maxByOrNull { it.date }
+
+                        if (lastCheckup != null) {
+                            val days = calculateDaysSince(lastCheckup.date)
+                            lastVetVisits[pet.id] = Pair(days, lastCheckup.date.take(10))
+
+                            if (days > maxDays) {
+                                maxDays = days
+                                mostUrgentPetId = pet.id
+                            }
+                        }
+                    }
 
                     val allSuggestions: List<PetSuggestion> = pets.map { pet ->
                         async {
@@ -82,7 +137,7 @@ class HomeViewModel : ViewModel() {
                     val upcoming = mutableListOf<UpcomingVaccine>()
                     var overdueCount = 0
 
-                    pets.forEach { pet ->
+                    uniquePets.forEach { pet ->
                         pet.vaccinations.forEach { vacc ->
                             val dueDateStr = vacc.nextDueDate ?: return@forEach
                             try {
@@ -123,7 +178,7 @@ class HomeViewModel : ViewModel() {
                         .sortedBy { when (it.type) { "danger" -> 0; "warning" -> 1; else -> 2 } }
 
                     _state.value = _state.value.copy(
-                        pets                 = pets,
+                        pets                 = uniquePets,
                         recentEvents         = eventResults
                             .filter { EventDateUtils.isTodayOrFuture(it.date) }
                             .sortedBy { EventDateUtils.parseEventInstant(it.date) ?: java.time.Instant.MAX }
@@ -132,6 +187,8 @@ class HomeViewModel : ViewModel() {
                         overdueVaccinesCount = overdueCount,
                         topAlert             = criticalGrouped.firstOrNull(),
                         totalAlertCount      = criticalGrouped.size,
+                        lastVetVisits        = lastVetVisits,
+                        mostUrgentPet        = mostUrgentPetId,
                         isLoading            = false
                     )
                 },
@@ -143,5 +200,13 @@ class HomeViewModel : ViewModel() {
                 }
             )
         }
+    }
+}
+private fun calculateDaysSince(dateString: String): Int {
+    return try {
+        val eventDate = LocalDate.parse(dateString.take(10))
+        Period.between(eventDate, LocalDate.now()).days
+    } catch (e: Exception) {
+        0
     }
 }

@@ -32,18 +32,21 @@ import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.OffWhite
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun PetProfileScreen(
     petId: String,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     onBack: () -> Unit = {},
+    onPetDeleted: () -> Unit = {},
     onAddEvent: () -> Unit = {},
     onAddVaccine: () -> Unit = {},
     onNFCScan: () -> Unit = {},
     onNavigateToVaccineDetail: (petId: String, vaccineId: String) -> Unit = { _, _ -> },
     onNavigateToEventDetail: (petId: String, eventId: String) -> Unit = { _, _ -> },
-    onSeeAllNotifications: (petId: String, petName: String) -> Unit = { _, _ -> }
+    onSeeAllNotifications: (petId: String, petName: String) -> Unit = { _, _ -> },
 ) {
     val viewModel: PetProfileViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -59,7 +62,7 @@ fun PetProfileScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete ${uiState.name}?") },
+            title = { Text("Delete ${uiState.name.truncateForDisplay(DisplayTextLimits.DETAIL_TITLE)}?") },
             text  = {
                 Text("All of this pet's data including vaccines and events will be permanently deleted.")
             },
@@ -68,7 +71,7 @@ fun PetProfileScreen(
                     onClick = {
                         showDeleteDialog = false
                         FeatureClicksTracker.endRoute()
-                        viewModel.deletePet(petId, onNavigatedBack = onBack)
+                        viewModel.deletePet(petId, onDeleted = onPetDeleted)
                     },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error

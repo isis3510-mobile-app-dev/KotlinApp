@@ -18,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -32,6 +33,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.petcare.util.InputFieldPolicy
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.containsOnlyWhitespace
+import com.example.petcare.util.normalizeForCommit
+import com.example.petcare.util.sanitizeForEditing
+import com.example.petcare.util.trimToNullIfBlank
+import com.example.petcare.util.validateCommittedInput
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,7 +51,21 @@ fun ForgotPasswordBottomSheet(
     onSend: (String) -> Unit
 ) {
     var email by remember { mutableStateOf("") }
+    var emailError by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    fun submitIfValid() {
+        emailError = validateCommittedInput(
+            value = email,
+            fieldPolicy = InputFieldPolicy.EMAIL,
+            required = true,
+            maxLength = InputTextLimits.EMAIL,
+            fieldName = "Email"
+        )
+        if (emailError == null) {
+            onSend(normalizeForCommit(email, InputFieldPolicy.EMAIL))
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -112,7 +134,19 @@ fun ForgotPasswordBottomSheet(
 
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { email = it },
+                    onValueChange = {
+                        val sanitized = sanitizeForEditing(
+                            raw = it,
+                            fieldPolicy = InputFieldPolicy.EMAIL,
+                            maxLength = InputTextLimits.EMAIL
+                        )
+                        email = sanitized.value
+                        emailError = sanitized.rejectionMessage ?: if (containsOnlyWhitespace(sanitized.value)) {
+                            "Only spaces are not allowed."
+                        } else {
+                            null
+                        }
+                    },
                     label = { Text("Email address") },
                     placeholder = { Text("you@gmail.com") },
                     modifier = Modifier.fillMaxWidth(),
@@ -122,22 +156,36 @@ fun ForgotPasswordBottomSheet(
                         imeAction = ImeAction.Done
                     ),
                     keyboardActions = KeyboardActions(
-                        onDone = { if (email.isNotBlank()) onSend(email) }
+                        onDone = { submitIfValid() }
+                    ),
+                    isError = emailError != null,
+                    supportingText = emailError?.let { { Text(it) } },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.secondary,
+                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                        cursorColor = MaterialTheme.colorScheme.secondary
                     )
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Button(
-                    onClick = { onSend(email) },
+                    onClick = { submitIfValid() },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = email.isNotBlank() && !isLoading
+                    enabled = email.trimToNullIfBlank() != null && !isLoading,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.surface,
+                        disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
+                        disabledContentColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.5f)
+                    )
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
                             strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = MaterialTheme.colorScheme.onSecondary
                         )
                     } else {
                         Text("Send reset link")
@@ -146,7 +194,10 @@ fun ForgotPasswordBottomSheet(
 
                 TextButton(
                     onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.secondary
+                    )
                 ) {
                     Text("Cancel")
                 }

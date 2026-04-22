@@ -37,6 +37,11 @@ class PetsViewModel(
     /** Llamado desde MainActivity cuando regresa de AddPet o PetProfile */
     fun refresh() = loadPets()
 
+    fun clearSessionData() {
+        allPets = emptyList()
+        _uiState.value = PetsUiState()
+    }
+
     fun loadPets() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
@@ -44,7 +49,7 @@ class PetsViewModel(
                 petRepository.getPets()
             }.fold(
                 onSuccess = { pets ->
-                    allPets = pets
+                    allPets = pets.distinctBy { it.id }
                     applyFilters()
                 },
                 onFailure = { e ->
@@ -57,6 +62,16 @@ class PetsViewModel(
                 }
             )
         }
+    }
+
+    fun removeDeletedPet(petId: String) {
+        allPets = allPets.filterNot { it.id == petId }
+        applyFilters()
+    }
+
+    fun addOrReplacePet(pet: Pet) {
+        allPets = (allPets.filterNot { it.id == pet.id } + pet).distinctBy { it.id }
+        applyFilters()
     }
 
     fun updateSearchQuery(query: String) {

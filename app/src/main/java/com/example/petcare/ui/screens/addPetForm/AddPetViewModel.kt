@@ -12,10 +12,16 @@ import kotlinx.coroutines.launch
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import com.example.petcare.data.model.Pet
 import com.google.firebase.Firebase
 import com.google.firebase.storage.storage
+import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
 import com.example.petcare.util.enforceMaxLength
+import com.example.petcare.util.normalizeForCommit
+import com.example.petcare.util.sanitizeForEditing
+import com.example.petcare.util.trimToNullIfBlank
+import com.example.petcare.util.validateCommittedInput
 import kotlinx.coroutines.tasks.await
 import java.io.File
 import java.util.UUID
@@ -51,16 +57,16 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
         _state.value = _state.value.copy(photoUri = persisted)
     }
     fun clearPhoto()               { _state.value = _state.value.copy(photoUri = null) }
-    fun setName(v: String)         { _state.value = _state.value.copy(name = enforceMaxLength(v, InputTextLimits.PET_NAME)) }
-    fun setBreed(v: String)        { _state.value = _state.value.copy(breed = enforceMaxLength(v, InputTextLimits.BREED)) }
-    fun setSpecies(v: String)      { _state.value = _state.value.copy(species = v) }
-    fun setGender(v: String)       { _state.value = _state.value.copy(gender = v, error = null) }
-    fun setWeight(v: String)       { _state.value = _state.value.copy(weight = v) }
-    fun setColor(v: String)        { _state.value = _state.value.copy(color = enforceMaxLength(v, InputTextLimits.COLOR)) }
+    fun setName(v: String)         { _state.value = _state.value.copy(name = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PET_NAME).value) }
+    fun setBreed(v: String)        { _state.value = _state.value.copy(breed = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.BREED).value) }
+    fun setSpecies(v: String)      { _state.value = _state.value.copy(species = normalizeForCommit(v, InputFieldPolicy.GENERAL_TEXT)) }
+    fun setGender(v: String)       { _state.value = _state.value.copy(gender = normalizeForCommit(v, InputFieldPolicy.GENERAL_TEXT), error = null) }
+    fun setWeight(v: String)       { _state.value = _state.value.copy(weight = sanitizeForEditing(v, InputFieldPolicy.DECIMAL, InputTextLimits.WEIGHT, 199.0).value) }
+    fun setColor(v: String)        { _state.value = _state.value.copy(color = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.COLOR).value) }
     fun setBirthDate(v: String)    { _state.value = _state.value.copy(birthDate = v) }   // NEW
-    fun setDefaultVet(v: String)     { _state.value = _state.value.copy(defaultVet = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
-    fun setDefaultClinic(v: String)  { _state.value = _state.value.copy(defaultClinic = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
-    fun setKnownAllergies(v: String) { _state.value = _state.value.copy(knownAllergies = enforceMaxLength(v, InputTextLimits.NOTES)) }
+    fun setDefaultVet(v: String)     { _state.value = _state.value.copy(defaultVet = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value) }
+    fun setDefaultClinic(v: String)  { _state.value = _state.value.copy(defaultClinic = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value) }
+    fun setKnownAllergies(v: String) { _state.value = _state.value.copy(knownAllergies = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.NOTES).value) }
 
     private suspend fun uploadPhoto(uri: Uri): String? {
         return try {
@@ -75,17 +81,34 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun submit(onSuccess: (petId: String) -> Unit) {
+    fun submit(onSuccess: (pet: Pet) -> Unit) {
         val s = _state.value
-        if (s.name.isBlank() || s.species.isBlank() || s.gender.isBlank()) {
-            val missing = buildList {
-                if (s.name.isBlank()) add("name")
-                if (s.species.isBlank()) add("species")
-                if (s.gender.isBlank()) add("gender")
-            }
-            _state.value = s.copy(
-                error = "Required fields: ${missing.joinToString(", ")}"
-            )
+        val nameError = validateCommittedInput(s.name, InputFieldPolicy.GENERAL_TEXT, required = true, maxLength = InputTextLimits.PET_NAME, fieldName = "Name")
+        val speciesError = if (normalizeForCommit(s.species, InputFieldPolicy.GENERAL_TEXT).isBlank()) "Species cannot be blank." else null
+        val genderError = if (normalizeForCommit(s.gender, InputFieldPolicy.GENERAL_TEXT).isBlank()) "Gender cannot be blank." else null
+        val weightError = validateCommittedInput(s.weight, InputFieldPolicy.DECIMAL, maxLength = InputTextLimits.WEIGHT, maxNumericValue = 199.0, fieldName = "Weight")
+        val breedError = validateCommittedInput(s.breed, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.BREED)
+        val colorError = validateCommittedInput(s.color, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.COLOR)
+        val vetError = validateCommittedInput(s.defaultVet, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC)
+        val clinicError = validateCommittedInput(s.defaultClinic, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC)
+        val allergiesError = validateCommittedInput(s.knownAllergies, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.NOTES)
+        val birthDateError = if (s.birthDate.isBlank()) "Date of Birth is required." else null
+
+        val firstError = listOfNotNull(
+            nameError,
+            speciesError,
+            genderError,
+            birthDateError,
+            weightError,
+            breedError,
+            colorError,
+            vetError,
+            clinicError,
+            allergiesError
+        ).firstOrNull()
+
+        if (firstError != null) {
+            _state.value = s.copy(error = firstError)
             return
         }
         viewModelScope.launch {
@@ -93,16 +116,16 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
             val photoUrl = s.photoUri?.let { uploadPhoto(it) }
 
             val request = CreatePetRequest(
-                name           = s.name.trim(),
-                species        = s.species.trim().lowercase(),
-                breed          = s.breed.trim(),
-                gender         = s.gender.trim().lowercase(),
-                weight         = s.weight.toDoubleOrNull(),
-                color          = s.color.trim(),
+                name           = normalizeForCommit(s.name, InputFieldPolicy.GENERAL_TEXT),
+                species        = normalizeForCommit(s.species, InputFieldPolicy.GENERAL_TEXT).lowercase(),
+                breed          = normalizeForCommit(s.breed, InputFieldPolicy.GENERAL_TEXT),
+                gender         = normalizeForCommit(s.gender, InputFieldPolicy.GENERAL_TEXT).lowercase(),
+                weight         = normalizeForCommit(s.weight, InputFieldPolicy.DECIMAL).trimToNullIfBlank()?.toDoubleOrNull(),
+                color          = normalizeForCommit(s.color, InputFieldPolicy.GENERAL_TEXT),
                 birthDate      = s.birthDate.takeIf { it.isNotBlank() }?.let { toIso(it) },
-                knownAllergies = s.knownAllergies.trim(),
-                defaultVet     = s.defaultVet.trim(),
-                defaultClinic  = s.defaultClinic.trim(),
+                knownAllergies = normalizeForCommit(s.knownAllergies, InputFieldPolicy.GENERAL_TEXT),
+                defaultVet     = normalizeForCommit(s.defaultVet, InputFieldPolicy.GENERAL_TEXT),
+                defaultClinic  = normalizeForCommit(s.defaultClinic, InputFieldPolicy.GENERAL_TEXT),
                 photoUrl       = photoUrl
             )
             FeatureExecutionTracker.track("Create Pet") {
@@ -110,7 +133,7 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
             }.fold(
                 onSuccess = { pet ->
                     _state.value = _state.value.copy(isLoading = false)
-                    onSuccess(pet.id)
+                    onSuccess(pet)
                 },
                 onFailure = { e ->
                     _state.value = _state.value.copy(

@@ -18,24 +18,21 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.ui.components.ButtonDefault
 import com.example.petcare.ui.screens.nfc.components.NFCHeader
 import com.example.petcare.ui.screens.nfc.components.NFCInfoCard
 import com.example.petcare.ui.screens.nfc.components.NFCToggle
-import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.MainActivity
-import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,10 +41,20 @@ fun ScanNFCScreen(
     onDone: () -> Unit = {},
     onWrite: () -> Unit = {}
 ) {
-    var isReadMode by remember { mutableStateOf(true) }
+    val activity = LocalActivity.current as MainActivity
+    val nfcViewModel = activity.nfcViewModel
+    val uiState by nfcViewModel.uiState.collectAsStateWithLifecycle()
 
-    val activity = LocalActivity.current
-    val nfcViewModel = activity
+    LaunchedEffect(Unit) {
+        nfcViewModel.reset()
+    }
+
+    LaunchedEffect(uiState) {
+        if (uiState is NfcUiState.WaitingForTag && !nfcViewModel.isPendingWrite()) {
+            onDone()
+        }
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -77,7 +84,7 @@ fun ScanNFCScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            NFCToggle(isReadMode = isReadMode, onModeChanged = { onWrite() })
+            NFCToggle(isReadMode = true, onModeChanged = { onWrite() })
 
             Spacer(modifier = Modifier.height(48.dp))
 
@@ -94,8 +101,17 @@ fun ScanNFCScreen(
                 width = 342.dp,
                 height = 56.dp,
                 text = "Start Scanning",
-                onclick = { onDone()}
+                onclick = { nfcViewModel.startReadMode(activity.nfcManager) }
             )
+
+            if (uiState is NfcUiState.Error) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = (uiState as NfcUiState.Error).message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 

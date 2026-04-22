@@ -14,7 +14,10 @@ class PetRepository(private val api: ApiService) {
 
     suspend fun getPets(): Result<List<Pet>> = runCatching {
         val response = api.getPets()
-        response.body() ?: error("Empty response")
+        if (!response.isSuccessful) {
+            error("Failed to load pets — HTTP ${response.code()}")
+        }
+        response.body().orEmpty()
     }
 
     suspend fun getPet(petId: String): Result<Pet> = runCatching {
@@ -32,10 +35,21 @@ class PetRepository(private val api: ApiService) {
         response.body() ?: error("Failed to update pet — HTTP ${response.code()}")
     }
 
-    suspend fun deletePet(petId: String): Result<Unit> = runCatching {
-        val response = api.deletePet(petId)
-        if (!response.isSuccessful) {
-            error("Failed to delete pet — HTTP ${response.code()}")
+    suspend fun deletePet(petId: String): Result<Unit> {
+        return try {
+            val response = api.deletePet(petId)
+            if (response.isSuccessful || response.code() == 204) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to delete pet — HTTP ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            val message = e.message.orEmpty()
+            if (message.contains("204") && message.contains("Content-Length")) {
+                Result.success(Unit)
+            } else {
+                Result.failure(e)
+            }
         }
     }
 

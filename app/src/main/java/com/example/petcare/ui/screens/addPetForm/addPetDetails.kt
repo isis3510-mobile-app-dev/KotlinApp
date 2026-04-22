@@ -26,6 +26,7 @@ import com.example.petcare.ui.components.GenderSelector
 import com.example.petcare.ui.components.Stepper
 import com.example.petcare.ui.components.TextFieldComponent
 import com.example.petcare.ui.components.TransparentTopBar
+import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
 
 @Composable
@@ -53,16 +54,14 @@ fun AddPetDetailsForm(
 
             GenderSelector(onOptionSelected = viewModel::setGender)
 
-            // FIX: decimal only + max 7 chars to prevent infinite input (e.g. "999.999")
             TextFieldComponent(
                 name = "Weight (Kg)",
                 label = "e.g. 4.5",
                 value = state.weight,
-                onValueChange = { newValue ->
-                    val filtered = newValue.filter { it.isDigit() || it == '.' }
-                    val dotCount = filtered.count { it == '.' }
-                    if (dotCount <= 1 && filtered.length <= 7) viewModel.setWeight(filtered)
-                },
+                onValueChange = viewModel::setWeight,
+                maxLength = InputTextLimits.WEIGHT,
+                fieldPolicy = InputFieldPolicy.DECIMAL,
+                maxNumericValue = 199.0,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
 
@@ -105,8 +104,11 @@ fun AddPetDetailsForm(
                 textColor = MaterialTheme.colorScheme.surface,
                 width = 169.dp, height = 50.57.dp,
                 text = "Continue", onclick = {
-                    if (state.gender.isBlank()) {
-                        viewModel.setError("Gender is required")
+                    val errors = mutableListOf<String>()
+                    if (state.gender.isBlank()) errors.add("Gender is required")
+                    if (state.birthDate.isBlank()) errors.add("Date of Birth is required")
+                    if (errors.isNotEmpty()) {
+                        viewModel.setError(errors.first())
                     } else {
                         viewModel.clearError()
                         FeatureClicksTracker.recordClick()

@@ -11,8 +11,11 @@ class EventRepository(private val api: ApiService) {
         petId: String? = null,
         ownerId: String? = null
     ): Result<List<Event>> = runCatching {
-        api.getEvents(petId = petId, ownerId = ownerId).body()
-            ?: error("Empty response")
+        val response = api.getEvents(petId = petId, ownerId = ownerId)
+        if (!response.isSuccessful) {
+            error("Failed to load events — HTTP ${response.code()}")
+        }
+        response.body().orEmpty()
     }
 
     suspend fun getEvent(eventId: String): Result<Event> = runCatching {

@@ -25,6 +25,8 @@ import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.GreenLight
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.OffWhite
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun EventDetailsHeaderCard(
@@ -41,7 +43,7 @@ fun EventDetailsHeaderCard(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
-                text = title,
+                text = title.truncateForDisplay(DisplayTextLimits.DETAIL_TITLE),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -57,11 +59,11 @@ fun EventDetailsHeaderCard(
             ) {
                 // Determine icon based on type
                 when(eventType) {
-                    EventType.DENTAL -> Text("🦷", fontSize = 16.sp)
+                    EventType.DENTAL -> Icon(Icons.Default.MedicalServices, null, tint = GreenDark, modifier = Modifier.size(16.dp))
                     EventType.CHECKUP -> Icon(Icons.Default.LocalHospital, null, tint = GreenDark, modifier = Modifier.size(16.dp))
                     EventType.SURGERY -> Icon(Icons.Default.MedicalServices, null, tint = GreenDark, modifier = Modifier.size(16.dp))
                     EventType.VACCINE -> Icon(Icons.Default.Vaccines, null, tint = GreenDark, modifier = Modifier.size(16.dp))
-                    EventType.OTHER -> Text("⚕️", fontSize = 16.sp)
+                    EventType.OTHER -> Icon(Icons.Default.LocalHospital, null, tint = GreenDark, modifier = Modifier.size(16.dp))
                 }
                 
                 Spacer(modifier = Modifier.width(6.dp))

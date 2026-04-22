@@ -25,7 +25,7 @@ android {
             localPropertiesFile.inputStream().use { localProperties.load(it) }
         }
         val backendIp = localProperties.getProperty("BACKEND_IP")?.replace("\"", "") ?: "10.0.2.2"
-        buildConfigField("String", "BASE_URL", "\"http://${backendIp}:8000/api/\"")
+        buildConfigField("String", "BASE_URL", "\"http://${backendIp}:8001/api/\"")
     }
 
     buildTypes {

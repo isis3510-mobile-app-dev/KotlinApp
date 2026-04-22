@@ -43,6 +43,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.unit.sp
 import com.example.petcare.ui.theme.RobotoMedium
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.IconButton
@@ -54,6 +56,8 @@ import com.google.android.gms.common.api.ApiException
 import androidx.compose.runtime.*
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import com.example.petcare.util.InputFieldPolicy
+import com.example.petcare.util.InputTextLimits
 
 
 @Composable
@@ -122,6 +126,7 @@ fun LoginScreen(
     Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)
         .fillMaxSize()
         .padding(24.dp)
+        .verticalScroll(rememberScrollState())
     ) {
         Spacer(modifier = Modifier.height(100.dp))
         Box(
@@ -148,7 +153,9 @@ fun LoginScreen(
             name = "Full Name",
             label = "Sarah Johnson",
             value = fullName,
-            onValueChange = { fullName = it}
+            onValueChange = { fullName = it},
+            maxLength = InputTextLimits.USER_NAME,
+            fieldPolicy = InputFieldPolicy.GENERAL_TEXT
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -157,7 +164,12 @@ fun LoginScreen(
             name = "Email Address",
             label = "you@gmail.com",
             value = email,
-            onValueChange = { email = it }
+            onValueChange = { email = it },
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
+            ),
+            maxLength = InputTextLimits.EMAIL,
+            fieldPolicy = InputFieldPolicy.EMAIL
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -182,7 +194,9 @@ fun LoginScreen(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
+            },
+            maxLength = InputTextLimits.PASSWORD,
+            fieldPolicy = InputFieldPolicy.PASSWORD
         )
 
         Spacer(modifier = Modifier.height(24.dp))

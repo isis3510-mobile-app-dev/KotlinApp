@@ -24,6 +24,8 @@ import com.example.petcare.ui.theme.GrayMedium
 import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.OffWhite
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun ProviderInfoCard(
@@ -61,7 +63,7 @@ fun ProviderInfoCard(
                 Text(text = "Veterinarian", style = MaterialTheme.typography.bodySmall, color = GrayText)
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = veterinarian,
+                    text = veterinarian.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -83,7 +85,7 @@ fun ProviderInfoCard(
                 Text(text = "Clinic", style = MaterialTheme.typography.bodySmall, color = GrayText)
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = clinic,
+                    text = clinic.truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )

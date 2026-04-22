@@ -142,17 +142,21 @@ fun PetProfileHeader(
 
             Spacer(modifier = Modifier.width(24.dp))
 
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text  = name.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                         color = Color.White,
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         fontSize = 24.sp,
+                        modifier = Modifier.weight(1f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     if (isHealthy) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -190,6 +194,7 @@ fun PetProfileHeader(
                     text  = "$breed · $species".truncateForDisplay(DisplayTextLimits.SUBTITLE_META),
                     color = Color.White.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.fillMaxWidth(),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -197,24 +202,52 @@ fun PetProfileHeader(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment     = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(text = "🎂", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = age, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+                        Text(
+                            text = age,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(text = "⚖️", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = weight, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+                        Text(
+                            text = weight,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         val genderEmoji = if (gender.contains("Male", true)) "♂" else "♀"
                         Text(text = genderEmoji, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = gender, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+                        Text(
+                            text = gender,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }

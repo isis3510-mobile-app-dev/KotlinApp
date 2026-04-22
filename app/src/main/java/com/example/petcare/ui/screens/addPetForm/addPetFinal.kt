@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.petcare.data.analytics.FeatureClicksTracker
+import com.example.petcare.data.model.Pet
 import com.example.petcare.ui.components.*
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
@@ -28,10 +29,10 @@ import com.example.petcare.util.InputTextLimits
 fun AddPetFinalForm(
     onBack: () -> Unit,
     /**
-     * Called with the newly created petId so the caller can navigate
-     * directly to that pet's profile.
+     * Called with the newly created pet so the caller can update
+     * shared screen state immediately.
      */
-    onclick: (petId: String) -> Unit,
+    onclick: (pet: Pet) -> Unit,
     viewModel: AddPetViewModel
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -118,9 +119,9 @@ fun AddPetFinalForm(
                 width = 169.dp, height = 50.57.dp,
                 text = if (state.isLoading) "Saving…" else "Add Pet",
                 onclick = {
-                    viewModel.submit { petId ->
+                    viewModel.submit { pet ->
                         FeatureClicksTracker.endRoute()
-                        onclick(petId)
+                        onclick(pet)
                     }
                 }
             )

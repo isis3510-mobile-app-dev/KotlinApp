@@ -177,9 +177,14 @@ fun CalendarScreen(
         // Empty state
         if (!uiState.isLoading && eventsForRange.isEmpty() && vaccinesForRange.isEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
+            val emptyMessage = when (selectedFilter) {
+                "Vaccines" -> "No vaccines on this day"
+                "Appointments" -> "No appointments on this day"
+                else -> "No records on this day"
+            }
             EmptyStateView(
                 icon          = Icons.Default.CalendarMonth,
-                message       = "No events on this day",
+                message       = emptyMessage,
                 buttonText    = "Add Event",
                 onButtonClick = onAddEvent
             )

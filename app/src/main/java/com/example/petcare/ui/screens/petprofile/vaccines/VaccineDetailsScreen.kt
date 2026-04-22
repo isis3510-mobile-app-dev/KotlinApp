@@ -36,6 +36,10 @@ import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilt
 import com.example.petcare.data.model.AttachedDocument
 import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.*
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.InputFieldPolicy
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun VaccineDetailsScreen(
@@ -261,8 +265,22 @@ private fun EditableProviderCard(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("PROVIDER INFORMATION", style = MaterialTheme.typography.labelMedium, color = GrayText, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-            TextFieldComponent(name = "Administered by", label = "e.g. Dr. Smith", value = administeredBy, onValueChange = onAdministeredBy)
-            TextFieldComponent(name = "Lot number (optional)", label = "e.g. LOT123", value = lotNumber, onValueChange = onLotNumber)
+            TextFieldComponent(
+                name = "Administered by",
+                label = "e.g. Dr. Smith",
+                value = administeredBy,
+                onValueChange = onAdministeredBy,
+                fieldPolicy = InputFieldPolicy.GENERAL_TEXT,
+                maxLength = InputTextLimits.PROVIDER_OR_CLINIC
+            )
+            TextFieldComponent(
+                name = "Lot number (optional)",
+                label = "e.g. LOT123",
+                value = lotNumber,
+                onValueChange = onLotNumber,
+                fieldPolicy = InputFieldPolicy.GENERAL_TEXT,
+                maxLength = InputTextLimits.LOT_NUMBER
+            )
         }
     }
 }
@@ -271,7 +289,11 @@ private fun EditableProviderCard(
 private fun VaccineHeaderCard(name: String, status: VaccineFilterStatus) {
     Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surface).padding(24.dp)) {
         Column {
-            Text(name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(
+                name.truncateForDisplay(DisplayTextLimits.DETAIL_TITLE),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
             Spacer(modifier = Modifier.height(16.dp))
             val (bg, fg, label) = when (status) {
                 VaccineFilterStatus.COMPLETED -> Triple(SuccessContainer, SuccessContent, "✓ Completed")
@@ -327,7 +349,7 @@ private fun ProviderCard(veterinarian: String, clinic: String) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text("Veterinarian", fontSize = 12.sp, color = GrayText)
-                    Text(veterinarian, fontSize = 16.sp)
+                    Text(veterinarian.truncateForDisplay(DisplayTextLimits.SUBTITLE_META), fontSize = 16.sp)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -338,7 +360,7 @@ private fun ProviderCard(veterinarian: String, clinic: String) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text("Clinic", fontSize = 12.sp, color = GrayText)
-                    Text(clinic, fontSize = 16.sp)
+                    Text(clinic.truncateForDisplay(DisplayTextLimits.SUBTITLE_META), fontSize = 16.sp)
                 }
             }
         }

@@ -74,15 +74,12 @@ fun EventListItem(
                     .background(iconBackground),
                 contentAlignment = Alignment.Center
             ) {
-                // Determine icon based on type. The mockups have specific icons (e.g. tooth for Dental).
-                // If checking for Dental we can use an emoji or vector if available, but for now we'll mock it 
-                // using Text for emojis if we don't have dedicated tooth icons
                 when(event.eventType) {
-                    EventType.DENTAL -> Text("🦷", fontSize = 24.sp)
+                    EventType.DENTAL -> Icon(Icons.Default.MedicalServices, null, tint = GrayDark)
                     EventType.CHECKUP -> Icon(Icons.Default.LocalHospital, null, tint = GrayDark)
                     EventType.SURGERY -> Icon(Icons.Default.MedicalServices, null, tint = GrayDark)
                     EventType.VACCINE -> Icon(Icons.Default.Vaccines, null, tint = GrayDark)
-                    EventType.OTHER -> Text("⚕️", fontSize = 24.sp)
+                    EventType.OTHER -> Icon(Icons.Default.LocalHospital, null, tint = GrayDark)
                 }
             }
 

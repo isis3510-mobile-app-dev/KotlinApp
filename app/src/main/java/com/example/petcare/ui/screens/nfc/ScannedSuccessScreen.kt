@@ -47,12 +47,8 @@ fun ScannedSuccessScreen(
     val payload = (uiState as? NfcUiState.ReadSuccess)?.payload
 
     ScannedSuccessContent(
-        payload       = payload,
-        onBack        = onBack,
-        onScanAnother = {
-            nfcViewModel.readAnother()
-            onDone()
-        }
+        payload = payload,
+        onBack = onBack
     )
 }
 
@@ -60,8 +56,7 @@ fun ScannedSuccessScreen(
 @Composable
 fun ScannedSuccessContent(
     payload: NfcPetPayload?,
-    onBack: () -> Unit,
-    onScanAnother: () -> Unit
+    onBack: () -> Unit
 ) {
     val isLost = payload?.status?.equals("lost", ignoreCase = true) == true
 
@@ -401,14 +396,6 @@ fun ScannedSuccessContent(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                text     = "Scan another tag",
-                fontSize = 15.sp,
-                color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.clickable { onScanAnother() }
-            )
-
         }
     }
 }
@@ -433,8 +420,7 @@ fun ScannedSuccessPreviewHealthy() {
                 defaultVet     = "Dr. Maf",
                 defaultClinic  = "Colmillos"
             ),
-            onBack        = {},
-            onScanAnother = {}
+            onBack = {}
         )
     }
 }
@@ -457,8 +443,7 @@ fun ScannedSuccessPreviewLost() {
                 defaultVet     = "Dr. García",
                 defaultClinic  = "VetPlus"
             ),
-            onBack        = {},
-            onScanAnother = {}
+            onBack = {}
         )
     }
 }
@@ -478,8 +463,7 @@ fun ScannedSuccessPreviewNoNotes() {
                 ownerInitials = "AT",
                 status        = "healthy"
             ),
-            onBack        = {},
-            onScanAnother = {}
+            onBack = {}
         )
     }
 }
