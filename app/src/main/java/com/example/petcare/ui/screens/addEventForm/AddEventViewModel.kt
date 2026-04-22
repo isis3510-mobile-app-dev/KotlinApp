@@ -10,8 +10,12 @@ import com.example.petcare.data.model.EventType
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.util.EventDateUtils
 import com.example.petcare.util.FirebaseDocumentUploader
+import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
-import com.example.petcare.util.enforceMaxLength
+import com.example.petcare.util.normalizeForCommit
+import com.example.petcare.util.sanitizeForEditing
+import com.example.petcare.util.trimToNullIfBlank
+import com.example.petcare.util.validateCommittedInput
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,16 +60,16 @@ class AddEventViewModel : ViewModel() {
     private val _state = MutableStateFlow(AddEventFormState())
     val state: StateFlow<AddEventFormState> = _state.asStateFlow()
 
-    fun setPetId(v: String)            { _state.value = _state.value.copy(petId = v) }
-    fun setOwnerId(v: String)          { _state.value = _state.value.copy(ownerId = v) }
-    fun setTitle(v: String)            { _state.value = _state.value.copy(title = enforceMaxLength(v, InputTextLimits.EVENT_TITLE)) }
+    fun setPetId(v: String)            { _state.value = _state.value.copy(petId = normalizeForCommit(v, InputFieldPolicy.GENERAL_TEXT)) }
+    fun setOwnerId(v: String)          { _state.value = _state.value.copy(ownerId = normalizeForCommit(v, InputFieldPolicy.GENERAL_TEXT)) }
+    fun setTitle(v: String)            { _state.value = _state.value.copy(title = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.EVENT_TITLE).value) }
     fun setDate(v: String)             { _state.value = _state.value.copy(date = v) }
     fun setTime(v: String)             { _state.value = _state.value.copy(time = v) }
     fun setEventType(v: EventType)     { _state.value = _state.value.copy(eventType = v) }
-    fun setDescription(v: String)      { _state.value = _state.value.copy(description = enforceMaxLength(v, InputTextLimits.NOTES)) }
-    fun setPrice(v: String)            { _state.value = _state.value.copy(price = v) }
-    fun setProvider(v: String)         { _state.value = _state.value.copy(provider = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
-    fun setClinic(v: String)           { _state.value = _state.value.copy(clinic = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
+    fun setDescription(v: String)      { _state.value = _state.value.copy(description = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.NOTES).value) }
+    fun setPrice(v: String)            { _state.value = _state.value.copy(price = sanitizeForEditing(v, InputFieldPolicy.DECIMAL, InputTextLimits.PRICE).value) }
+    fun setProvider(v: String)         { _state.value = _state.value.copy(provider = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value) }
+    fun setClinic(v: String)           { _state.value = _state.value.copy(clinic = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value) }
     fun setFollowUpDate(v: String)     { _state.value = _state.value.copy(followUpDate = v) }
     fun setReminderEnabled(v: Boolean) { _state.value = _state.value.copy(reminderEnabled = v) }
 
@@ -126,8 +130,24 @@ class AddEventViewModel : ViewModel() {
 
     fun submit(onSuccess: (eventId: String) -> Unit) {
         val s = _state.value
-        if (s.petId.isBlank() || s.ownerId.isBlank() || s.title.isBlank() || s.date.isBlank()) {
-            _state.value = s.copy(error = "Pet, user profile, title and date are required")
+        val titleError = validateCommittedInput(s.title, InputFieldPolicy.GENERAL_TEXT, required = true, maxLength = InputTextLimits.EVENT_TITLE, fieldName = "Title")
+        val descriptionError = validateCommittedInput(s.description, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.NOTES)
+        val providerError = validateCommittedInput(s.provider, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC)
+        val clinicError = validateCommittedInput(s.clinic, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC)
+        val priceError = validateCommittedInput(s.price, InputFieldPolicy.DECIMAL, maxLength = InputTextLimits.PRICE, fieldName = "Price")
+
+        val firstError = listOfNotNull(
+            if (s.petId.isBlank() || s.ownerId.isBlank()) "Pet and user profile are required." else null,
+            if (s.date.isBlank()) "Date is required." else null,
+            titleError,
+            descriptionError,
+            providerError,
+            clinicError,
+            priceError
+        ).firstOrNull()
+
+        if (firstError != null) {
+            _state.value = s.copy(error = firstError)
             return
         }
         // Esperar a que terminen los uploads pendientes
@@ -142,13 +162,13 @@ class AddEventViewModel : ViewModel() {
             val request = CreateEventRequest(
                 petId        = s.petId,
                 ownerId      = s.ownerId,
-                title        = s.title.trim(),
+                title        = normalizeForCommit(s.title, InputFieldPolicy.GENERAL_TEXT),
                 eventType    = s.eventType.name.lowercase(),
                 date         = toIso(s.date, s.time),
-                price        = s.price.toDoubleOrNull(),
-                provider     = s.provider.trim(),
-                clinic       = s.clinic.trim(),
-                description  = s.description.trim(),
+                price        = normalizeForCommit(s.price, InputFieldPolicy.DECIMAL).trimToNullIfBlank()?.toDoubleOrNull(),
+                provider     = normalizeForCommit(s.provider, InputFieldPolicy.GENERAL_TEXT),
+                clinic       = normalizeForCommit(s.clinic, InputFieldPolicy.GENERAL_TEXT),
+                description  = normalizeForCommit(s.description, InputFieldPolicy.GENERAL_TEXT),
                 followUpDate = s.followUpDate
                     .takeIf { it.isNotBlank() }
                     ?.let { toIso(it, "12:00 AM") }

@@ -23,6 +23,7 @@ import com.example.petcare.ui.components.ButtonOutline
 import com.example.petcare.ui.components.Stepper
 import com.example.petcare.ui.components.TextFieldComponent
 import com.example.petcare.ui.components.TransparentTopBar
+import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
 
 
@@ -67,15 +68,12 @@ fun AddEventDetailsForm(
                 maxLength = InputTextLimits.PROVIDER_OR_CLINIC
             )
 
-            // FIX: decimal only + max 10 chars to prevent infinite input
             TextFieldComponent(
                 name = "Price (optional)", label = "e.g. 50",
                 value = state.price,
-                onValueChange = { newValue ->
-                    val filtered = newValue.filter { it.isDigit() || it == '.' }
-                    val dotCount = filtered.count { it == '.' }
-                    if (dotCount <= 1 && filtered.length <= 10) viewModel.setPrice(filtered)
-                },
+                onValueChange = viewModel::setPrice,
+                maxLength = InputTextLimits.PRICE,
+                fieldPolicy = InputFieldPolicy.DECIMAL,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
         }

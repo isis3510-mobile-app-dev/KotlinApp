@@ -12,9 +12,11 @@ import com.example.petcare.data.network.ApiClient
 import com.example.petcare.data.network.ApiService
 import com.example.petcare.data.preferences.AppThemeMode
 import com.example.petcare.data.preferences.UserPreferencesRepository
+import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
 import com.example.petcare.util.InputValidators
-import com.example.petcare.util.enforceMaxLength
+import com.example.petcare.util.normalizeForCommit
+import com.example.petcare.util.validateCommittedInput
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -130,9 +132,20 @@ class ProfileViewModel(
             _userState.value = Triple(current, true, null)
 
             val sanitizedValue = when (field) {
-                is EditField.Name -> enforceMaxLength(value.trim(), InputTextLimits.USER_NAME)
-                is EditField.Phone -> enforceMaxLength(value.trim(), InputTextLimits.PHONE)
-                is EditField.Address -> enforceMaxLength(value.trim(), InputTextLimits.ADDRESS)
+                is EditField.Name -> normalizeForCommit(value, InputFieldPolicy.GENERAL_TEXT)
+                is EditField.Phone -> normalizeForCommit(value, InputFieldPolicy.PHONE)
+                is EditField.Address -> normalizeForCommit(value, InputFieldPolicy.GENERAL_TEXT)
+            }
+
+            val validationMessage = when (field) {
+                is EditField.Name -> validateCommittedInput(value, InputFieldPolicy.GENERAL_TEXT, required = true, maxLength = InputTextLimits.USER_NAME, fieldName = "Name")
+                is EditField.Phone -> validateCommittedInput(value, InputFieldPolicy.PHONE, required = true, maxLength = InputTextLimits.PHONE, fieldName = "Phone")
+                is EditField.Address -> validateCommittedInput(value, InputFieldPolicy.GENERAL_TEXT, required = true, maxLength = InputTextLimits.ADDRESS, fieldName = "Address")
+            }
+            if (validationMessage != null) {
+                _userState.value = Triple(current, false, null)
+                _uiEvents.send(UiEvent.ShowMessage(validationMessage))
+                return@launch
             }
 
             if (field is EditField.Phone &&
@@ -172,8 +185,18 @@ class ProfileViewModel(
         val current = _userState.value.first ?: return
         viewModelScope.launch {
             _userState.value = Triple(current, true, null)
-            val sanitizedEmail = newEmail.trim()
-            authRepository.updateEmail(currentPassword, sanitizedEmail)
+            val emailError = validateCommittedInput(newEmail, InputFieldPolicy.EMAIL, required = true, maxLength = InputTextLimits.EMAIL, fieldName = "Email")
+            val passwordError = validateCommittedInput(currentPassword, InputFieldPolicy.PASSWORD, required = true, maxLength = InputTextLimits.PASSWORD, fieldName = "Password")
+            if (emailError != null || passwordError != null) {
+                _userState.value = Triple(current, false, null)
+                _uiEvents.send(UiEvent.ShowMessage(emailError ?: passwordError ?: "Invalid input"))
+                return@launch
+            }
+            val sanitizedEmail = normalizeForCommit(newEmail, InputFieldPolicy.EMAIL)
+            authRepository.updateEmail(
+                normalizeForCommit(currentPassword, InputFieldPolicy.PASSWORD),
+                sanitizedEmail
+            )
                 .onSuccess {
                     _userState.value = Triple(
                         current,

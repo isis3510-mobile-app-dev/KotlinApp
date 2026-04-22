@@ -31,6 +31,7 @@ import java.time.format.DateTimeFormatter
 fun CalendarScreen(
     paddingValues: PaddingValues = PaddingValues(0.dp),
     onAddEvent: () -> Unit = {},
+    onAddVaccine: () -> Unit = {},
     onNavigateToEvent: (petId: String, eventId: String) -> Unit = { _, _ -> }
 ) {
     val viewModel: CalendarViewModel = viewModel()
@@ -179,9 +180,9 @@ fun CalendarScreen(
             Spacer(modifier = Modifier.height(16.dp))
             EmptyStateView(
                 icon          = Icons.Default.CalendarMonth,
-                message       = "No events on this day",
-                buttonText    = "Add Event",
-                onButtonClick = onAddEvent
+                message       = "No vaccines on this day",
+                buttonText    = "Add Vaccine",
+                onButtonClick = onAddVaccine
             )
         }
 

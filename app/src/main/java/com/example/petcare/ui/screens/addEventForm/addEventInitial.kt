@@ -19,6 +19,7 @@ import com.example.petcare.ui.screens.pets.PetsViewModel
 import com.example.petcare.ui.theme.GrayBorder
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.trimToNullIfBlank
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -186,9 +187,11 @@ fun AddEventInitialForm(
             height = 56.dp,
             text = "Continue",
             onclick = {
-                if (state.petId.isNotBlank() && state.title.isNotBlank() && state.date.isNotBlank()) {
+                if (state.petId.isNotBlank() && state.title.trimToNullIfBlank() != null && state.date.isNotBlank()) {
                     FeatureClicksTracker.recordClick()
                     onclick()
+                } else if (state.title.trimToNullIfBlank() == null) {
+                    viewModel.clearError()
                 }
             }
         )

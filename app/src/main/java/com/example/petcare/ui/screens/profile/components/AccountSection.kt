@@ -24,6 +24,7 @@ import com.example.petcare.ui.theme.InfoContent
 import com.example.petcare.ui.theme.SuccessContainer
 import com.example.petcare.ui.theme.SuccessContent
 import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
 import com.example.petcare.util.truncateForDisplay
 
@@ -104,6 +105,7 @@ fun AccountSection(
             currentValue = userName,
             placeholder = "Full name",
             maxLength = InputTextLimits.USER_NAME,
+            fieldPolicy = InputFieldPolicy.GENERAL_TEXT,
             onDismiss = { activeSheet = ActiveSheet.NONE },
             onSave = {
                 onSaveName(it)
@@ -116,6 +118,7 @@ fun AccountSection(
             placeholder = "+57 300 123 4567",
             keyboardType = KeyboardType.Phone,
             maxLength = InputTextLimits.PHONE,
+            fieldPolicy = InputFieldPolicy.PHONE,
             onDismiss = { activeSheet = ActiveSheet.NONE },
             onSave = {
                 onSavePhone(it)

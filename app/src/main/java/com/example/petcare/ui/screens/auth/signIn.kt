@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import com.example.petcare.util.InputFieldPolicy
+import com.example.petcare.util.InputTextLimits
 
 @Composable
 fun SignInScreen(
@@ -87,7 +89,12 @@ fun SignInScreen(
             name = "Email Address",
             label = "you@gmail.com",
             value = email,
-            onValueChange = { email = it}
+            onValueChange = { email = it},
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
+            ),
+            maxLength = InputTextLimits.EMAIL,
+            fieldPolicy = InputFieldPolicy.EMAIL
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -112,7 +119,9 @@ fun SignInScreen(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
+            },
+            maxLength = InputTextLimits.PASSWORD,
+            fieldPolicy = InputFieldPolicy.PASSWORD
         )
 
         Spacer(modifier = Modifier.height(10.dp))

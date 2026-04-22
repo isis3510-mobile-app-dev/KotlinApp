@@ -5,6 +5,8 @@ object DisplayTextLimits {
     const val COMPACT_TITLE = 28
     const val SUBTITLE_META = 36
     const val LONG_SNIPPET = 120
+    const val DETAIL_TITLE = 60
+    const val DETAIL_BODY = 240
 }
 
 object InputTextLimits {
@@ -18,6 +20,10 @@ object InputTextLimits {
     const val PHONE = 20
     const val ADDRESS = 120
     const val LOT_NUMBER = 30
+    const val EMAIL = 254
+    const val PASSWORD = 64
+    const val WEIGHT = 5
+    const val PRICE = 10
 }
 
 fun String.truncateForDisplay(limit: Int): String {

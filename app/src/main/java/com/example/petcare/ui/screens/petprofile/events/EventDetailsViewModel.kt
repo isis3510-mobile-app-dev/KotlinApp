@@ -9,8 +9,12 @@ import com.example.petcare.data.model.Event
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.util.EventDateUtils
 import com.example.petcare.util.FirebaseDocumentUploader
+import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
-import com.example.petcare.util.enforceMaxLength
+import com.example.petcare.util.normalizeForCommit
+import com.example.petcare.util.sanitizeForEditing
+import com.example.petcare.util.trimToNullIfBlank
+import com.example.petcare.util.validateCommittedInput
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,10 +54,10 @@ class EventDetailsViewModel : ViewModel() {
                     _uiState.value = _uiState.value.copy(
                         event           = event,
                         isLoading       = false,
-                        editTitle       = enforceMaxLength(event.title, InputTextLimits.EVENT_TITLE),
-                        editDescription = enforceMaxLength(event.description, InputTextLimits.NOTES),
-                        editProvider    = enforceMaxLength(event.provider, InputTextLimits.PROVIDER_OR_CLINIC),
-                        editClinic      = enforceMaxLength(event.clinic, InputTextLimits.PROVIDER_OR_CLINIC),
+                        editTitle       = sanitizeForEditing(event.title, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.EVENT_TITLE).value,
+                        editDescription = sanitizeForEditing(event.description, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.NOTES).value,
+                        editProvider    = sanitizeForEditing(event.provider, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value,
+                        editClinic      = sanitizeForEditing(event.clinic, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value,
                         editPrice       = event.price?.toString() ?: "",
                         editDate        = appDate,
                         editTime        = appTime
@@ -89,11 +93,11 @@ class EventDetailsViewModel : ViewModel() {
     fun startEditing()  { _uiState.value = _uiState.value.copy(isEditing = true,  error = null) }
     fun cancelEditing() { _uiState.value = _uiState.value.copy(isEditing = false, error = null) }
 
-    fun setTitle(v: String)       { _uiState.value = _uiState.value.copy(editTitle = enforceMaxLength(v, InputTextLimits.EVENT_TITLE)) }
-    fun setDescription(v: String) { _uiState.value = _uiState.value.copy(editDescription = enforceMaxLength(v, InputTextLimits.NOTES)) }
-    fun setProvider(v: String)    { _uiState.value = _uiState.value.copy(editProvider = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
-    fun setClinic(v: String)      { _uiState.value = _uiState.value.copy(editClinic = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
-    fun setPrice(v: String)       { _uiState.value = _uiState.value.copy(editPrice = v) }
+    fun setTitle(v: String)       { _uiState.value = _uiState.value.copy(editTitle = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.EVENT_TITLE).value) }
+    fun setDescription(v: String) { _uiState.value = _uiState.value.copy(editDescription = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.NOTES).value) }
+    fun setProvider(v: String)    { _uiState.value = _uiState.value.copy(editProvider = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value) }
+    fun setClinic(v: String)      { _uiState.value = _uiState.value.copy(editClinic = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value) }
+    fun setPrice(v: String)       { _uiState.value = _uiState.value.copy(editPrice = sanitizeForEditing(v, InputFieldPolicy.DECIMAL, InputTextLimits.PRICE).value) }
     fun setDate(v: String)        { _uiState.value = _uiState.value.copy(editDate = v) }
     fun setTime(v: String)        { _uiState.value = _uiState.value.copy(editTime = v) }
 
@@ -114,16 +118,28 @@ class EventDetailsViewModel : ViewModel() {
             return
         }
 
+        val validationMessage = listOfNotNull(
+            validateCommittedInput(s.editTitle, InputFieldPolicy.GENERAL_TEXT, required = true, maxLength = InputTextLimits.EVENT_TITLE, fieldName = "Title"),
+            validateCommittedInput(s.editDescription, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.NOTES),
+            validateCommittedInput(s.editProvider, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC),
+            validateCommittedInput(s.editClinic, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC),
+            validateCommittedInput(s.editPrice, InputFieldPolicy.DECIMAL, maxLength = InputTextLimits.PRICE, fieldName = "Price")
+        ).firstOrNull()
+        if (validationMessage != null) {
+            _uiState.value = s.copy(isSaving = false, error = validationMessage)
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = s.copy(isSaving = true, error = null)
             FeatureExecutionTracker.track("Edit Event") {
                 RepositoryProvider.eventRepository.updateEvent(
                     eventId     = event.id,
-                    title       = s.editTitle.trim(),
-                    description = s.editDescription.trim(),
-                    provider    = s.editProvider.trim(),
-                    clinic      = s.editClinic.trim(),
-                    price       = s.editPrice.toDoubleOrNull(),
+                    title       = normalizeForCommit(s.editTitle, InputFieldPolicy.GENERAL_TEXT),
+                    description = normalizeForCommit(s.editDescription, InputFieldPolicy.GENERAL_TEXT),
+                    provider    = normalizeForCommit(s.editProvider, InputFieldPolicy.GENERAL_TEXT),
+                    clinic      = normalizeForCommit(s.editClinic, InputFieldPolicy.GENERAL_TEXT),
+                    price       = normalizeForCommit(s.editPrice, InputFieldPolicy.DECIMAL).trimToNullIfBlank()?.toDoubleOrNull(),
                     date        = isoDate
                 )
             }.fold(

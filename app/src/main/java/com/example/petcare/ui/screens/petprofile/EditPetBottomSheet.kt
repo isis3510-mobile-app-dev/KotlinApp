@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
@@ -26,7 +25,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
@@ -37,8 +35,11 @@ import coil.request.ImageRequest
 import com.example.petcare.ui.components.DateTextField
 import com.example.petcare.ui.theme.GrayBorder
 import com.example.petcare.ui.theme.GreenDark
+import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
-import com.example.petcare.util.enforceMaxLength
+import com.example.petcare.util.containsOnlyWhitespace
+import com.example.petcare.util.sanitizeForEditing
+import com.example.petcare.util.validateLiveInput
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -206,7 +207,6 @@ fun EditPetBottomSheet(
                 EditField("Name *", "e.g. Buddy", state.name, editViewModel::setName, InputTextLimits.PET_NAME)
                 EditField("Breed", "e.g. Golden Retriever", state.breed, editViewModel::setBreed, InputTextLimits.BREED)
 
-                // FIX: weight field uses decimal keyboard only
                 EditFieldDecimal(
                     label = "Weight (Kg)",
                     placeholder = "e.g. 4.5",
@@ -286,6 +286,7 @@ private fun EditField(
     onValueChange: (String) -> Unit,
     maxLength: Int? = null
 ) {
+    var localError by remember(label, maxLength) { mutableStateOf<String?>(null) }
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text     = label,
@@ -295,11 +296,25 @@ private fun EditField(
         )
         OutlinedTextField(
             value         = value,
-            onValueChange = { onValueChange(enforceMaxLength(it, maxLength)) },
+            onValueChange = {
+                val sanitized = sanitizeForEditing(
+                    raw = it,
+                    fieldPolicy = InputFieldPolicy.GENERAL_TEXT,
+                    maxLength = maxLength
+                )
+                localError = sanitized.rejectionMessage ?: if (containsOnlyWhitespace(sanitized.value)) {
+                    "Only spaces are not allowed."
+                } else {
+                    null
+                }
+                onValueChange(sanitized.value)
+            },
             placeholder   = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
             singleLine    = true,
             modifier      = Modifier.fillMaxWidth(),
             shape         = RoundedCornerShape(20.dp),
+            isError       = localError != null,
+            supportingText = localError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
             colors        = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor   = GreenDark,
                 unfocusedBorderColor = GrayBorder
@@ -316,6 +331,7 @@ private fun EditFieldDecimal(
     value: String,
     onValueChange: (String) -> Unit
 ) {
+    var localError by remember(label) { mutableStateOf<String?>(null) }
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text     = label,
@@ -325,17 +341,26 @@ private fun EditFieldDecimal(
         )
         OutlinedTextField(
             value         = value,
-            onValueChange = { newValue ->
-                // Only allow digits and a single dot, max 7 chars (e.g. "999.999")
-                val filtered = newValue.filter { it.isDigit() || it == '.' }
-                val dotCount = filtered.count { it == '.' }
-                if (dotCount <= 1 && filtered.length <= 7) onValueChange(filtered)
+            onValueChange = {
+                val sanitized = sanitizeForEditing(
+                    raw = it,
+                    fieldPolicy = InputFieldPolicy.DECIMAL,
+                    maxLength = InputTextLimits.WEIGHT,
+                    maxNumericValue = 199.0
+                )
+                localError = sanitized.rejectionMessage ?: validateLiveInput(
+                    value = sanitized.value,
+                    fieldPolicy = InputFieldPolicy.DECIMAL,
+                    maxNumericValue = 199.0
+                )
+                onValueChange(sanitized.value)
             },
             placeholder   = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
             singleLine    = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier      = Modifier.fillMaxWidth(),
             shape         = RoundedCornerShape(20.dp),
+            isError       = localError != null,
+            supportingText = localError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
             colors        = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor   = GreenDark,
                 unfocusedBorderColor = GrayBorder
