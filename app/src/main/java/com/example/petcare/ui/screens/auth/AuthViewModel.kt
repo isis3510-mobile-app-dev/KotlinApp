@@ -13,6 +13,7 @@ import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
 import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.validateCommittedInput
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -74,8 +75,7 @@ class AuthViewModel(
                 normalizeForCommit(password, InputFieldPolicy.PASSWORD)
             ).fold(
                 onSuccess = { firebaseUser ->
-                    _state.value = AuthState.Success(firebaseUser)
-                    fetchUserProfile()
+                    completeAuthSuccess(firebaseUser, shouldRetryProfileBootstrap = false)
                 },
                 onFailure = { _state.value = AuthState.Error(friendlyError(it)) }
             )
@@ -127,8 +127,7 @@ class AuthViewModel(
                 fullName = normalizeForCommit(fullName, InputFieldPolicy.GENERAL_TEXT)
             ).fold(
                 onSuccess = { firebaseUser ->
-                   _state.value = AuthState.Success(firebaseUser)
-                    fetchUserProfile()
+                    completeAuthSuccess(firebaseUser, shouldRetryProfileBootstrap = true)
                 },
                 onFailure = { _state.value = AuthState.Error(friendlyError(it)) }
             )
@@ -140,8 +139,7 @@ class AuthViewModel(
             _state.value = AuthState.Loading
             authRepository.loginWithGoogle(idToken).fold(
                 onSuccess = { firebaseUser ->
-                    _state.value = AuthState.Success(firebaseUser)
-                    fetchUserProfile()
+                    completeAuthSuccess(firebaseUser, shouldRetryProfileBootstrap = true)
                 },
                 onFailure = { _state.value = AuthState.Error(friendlyError(it)) }
             )
@@ -150,7 +148,7 @@ class AuthViewModel(
 
     fun fetchUserProfile() {
         viewModelScope.launch {
-            userRepository.getMe().fold(
+            fetchUserProfileInternal().fold(
                 onSuccess = { _userProfile.value = it },
                 onFailure = { android.util.Log.e("AUTH", "Fetch profile error: ${it.message}") }
             )
@@ -213,12 +211,61 @@ class AuthViewModel(
 
     // ── Helpers ───────────────────────────────────────────────────
 
+    private suspend fun completeAuthSuccess(
+        firebaseUser: FirebaseUser,
+        shouldRetryProfileBootstrap: Boolean
+    ) {
+        val profileResult = fetchUserProfileWithRetry(
+            maxAttempts = if (shouldRetryProfileBootstrap) 5 else 2
+        )
+
+        profileResult.onSuccess { _userProfile.value = it }
+            .onFailure {
+                android.util.Log.w("AUTH", "Profile bootstrap incomplete: ${it.message}")
+            }
+
+        _state.value = AuthState.Success(firebaseUser)
+    }
+
+    private suspend fun fetchUserProfileInternal(): Result<User> = userRepository.getMe()
+
+    private suspend fun fetchUserProfileWithRetry(maxAttempts: Int): Result<User> {
+        var lastResult: Result<User> = Result.failure(IllegalStateException("Profile not loaded"))
+
+        repeat(maxAttempts) { attempt ->
+            lastResult = fetchUserProfileInternal()
+            if (lastResult.isSuccess) return lastResult
+
+            val error = lastResult.exceptionOrNull()
+            if (!shouldRetryProfileFetch(error) || attempt == maxAttempts - 1) {
+                return lastResult
+            }
+
+            delay((attempt + 1) * 300L)
+        }
+
+        return lastResult
+    }
+
+    private fun shouldRetryProfileFetch(error: Throwable?): Boolean {
+        val message = error?.message?.lowercase().orEmpty()
+        return "empty response" in message || "404" in message || "not found" in message
+    }
+
     private fun friendlyError(e: Throwable): String = when {
-        e.message?.contains("no user record") == true           -> "No account record"
-        e.message?.contains("password is invalid") == true      -> "Password is invalid"
-        e.message?.contains("email address is already") == true -> "Email address is already registered"
-        e.message?.contains("badly formatted") == true          -> "Email is badly formatted"
-        e.message?.contains("network") == true                  -> "No connection to internet"
-        else -> e.message ?: "Unknown error"
+        e.message?.contains("email address is already", ignoreCase = true) == true ->
+            "This email is already registered"
+        e.message?.contains("badly formatted", ignoreCase = true) == true ->
+            "Enter a valid email address"
+        e.message?.contains("network", ignoreCase = true) == true ->
+            "No internet connection. Please try again."
+        e.message?.contains("too many", ignoreCase = true) == true ->
+            "Too many attempts. Please try again later."
+        e.message?.contains("no user record", ignoreCase = true) == true ||
+            e.message?.contains("password is invalid", ignoreCase = true) == true ||
+            e.message?.contains("invalid credential", ignoreCase = true) == true ||
+            e.message?.contains("supplied auth credential is incorrect", ignoreCase = true) == true ->
+            "Incorrect email or password"
+        else -> "We couldn't sign you in. Please try again."
     }
 }

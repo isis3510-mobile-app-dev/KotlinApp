@@ -47,6 +47,10 @@ class HomeViewModel : ViewModel() {
         _state.value = _state.value.copy(userName = name, userId = userId)
     }
 
+    fun clearSessionData() {
+        _state.value = HomeUiState()
+    }
+
     fun loadData() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)

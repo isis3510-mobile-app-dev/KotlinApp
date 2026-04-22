@@ -37,6 +37,11 @@ class PetsViewModel(
     /** Llamado desde MainActivity cuando regresa de AddPet o PetProfile */
     fun refresh() = loadPets()
 
+    fun clearSessionData() {
+        allPets = emptyList()
+        _uiState.value = PetsUiState()
+    }
+
     fun loadPets() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }

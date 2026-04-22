@@ -31,7 +31,6 @@ import java.time.format.DateTimeFormatter
 fun CalendarScreen(
     paddingValues: PaddingValues = PaddingValues(0.dp),
     onAddEvent: () -> Unit = {},
-    onAddVaccine: () -> Unit = {},
     onNavigateToEvent: (petId: String, eventId: String) -> Unit = { _, _ -> }
 ) {
     val viewModel: CalendarViewModel = viewModel()
@@ -178,11 +177,16 @@ fun CalendarScreen(
         // Empty state
         if (!uiState.isLoading && eventsForRange.isEmpty() && vaccinesForRange.isEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
+            val emptyMessage = when (selectedFilter) {
+                "Vaccines" -> "No vaccines on this day"
+                "Appointments" -> "No appointments on this day"
+                else -> "No records on this day"
+            }
             EmptyStateView(
                 icon          = Icons.Default.CalendarMonth,
-                message       = "No vaccines on this day",
-                buttonText    = "Add Vaccine",
-                onButtonClick = onAddVaccine
+                message       = emptyMessage,
+                buttonText    = "Add Event",
+                onButtonClick = onAddEvent
             )
         }
 

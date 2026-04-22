@@ -8,6 +8,7 @@ import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.EventType
 import com.example.petcare.data.repository.RepositoryProvider
+import com.example.petcare.ui.navigation.Routes
 import com.example.petcare.util.EventDateUtils
 import com.example.petcare.util.FirebaseDocumentUploader
 import com.example.petcare.util.InputFieldPolicy
@@ -35,6 +36,7 @@ data class StagedDocument(
 data class AddEventFormState(
     val petId: String   = "",
     val ownerId: String = "",
+    val originRoute: String = Routes.Records,
     // Step 1
     val title: String        = "",
     val date: String         = "",
@@ -62,6 +64,7 @@ class AddEventViewModel : ViewModel() {
 
     fun setPetId(v: String)            { _state.value = _state.value.copy(petId = normalizeForCommit(v, InputFieldPolicy.GENERAL_TEXT)) }
     fun setOwnerId(v: String)          { _state.value = _state.value.copy(ownerId = normalizeForCommit(v, InputFieldPolicy.GENERAL_TEXT)) }
+    fun setOriginRoute(v: String)      { _state.value = _state.value.copy(originRoute = v) }
     fun setTitle(v: String)            { _state.value = _state.value.copy(title = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.EVENT_TITLE).value) }
     fun setDate(v: String)             { _state.value = _state.value.copy(date = v) }
     fun setTime(v: String)             { _state.value = _state.value.copy(time = v) }

@@ -14,7 +14,10 @@ class PetRepository(private val api: ApiService) {
 
     suspend fun getPets(): Result<List<Pet>> = runCatching {
         val response = api.getPets()
-        response.body() ?: error("Empty response")
+        if (!response.isSuccessful) {
+            error("Failed to load pets — HTTP ${response.code()}")
+        }
+        response.body().orEmpty()
     }
 
     suspend fun getPet(petId: String): Result<Pet> = runCatching {
