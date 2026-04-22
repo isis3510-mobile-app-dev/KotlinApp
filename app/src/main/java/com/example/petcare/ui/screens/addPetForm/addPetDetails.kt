@@ -104,8 +104,11 @@ fun AddPetDetailsForm(
                 textColor = MaterialTheme.colorScheme.surface,
                 width = 169.dp, height = 50.57.dp,
                 text = "Continue", onclick = {
-                    if (state.gender.isBlank()) {
-                        viewModel.setError("Gender is required")
+                    val errors = mutableListOf<String>()
+                    if (state.gender.isBlank()) errors.add("Gender is required")
+                    if (state.birthDate.isBlank()) errors.add("Date of Birth is required")
+                    if (errors.isNotEmpty()) {
+                        viewModel.setError(errors.first())
                     } else {
                         viewModel.clearError()
                         FeatureClicksTracker.recordClick()

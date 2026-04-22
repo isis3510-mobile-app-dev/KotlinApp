@@ -114,7 +114,8 @@ class MainActivity : ComponentActivity() {
         ViewModelFactory(app.userPreferencesRepository)
     }
 
-    private lateinit var nfcManager: NfcManager
+    lateinit var nfcManager: NfcManager
+        private set
     val nfcViewModel: NfcViewModel by viewModels()
 
     val petsViewModel: PetsViewModel by viewModels {
@@ -202,6 +203,7 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(firebaseUserId) {
                 homeViewModel.clearSessionData()
+                nfcViewModel.resetSession()
 
                 if (firebaseUserId.isNullOrBlank()) {
                     petsViewModel.clearSessionData()
@@ -560,6 +562,18 @@ class MainActivity : ComponentActivity() {
                                                 .onSuccess { it.savedStateHandle["reload_profile"] = true }
                                             navController.popBackStack()
                                         },
+                                        onPetDeleted = {
+                                            // Señalamos a Home y Pets que recarguen
+                                            runCatching { navController.getBackStackEntry(Routes.Home) }
+                                                .onSuccess { it.savedStateHandle["reload_home"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Pets) }
+                                                .onSuccess { it.savedStateHandle["reload_pets"] = true }
+
+                                            navController.navigate(Routes.Home) {
+                                                popUpTo(Routes.Home) { inclusive = false }
+                                                launchSingleTop = true
+                                            }
+                                        },
                                         onAddEvent   = {
                                             addEventViewModel.setPetId(petId)
                                             addEventViewModel.setOwnerId(
@@ -582,6 +596,7 @@ class MainActivity : ComponentActivity() {
                                         onSeeAllNotifications = { pid, petName ->
                                             navController.navigate("suggestions/$pid/$petName")
                                         }
+
                                     )
                                 }
 
@@ -918,12 +933,13 @@ class MainActivity : ComponentActivity() {
         }
         val action = intent.action ?: return
         if (action != NfcAdapter.ACTION_NDEF_DISCOVERED &&
+            action != NfcAdapter.ACTION_TECH_DISCOVERED &&
             action != NfcAdapter.ACTION_TAG_DISCOVERED) return
 
         val tag = nfcManager.getTagFromIntent(intent) ?: return
         if (nfcViewModel.isPendingWrite()) {
             nfcViewModel.onTagDetectedForWrite(tag, nfcManager)
-        } else {
+        } else if (nfcViewModel.isReadyForReadTag()) {
             nfcViewModel.onTagDetectedForRead(tag, nfcManager)
         }
     }
