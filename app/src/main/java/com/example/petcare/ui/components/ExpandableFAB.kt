@@ -138,7 +138,7 @@ fun ExpandableFAB(
             FloatingActionButton(
                 onClick        = { expanded = !expanded },
                 containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor   = Color.White,
+                contentColor = Color.White,
                 modifier       = Modifier.size(56.dp),
                 shape          = RoundedCornerShape(16.dp)
             ) {

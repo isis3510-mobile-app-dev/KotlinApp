@@ -51,6 +51,30 @@ class HomeViewModel : ViewModel() {
         _state.value = HomeUiState()
     }
 
+    fun removeDeletedPet(petId: String) {
+        val currentPetName = _state.value.pets.firstOrNull { it.id == petId }?.name
+
+        _state.value = _state.value.copy(
+            pets = _state.value.pets.filterNot { it.id == petId },
+            recentEvents = _state.value.recentEvents.filterNot { it.petId == petId },
+            upcomingVaccines = _state.value.upcomingVaccines.filterNot { it.petId == petId },
+            topAlert = _state.value.topAlert
+                ?.let { alert ->
+                    val filteredPets = currentPetName
+                        ?.let { deletedPetName -> alert.pets.filterNot { it == deletedPetName } }
+                        ?: alert.pets
+
+                    if (filteredPets.isEmpty()) null else alert.copy(pets = filteredPets)
+                }
+        )
+    }
+
+    fun addOrReplacePet(pet: Pet) {
+        _state.value = _state.value.copy(
+            pets = (_state.value.pets.filterNot { it.id == pet.id } + pet).distinctBy { it.id }
+        )
+    }
+
     fun loadData() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
@@ -59,13 +83,14 @@ class HomeViewModel : ViewModel() {
                 RepositoryProvider.petRepository.getPets()
             }.fold(
                 onSuccess = { pets ->
+                    val uniquePets = pets.distinctBy { it.id }
 
                     val catalogMap = RepositoryProvider.petRepository
                         .getVaccineCatalog()
                         .getOrElse { emptyList() }
                         .associateBy { it.id }
 
-                    val eventResults = pets.map { pet ->
+                    val eventResults = uniquePets.map { pet ->
                         async {
                             RepositoryProvider.eventRepository
                                 .getEvents(petId = pet.id)
@@ -73,7 +98,7 @@ class HomeViewModel : ViewModel() {
                         }
                     }.awaitAll().flatten()
 
-                    val allSuggestions: List<PetSuggestion> = pets.map { pet ->
+                    val allSuggestions: List<PetSuggestion> = uniquePets.map { pet ->
                         async {
                             RepositoryProvider.petRepository
                                 .getPetSmart(pet.id)
@@ -86,7 +111,7 @@ class HomeViewModel : ViewModel() {
                     val upcoming = mutableListOf<UpcomingVaccine>()
                     var overdueCount = 0
 
-                    pets.forEach { pet ->
+                    uniquePets.forEach { pet ->
                         pet.vaccinations.forEach { vacc ->
                             val dueDateStr = vacc.nextDueDate ?: return@forEach
                             try {
@@ -127,7 +152,7 @@ class HomeViewModel : ViewModel() {
                         .sortedBy { when (it.type) { "danger" -> 0; "warning" -> 1; else -> 2 } }
 
                     _state.value = _state.value.copy(
-                        pets                 = pets,
+                        pets                 = uniquePets,
                         recentEvents         = eventResults
                             .filter { EventDateUtils.isTodayOrFuture(it.date) }
                             .sortedBy { EventDateUtils.parseEventInstant(it.date) ?: java.time.Instant.MAX }

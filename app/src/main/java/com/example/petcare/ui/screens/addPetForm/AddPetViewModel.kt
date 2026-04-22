@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import com.example.petcare.data.model.Pet
 import com.google.firebase.Firebase
 import com.google.firebase.storage.storage
 import com.example.petcare.util.InputFieldPolicy
@@ -80,7 +81,7 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun submit(onSuccess: (petId: String) -> Unit) {
+    fun submit(onSuccess: (pet: Pet) -> Unit) {
         val s = _state.value
         val nameError = validateCommittedInput(s.name, InputFieldPolicy.GENERAL_TEXT, required = true, maxLength = InputTextLimits.PET_NAME, fieldName = "Name")
         val speciesError = if (normalizeForCommit(s.species, InputFieldPolicy.GENERAL_TEXT).isBlank()) "Species cannot be blank." else null
@@ -130,7 +131,7 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
             }.fold(
                 onSuccess = { pet ->
                     _state.value = _state.value.copy(isLoading = false)
-                    onSuccess(pet.id)
+                    onSuccess(pet)
                 },
                 onFailure = { e ->
                     _state.value = _state.value.copy(

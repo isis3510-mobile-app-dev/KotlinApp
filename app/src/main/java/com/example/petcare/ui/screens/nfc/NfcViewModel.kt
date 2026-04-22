@@ -146,7 +146,7 @@ class NfcViewModel(
             val petId = nfcManager.readPetIdFromTag(tag)
             if (petId == null) {
                 _uiState.value = NfcUiState.Error(
-                    "This doesn't look like a PetCare tag.\nMake sure it was written with this app first."
+                    "This NFC tag doesn't contain a valid PetCare payload.\nMake sure it was written with the current app format."
                 )
                 return@launch
             }
