@@ -114,7 +114,8 @@ class MainActivity : ComponentActivity() {
         ViewModelFactory(app.userPreferencesRepository)
     }
 
-    private lateinit var nfcManager: NfcManager
+    lateinit var nfcManager: NfcManager
+        private set
     val nfcViewModel: NfcViewModel by viewModels()
 
     val petsViewModel: PetsViewModel by viewModels {
@@ -202,6 +203,7 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(firebaseUserId) {
                 homeViewModel.clearSessionData()
+                nfcViewModel.resetSession()
 
                 if (firebaseUserId.isNullOrBlank()) {
                     petsViewModel.clearSessionData()
@@ -918,12 +920,13 @@ class MainActivity : ComponentActivity() {
         }
         val action = intent.action ?: return
         if (action != NfcAdapter.ACTION_NDEF_DISCOVERED &&
+            action != NfcAdapter.ACTION_TECH_DISCOVERED &&
             action != NfcAdapter.ACTION_TAG_DISCOVERED) return
 
         val tag = nfcManager.getTagFromIntent(intent) ?: return
         if (nfcViewModel.isPendingWrite()) {
             nfcViewModel.onTagDetectedForWrite(tag, nfcManager)
-        } else {
+        } else if (nfcViewModel.isReadyForReadTag()) {
             nfcViewModel.onTagDetectedForRead(tag, nfcManager)
         }
     }

@@ -56,6 +56,9 @@ fun WriteNFCScreen(
     val pets = petsUiState.pets
 
     LaunchedEffect(Unit) {
+        if (!nfcViewModel.isPendingWrite()) {
+            nfcViewModel.reset()
+        }
         activity.petsViewModel.refresh()
     }
 
@@ -142,7 +145,7 @@ fun WriteNFCScreen(
 
                     NFCHeader(
                         title    = "Write Tag for ${selectedPet?.name ?: ""}",
-                        subtitle = "Hold your phone near a blank NFC tag to write ${selectedPet?.name ?: "your pet"}'s emergency info"
+                        subtitle = "Hold your phone near a compatible NFC tag to write ${selectedPet?.name ?: "your pet"}'s emergency info"
                     )
 
                     Spacer(modifier = Modifier.height(64.dp))

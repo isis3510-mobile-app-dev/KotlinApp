@@ -67,6 +67,7 @@ fun ScanningNFCScreen(
     }
 
     val isWriteMode  = nfcViewModel.isPendingWrite()
+    val isReadMode   = nfcViewModel.isReadModeActive()
     val isProcessing = uiState is NfcUiState.ProcessingTag
     val isError      = uiState is NfcUiState.Error
     val isWaiting    = uiState is NfcUiState.WaitingForTag
@@ -175,6 +176,16 @@ fun ScanningNFCScreen(
                     if (nfcViewModel.isPendingWrite()) {
                         Button(
                             onClick = { nfcViewModel.retryWrite() },
+                            colors = ButtonDefaults.buttonColors(containerColor = GreenDark),
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(28.dp)
+                        ) {
+                            Text("Try again", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    } else if (isReadMode) {
+                        Button(
+                            onClick = { nfcViewModel.retryRead() },
                             colors = ButtonDefaults.buttonColors(containerColor = GreenDark),
                             modifier = Modifier.fillMaxWidth().height(52.dp),
                             shape = RoundedCornerShape(28.dp)
