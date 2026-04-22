@@ -354,5 +354,19 @@ fun HomeScreen(
                 }
             }
         }
+        if (homeState.mostUrgentPet.isNotEmpty() && homeState.topAlert == null) {
+            val petName = homeState.pets.find { it.id == homeState.mostUrgentPet }?.name ?: ""
+            val (daysSince, lastDate) = homeState.lastVetVisits[homeState.mostUrgentPet] ?: Pair(0, "")
+
+            if (daysSince > 0) {
+                item {
+                    LastVetVisitCard(
+                        daysSince = daysSince,
+                        petName = petName,
+                        lastDate = lastDate
+                    )
+                }
+            }
+        }
     }
 }
