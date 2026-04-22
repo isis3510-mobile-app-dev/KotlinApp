@@ -47,7 +47,6 @@ fun PetProfileScreen(
     onNavigateToVaccineDetail: (petId: String, vaccineId: String) -> Unit = { _, _ -> },
     onNavigateToEventDetail: (petId: String, eventId: String) -> Unit = { _, _ -> },
     onSeeAllNotifications: (petId: String, petName: String) -> Unit = { _, _ -> },
-    onPetDeleted: () -> Unit = {}
 ) {
     val viewModel: PetProfileViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
