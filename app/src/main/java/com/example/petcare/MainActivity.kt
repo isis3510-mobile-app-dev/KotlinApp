@@ -560,6 +560,20 @@ class MainActivity : ComponentActivity() {
                                                 .onSuccess { it.savedStateHandle["reload_profile"] = true }
                                             navController.popBackStack()
                                         },
+                                        onPetDeleted = {
+                                            runCatching { navController.getBackStackEntry(Routes.Pets) }
+                                                .onSuccess { it.savedStateHandle["reload_pets"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Home) }
+                                                .onSuccess { it.savedStateHandle["reload_home"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Profile) }
+                                                .onSuccess { it.savedStateHandle["reload_profile"] = true }
+                                            if (!navController.popBackStack(Routes.Home, inclusive = false)) {
+                                                navController.navigate(Routes.Home) {
+                                                    popUpTo(Routes.PetProfile) { inclusive = true }
+                                                    launchSingleTop = true
+                                                }
+                                            }
+                                        },
                                         onAddEvent   = {
                                             addEventViewModel.setPetId(petId)
                                             addEventViewModel.setOwnerId(

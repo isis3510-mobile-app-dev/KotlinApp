@@ -40,6 +40,7 @@ fun PetProfileScreen(
     petId: String,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     onBack: () -> Unit = {},
+    onPetDeleted: () -> Unit = {},
     onAddEvent: () -> Unit = {},
     onAddVaccine: () -> Unit = {},
     onNFCScan: () -> Unit = {},
@@ -70,7 +71,7 @@ fun PetProfileScreen(
                     onClick = {
                         showDeleteDialog = false
                         FeatureClicksTracker.endRoute()
-                        viewModel.deletePet(petId, onNavigatedBack = onBack)
+                        viewModel.deletePet(petId, onDeleted = onPetDeleted)
                     },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
