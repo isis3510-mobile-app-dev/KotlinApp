@@ -45,7 +45,8 @@ fun PetProfileScreen(
     onNFCScan: () -> Unit = {},
     onNavigateToVaccineDetail: (petId: String, vaccineId: String) -> Unit = { _, _ -> },
     onNavigateToEventDetail: (petId: String, eventId: String) -> Unit = { _, _ -> },
-    onSeeAllNotifications: (petId: String, petName: String) -> Unit = { _, _ -> }
+    onSeeAllNotifications: (petId: String, petName: String) -> Unit = { _, _ -> },
+    onPetDeleted: () -> Unit = {}
 ) {
     val viewModel: PetProfileViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -70,7 +71,7 @@ fun PetProfileScreen(
                     onClick = {
                         showDeleteDialog = false
                         FeatureClicksTracker.endRoute()
-                        viewModel.deletePet(petId, onNavigatedBack = onBack)
+                        viewModel.deletePet(petId, onNavigatedBack = onPetDeleted)
                     },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
