@@ -35,6 +35,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.petcare.util.InputFieldPolicy
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.containsOnlyWhitespace
+import com.example.petcare.util.normalizeForCommit
+import com.example.petcare.util.sanitizeForEditing
+import com.example.petcare.util.trimToNullIfBlank
+import com.example.petcare.util.validateCommittedInput
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,7 +55,33 @@ fun EditEmailBottomSheet(
     var newEmail by remember { mutableStateOf("") }
     var currentPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    fun submitIfValid() {
+        val normalizedEmail = normalizeForCommit(newEmail, InputFieldPolicy.EMAIL)
+        val normalizedPassword = normalizeForCommit(currentPassword, InputFieldPolicy.PASSWORD)
+
+        emailError = validateCommittedInput(
+            value = newEmail,
+            fieldPolicy = InputFieldPolicy.EMAIL,
+            required = true,
+            maxLength = InputTextLimits.EMAIL,
+            fieldName = "Email"
+        )
+        passwordError = validateCommittedInput(
+            value = currentPassword,
+            fieldPolicy = InputFieldPolicy.PASSWORD,
+            required = true,
+            maxLength = InputTextLimits.PASSWORD,
+            fieldName = "Password"
+        )
+
+        if (emailError == null && passwordError == null) {
+            onSave(normalizedEmail, normalizedPassword)
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -73,16 +106,21 @@ fun EditEmailBottomSheet(
             )
 
             // Nuevo email
-            val emailRegex = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
-            val isEmailValid = newEmail.matches(emailRegex)
-
             OutlinedTextField(
                 value = newEmail,
-                onValueChange = { val regex = Regex("^[a-zA-Z0-9@._-]*$")
-                                    if (it.matches(regex)) {
-                                        newEmail = it
-                                    }
-                                },
+                onValueChange = {
+                    val sanitized = sanitizeForEditing(
+                        raw = it,
+                        fieldPolicy = InputFieldPolicy.EMAIL,
+                        maxLength = InputTextLimits.EMAIL
+                    )
+                    newEmail = sanitized.value
+                    emailError = sanitized.rejectionMessage ?: if (containsOnlyWhitespace(sanitized.value)) {
+                        "Only spaces are not allowed."
+                    } else {
+                        null
+                    }
+                },
                 label = { Text("New email") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -90,12 +128,8 @@ fun EditEmailBottomSheet(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next
                 ),
-                isError = newEmail.isNotEmpty() && !isEmailValid,
-                supportingText = {
-                    if (newEmail.isNotEmpty() && !isEmailValid) {
-                        Text("Invalid email format")
-                    }
-                },
+                isError = emailError != null,
+                supportingText = emailError?.let { { Text(it) } },
 
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.secondary,
@@ -107,12 +141,19 @@ fun EditEmailBottomSheet(
 
             OutlinedTextField(
                 value = currentPassword,
-                onValueChange = { val filtered = it.filter { char ->
-                                        char.code in 32..126
-                                    }.take(64)
-
-                                        currentPassword = filtered
-                                },
+                onValueChange = {
+                    val sanitized = sanitizeForEditing(
+                        raw = it,
+                        fieldPolicy = InputFieldPolicy.PASSWORD,
+                        maxLength = InputTextLimits.PASSWORD
+                    )
+                    currentPassword = sanitized.value
+                    passwordError = sanitized.rejectionMessage ?: if (containsOnlyWhitespace(sanitized.value)) {
+                        "Only spaces are not allowed."
+                    } else {
+                        null
+                    }
+                },
                 label = { Text("Current password") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -136,12 +177,10 @@ fun EditEmailBottomSheet(
                     imeAction = ImeAction.Done
                 ),
                 keyboardActions = KeyboardActions(
-                    onDone = {
-                        if (newEmail.isNotBlank() && currentPassword.isNotBlank()) {
-                            onSave(newEmail, currentPassword)
-                        }
-                    }
+                    onDone = { submitIfValid() }
                 ),
+                isError = passwordError != null,
+                supportingText = passwordError?.let { { Text(it) } },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.secondary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.secondary,
@@ -159,11 +198,11 @@ fun EditEmailBottomSheet(
             Spacer(modifier = Modifier.height(4.dp))
 
             Button(
-                onClick = { onSave(newEmail, currentPassword) },
+                onClick = { submitIfValid() },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = newEmail.isNotBlank() &&
-                        currentPassword.isNotBlank() &&
-                        newEmail != currentEmail &&
+                enabled = newEmail.trimToNullIfBlank() != null &&
+                        currentPassword.trimToNullIfBlank() != null &&
+                        normalizeForCommit(newEmail, InputFieldPolicy.EMAIL) != currentEmail &&
                         !isLoading,
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondary,
@@ -176,7 +215,7 @@ fun EditEmailBottomSheet(
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.onSecondary
                     )
                 } else {
                     Text("Update email")

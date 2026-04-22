@@ -20,7 +20,11 @@ import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.RobotoMedium
 import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.GrayBorder
+import com.example.petcare.util.InputFieldPolicy
+import com.example.petcare.util.containsOnlyWhitespace
 import com.example.petcare.util.enforceMaxLength
+import com.example.petcare.util.sanitizeForEditing
+import com.example.petcare.util.validateLiveInput
 
 @Composable
 fun TextFieldComponent(name: String, label: String = "", icon: (@Composable () -> Unit)? = null,
@@ -28,10 +32,27 @@ fun TextFieldComponent(name: String, label: String = "", icon: (@Composable () -
                        onValueChange: ((String) -> Unit)? = null,
                        visualTransformation: VisualTransformation = VisualTransformation.None,
                        keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-                       maxLength: Int? = null
+                       maxLength: Int? = null,
+                       fieldPolicy: InputFieldPolicy = InputFieldPolicy.GENERAL_TEXT,
+                       maxNumericValue: Double? = null,
+                       isError: Boolean = false,
+                       supportingText: String? = null
 ){
     var internalText by remember{ mutableStateOf("")}
+    var localError by remember(name, fieldPolicy, maxLength, maxNumericValue) {
+        mutableStateOf<String?>(null)
+    }
     val text = enforceMaxLength(value ?: internalText, maxLength)
+    val validationMessage = supportingText
+        ?: localError
+        ?: when {
+            containsOnlyWhitespace(text) -> "Only spaces are not allowed."
+            else -> validateLiveInput(
+                value = text,
+                fieldPolicy = fieldPolicy,
+                maxNumericValue = maxNumericValue
+            )
+        }
     Column(
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -47,11 +68,17 @@ fun TextFieldComponent(name: String, label: String = "", icon: (@Composable () -
                 value = text,
                 onValueChange = {
                     newValue ->
-                    val sanitized = enforceMaxLength(newValue, maxLength)
+                    val sanitized = sanitizeForEditing(
+                        raw = newValue,
+                        fieldPolicy = fieldPolicy,
+                        maxLength = maxLength,
+                        maxNumericValue = maxNumericValue
+                    )
+                    localError = sanitized.rejectionMessage
                     if (onValueChange != null){
-                        onValueChange(sanitized)
+                        onValueChange(sanitized.value)
                     } else {
-                        internalText = sanitized
+                        internalText = sanitized.value
                     }
                 },
                 modifier = Modifier
@@ -79,6 +106,7 @@ fun TextFieldComponent(name: String, label: String = "", icon: (@Composable () -
                     focusedTextColor = MaterialTheme.colorScheme.onSurface,
                     unfocusedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
+                isError = isError || validationMessage != null,
                 trailingIcon = {
                     if (icon != null) {
                         IconButton(onClick = {}) {
@@ -87,7 +115,10 @@ fun TextFieldComponent(name: String, label: String = "", icon: (@Composable () -
                     }
                 },
                 visualTransformation = visualTransformation,
-                keyboardOptions = keyboardOptions
+                keyboardOptions = keyboardOptions,
+                supportingText = validationMessage?.let {
+                    { Text(text = it, color = MaterialTheme.colorScheme.error) }
+                }
 
             )
         }

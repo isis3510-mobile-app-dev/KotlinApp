@@ -32,6 +32,8 @@ import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.OffWhite
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun PetProfileScreen(
@@ -59,7 +61,7 @@ fun PetProfileScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete ${uiState.name}?") },
+            title = { Text("Delete ${uiState.name.truncateForDisplay(DisplayTextLimits.DETAIL_TITLE)}?") },
             text  = {
                 Text("All of this pet's data including vaccines and events will be permanently deleted.")
             },

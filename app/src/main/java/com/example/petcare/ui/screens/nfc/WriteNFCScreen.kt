@@ -55,6 +55,10 @@ fun WriteNFCScreen(
     val petsUiState by activity.petsViewModel.uiState.collectAsStateWithLifecycle()
     val pets = petsUiState.pets
 
+    LaunchedEffect(Unit) {
+        activity.petsViewModel.refresh()
+    }
+
     // Map domain Pet → PetOption used by the selection row
     // We use a placeholder image (R.drawable.pet) until photo loading is added
     val petOptions = pets.map { pet ->

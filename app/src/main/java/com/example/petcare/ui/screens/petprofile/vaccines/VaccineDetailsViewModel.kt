@@ -11,6 +11,12 @@ import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
 import com.example.petcare.util.FirebaseDocumentUploader
+import com.example.petcare.util.InputFieldPolicy
+import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.normalizeForCommit
+import com.example.petcare.util.sanitizeForEditing
+import com.example.petcare.util.trimToNullIfBlank
+import com.example.petcare.util.validateCommittedInput
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -85,9 +91,9 @@ class VaccineDetailsViewModel : ViewModel() {
                     _uiState.value = _uiState.value.copy(
                         vaccine            = record,
                         isLoading          = false,
-                        editAdministeredBy = vacc.administeredBy,
+                        editAdministeredBy = sanitizeForEditing(vacc.administeredBy, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value,
                         editNextDueDate    = vacc.nextDueDate?.take(10) ?: "",
-                        editLotNumber      = vacc.lotNumber
+                        editLotNumber      = sanitizeForEditing(vacc.lotNumber, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.LOT_NUMBER).value
                     )
                 },
                 onFailure = { e ->
@@ -135,28 +141,40 @@ class VaccineDetailsViewModel : ViewModel() {
     fun cancelEditing() { _uiState.value = _uiState.value.copy(isEditing = false, error = null) }
 
     fun setAdministeredBy(v: String) {
-        _uiState.value = _uiState.value.copy(editAdministeredBy = v)
+        _uiState.value = _uiState.value.copy(
+            editAdministeredBy = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value
+        )
     }
     fun setNextDueDate(v: String) {
         _uiState.value = _uiState.value.copy(editNextDueDate = v)
     }
     fun setLotNumber(v: String) {
-        _uiState.value = _uiState.value.copy(editLotNumber = v)
+        _uiState.value = _uiState.value.copy(
+            editLotNumber = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.LOT_NUMBER).value
+        )
     }
 
     fun saveEdits() {
         val petId         = _uiState.value.petId
         val vaccinationId = _uiState.value.vaccine?.id ?: return
         val s             = _uiState.value
+        val validationMessage = listOfNotNull(
+            validateCommittedInput(s.editAdministeredBy, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC),
+            validateCommittedInput(s.editLotNumber, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.LOT_NUMBER)
+        ).firstOrNull()
+        if (validationMessage != null) {
+            _uiState.value = s.copy(error = validationMessage)
+            return
+        }
         viewModelScope.launch {
             _uiState.value = s.copy(isSaving = true, error = null)
             FeatureExecutionTracker.track("Edit Vaccination") {
                 RepositoryProvider.petRepository.updateVaccination(
                     petId          = petId,
                     vaccinationId  = vaccinationId,
-                    administeredBy = s.editAdministeredBy,
+                    administeredBy = normalizeForCommit(s.editAdministeredBy, InputFieldPolicy.GENERAL_TEXT),
                     nextDueDate    = s.editNextDueDate.takeIf { it.isNotBlank() },
-                    lotNumber      = s.editLotNumber
+                    lotNumber      = normalizeForCommit(s.editLotNumber, InputFieldPolicy.GENERAL_TEXT)
                 )
             }.fold(
                 onSuccess = { _ ->
@@ -164,9 +182,9 @@ class VaccineDetailsViewModel : ViewModel() {
                         isSaving  = false,
                         isEditing = false,
                         vaccine   = _uiState.value.vaccine?.copy(
-                            provider    = s.editAdministeredBy,
+                            provider    = normalizeForCommit(s.editAdministeredBy, InputFieldPolicy.GENERAL_TEXT),
                             nextDueDate = s.editNextDueDate.takeIf { it.isNotBlank() },
-                            lotNumber   = s.editLotNumber.takeIf { it.isNotBlank() }
+                            lotNumber   = normalizeForCommit(s.editLotNumber, InputFieldPolicy.GENERAL_TEXT).trimToNullIfBlank()
                         )
                     )
                 },

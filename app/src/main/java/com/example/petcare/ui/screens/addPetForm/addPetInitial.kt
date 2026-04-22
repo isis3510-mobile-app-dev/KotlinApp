@@ -26,6 +26,7 @@ import com.example.petcare.ui.components.*
 import com.example.petcare.data.analytics.FeatureClicksTracker
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.trimToNullIfBlank
 import java.io.File
 
 @Composable
@@ -187,13 +188,17 @@ fun AddPetInitialForm(
             height = 56.dp,
             text = "Continue",
             onclick = {
-                if (state.name.isNotBlank() && state.species.isNotBlank()) {
+                if (state.name.trimToNullIfBlank() != null && state.species.trimToNullIfBlank() != null) {
                     FeatureClicksTracker.recordClick()
+                    viewModel.clearError()
                     onclick()
                 } else {
-                    if (state.name.isBlank()) viewModel.setName("")
-                    if (state.species.isBlank()) viewModel.setSpecies("")
-                    viewModel.clearError()
+                    viewModel.setError(
+                        when {
+                            state.name.trimToNullIfBlank() == null -> "Name cannot be blank."
+                            else -> "Species is required."
+                        }
+                    )
                 }
             }
         )

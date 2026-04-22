@@ -7,8 +7,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.repository.RepositoryProvider
+import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
-import com.example.petcare.util.enforceMaxLength
+import com.example.petcare.util.normalizeForCommit
+import com.example.petcare.util.sanitizeForEditing
+import com.example.petcare.util.trimToNullIfBlank
+import com.example.petcare.util.validateCommittedInput
 import com.google.firebase.Firebase
 import com.google.firebase.storage.storage
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,36 +54,45 @@ class EditPetViewModel(application: Application) : AndroidViewModel(application)
         defaultClinic: String,
         photoUrl: String?
     ) {
-        if (_state.value.name.isNotBlank()) return
+        if (_state.value.name.trim().isNotEmpty()) return
         _state.value = EditPetState(
-            name           = enforceMaxLength(name, InputTextLimits.PET_NAME),
-            breed          = enforceMaxLength(breed, InputTextLimits.BREED),
-            weight         = weight,
-            color          = enforceMaxLength(color, InputTextLimits.COLOR),
+            name           = sanitizeForEditing(name, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PET_NAME).value,
+            breed          = sanitizeForEditing(breed, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.BREED).value,
+            weight         = sanitizeForEditing(weight, InputFieldPolicy.DECIMAL, InputTextLimits.WEIGHT, 199.0).value,
+            color          = sanitizeForEditing(color, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.COLOR).value,
             birthDate      = birthDate,
-            knownAllergies = enforceMaxLength(knownAllergies, InputTextLimits.NOTES),
-            defaultVet     = enforceMaxLength(defaultVet, InputTextLimits.PROVIDER_OR_CLINIC),
-            defaultClinic  = enforceMaxLength(defaultClinic, InputTextLimits.PROVIDER_OR_CLINIC),
+            knownAllergies = sanitizeForEditing(knownAllergies, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.NOTES).value,
+            defaultVet     = sanitizeForEditing(defaultVet, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value,
+            defaultClinic  = sanitizeForEditing(defaultClinic, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value,
             photoUrl       = photoUrl
         )
     }
 
-    fun setName(v: String)           { _state.value = _state.value.copy(name = enforceMaxLength(v, InputTextLimits.PET_NAME)) }
-    fun setBreed(v: String)          { _state.value = _state.value.copy(breed = enforceMaxLength(v, InputTextLimits.BREED)) }
-    fun setWeight(v: String)         { _state.value = _state.value.copy(weight = v) }
-    fun setColor(v: String)          { _state.value = _state.value.copy(color = enforceMaxLength(v, InputTextLimits.COLOR)) }
+    fun setName(v: String)           { _state.value = _state.value.copy(name = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PET_NAME).value) }
+    fun setBreed(v: String)          { _state.value = _state.value.copy(breed = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.BREED).value) }
+    fun setWeight(v: String)         { _state.value = _state.value.copy(weight = sanitizeForEditing(v, InputFieldPolicy.DECIMAL, InputTextLimits.WEIGHT, 199.0).value) }
+    fun setColor(v: String)          { _state.value = _state.value.copy(color = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.COLOR).value) }
     fun setBirthDate(v: String)      { _state.value = _state.value.copy(birthDate = v) }
-    fun setKnownAllergies(v: String) { _state.value = _state.value.copy(knownAllergies = enforceMaxLength(v, InputTextLimits.NOTES)) }
-    fun setDefaultVet(v: String)     { _state.value = _state.value.copy(defaultVet = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
-    fun setDefaultClinic(v: String)  { _state.value = _state.value.copy(defaultClinic = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
+    fun setKnownAllergies(v: String) { _state.value = _state.value.copy(knownAllergies = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.NOTES).value) }
+    fun setDefaultVet(v: String)     { _state.value = _state.value.copy(defaultVet = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value) }
+    fun setDefaultClinic(v: String)  { _state.value = _state.value.copy(defaultClinic = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value) }
     fun setPendingPhotoUri(uri: Uri?) { _state.value = _state.value.copy(pendingPhotoUri = uri) }
     fun clearError()                 { _state.value = _state.value.copy(error = null) }
     fun resetSaved()                 { _state.value = _state.value.copy(isSaved = false) }
 
     fun save(petId: String) {
         val s = _state.value
-        if (s.name.isBlank()) {
-            _state.value = s.copy(error = "Name is required")
+        val validationMessage = listOfNotNull(
+            validateCommittedInput(s.name, InputFieldPolicy.GENERAL_TEXT, required = true, maxLength = InputTextLimits.PET_NAME, fieldName = "Name"),
+            validateCommittedInput(s.breed, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.BREED, fieldName = "Breed"),
+            validateCommittedInput(s.weight, InputFieldPolicy.DECIMAL, maxLength = InputTextLimits.WEIGHT, maxNumericValue = 199.0, fieldName = "Weight"),
+            validateCommittedInput(s.color, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.COLOR, fieldName = "Color"),
+            validateCommittedInput(s.knownAllergies, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.NOTES, fieldName = "Known allergies"),
+            validateCommittedInput(s.defaultVet, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC, fieldName = "Veterinarian"),
+            validateCommittedInput(s.defaultClinic, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC, fieldName = "Clinic")
+        ).firstOrNull()
+        if (validationMessage != null) {
+            _state.value = s.copy(error = validationMessage)
             return
         }
         viewModelScope.launch {
@@ -92,14 +105,14 @@ class EditPetViewModel(application: Application) : AndroidViewModel(application)
             }
 
             val request = UpdatePetRequest(
-                name           = s.name.trim().takeIf { it.isNotBlank() },
-                breed          = s.breed.trim().takeIf { it.isNotBlank() },
-                weight         = s.weight.toDoubleOrNull(),
-                color          = s.color.trim().takeIf { it.isNotBlank() },
+                name           = normalizeForCommit(s.name, InputFieldPolicy.GENERAL_TEXT).trimToNullIfBlank(),
+                breed          = normalizeForCommit(s.breed, InputFieldPolicy.GENERAL_TEXT).trimToNullIfBlank(),
+                weight         = normalizeForCommit(s.weight, InputFieldPolicy.DECIMAL).trimToNullIfBlank()?.toDoubleOrNull(),
+                color          = normalizeForCommit(s.color, InputFieldPolicy.GENERAL_TEXT).trimToNullIfBlank(),
                 birthDate      = s.birthDate.takeIf { it.isNotBlank() }?.let { toIso(it) },
-                knownAllergies = s.knownAllergies.trim(),
-                defaultVet     = s.defaultVet.trim(),
-                defaultClinic  = s.defaultClinic.trim(),
+                knownAllergies = normalizeForCommit(s.knownAllergies, InputFieldPolicy.GENERAL_TEXT),
+                defaultVet     = normalizeForCommit(s.defaultVet, InputFieldPolicy.GENERAL_TEXT),
+                defaultClinic  = normalizeForCommit(s.defaultClinic, InputFieldPolicy.GENERAL_TEXT),
                 photoUrl       = finalPhotoUrl
             )
 

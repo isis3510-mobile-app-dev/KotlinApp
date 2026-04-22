@@ -56,6 +56,8 @@ import com.google.android.gms.common.api.ApiException
 import androidx.compose.runtime.*
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import com.example.petcare.util.InputFieldPolicy
+import com.example.petcare.util.InputTextLimits
 
 
 @Composable
@@ -151,7 +153,9 @@ fun LoginScreen(
             name = "Full Name",
             label = "Sarah Johnson",
             value = fullName,
-            onValueChange = { fullName = it}
+            onValueChange = { fullName = it},
+            maxLength = InputTextLimits.USER_NAME,
+            fieldPolicy = InputFieldPolicy.GENERAL_TEXT
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -160,7 +164,12 @@ fun LoginScreen(
             name = "Email Address",
             label = "you@gmail.com",
             value = email,
-            onValueChange = { email = it }
+            onValueChange = { email = it },
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
+            ),
+            maxLength = InputTextLimits.EMAIL,
+            fieldPolicy = InputFieldPolicy.EMAIL
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -185,7 +194,9 @@ fun LoginScreen(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
+            },
+            maxLength = InputTextLimits.PASSWORD,
+            fieldPolicy = InputFieldPolicy.PASSWORD
         )
 
         Spacer(modifier = Modifier.height(24.dp))

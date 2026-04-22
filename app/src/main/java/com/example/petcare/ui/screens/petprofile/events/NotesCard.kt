@@ -22,6 +22,8 @@ import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.PetCareTheme
 import com.example.petcare.ui.theme.OffWhite
+import com.example.petcare.util.DisplayTextLimits
+import com.example.petcare.util.truncateForDisplay
 
 @Composable
 fun NotesCard(
@@ -50,7 +52,7 @@ fun NotesCard(
             Spacer(modifier = Modifier.height(20.dp))
             
             Text(
-                text = description,
+                text = description.truncateForDisplay(DisplayTextLimits.DETAIL_BODY),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground,
                 lineHeight = 24.sp

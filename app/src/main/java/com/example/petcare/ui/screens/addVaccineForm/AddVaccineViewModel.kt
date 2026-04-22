@@ -11,8 +11,11 @@ import com.example.petcare.data.model.Vaccine
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.addEventForm.StagedDocument
 import com.example.petcare.util.FirebaseDocumentUploader
+import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
-import com.example.petcare.util.enforceMaxLength
+import com.example.petcare.util.normalizeForCommit
+import com.example.petcare.util.sanitizeForEditing
+import com.example.petcare.util.validateCommittedInput
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,8 +70,8 @@ class AddVaccineViewModel : ViewModel() {
     fun setPetId(v: String)             { _state.value = _state.value.copy(petId = v) }
     fun setSelectedVaccine(v: Vaccine?) { _state.value = _state.value.copy(selectedVaccine = v) }
     fun setDateGiven(v: String)         { _state.value = _state.value.copy(dateGiven = v) }
-    fun setAdministeredBy(v: String)    { _state.value = _state.value.copy(administeredBy = enforceMaxLength(v, InputTextLimits.PROVIDER_OR_CLINIC)) }
-    fun setLotNumber(v: String)         { _state.value = _state.value.copy(lotNumber = enforceMaxLength(v, InputTextLimits.LOT_NUMBER)) }
+    fun setAdministeredBy(v: String)    { _state.value = _state.value.copy(administeredBy = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value) }
+    fun setLotNumber(v: String)         { _state.value = _state.value.copy(lotNumber = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.LOT_NUMBER).value) }
     fun setNextDueDate(v: String)       { _state.value = _state.value.copy(nextDueDate = v) }
 
     // ── Document staging ──────────────────────────────────────────────────
@@ -126,8 +129,16 @@ class AddVaccineViewModel : ViewModel() {
 
     fun submit(onSuccess: () -> Unit) {
         val s = _state.value
-        if (s.petId.isBlank() || s.selectedVaccine == null || s.dateGiven.isBlank()) {
-            _state.value = s.copy(error = "Pet, vaccine and date are required")
+        val selectedVaccine = s.selectedVaccine
+        val administeredByError = validateCommittedInput(s.administeredBy, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC)
+        val lotNumberError = validateCommittedInput(s.lotNumber, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.LOT_NUMBER)
+        val firstError = listOfNotNull(
+            if (s.petId.isBlank() || selectedVaccine == null || s.dateGiven.isBlank()) "Pet, vaccine and date are required." else null,
+            administeredByError,
+            lotNumberError
+        ).firstOrNull()
+        if (firstError != null) {
+            _state.value = s.copy(error = firstError)
             return
         }
         if (s.stagedDocuments.any { it.isUploading }) {
@@ -139,12 +150,12 @@ class AddVaccineViewModel : ViewModel() {
             _state.value = s.copy(isLoading = true, error = null)
 
             val request = AddVaccinationRequest(
-                vaccineId      = s.selectedVaccine.id,
+                vaccineId      = selectedVaccine?.id ?: return@launch,
                 dateGiven      = toIso(s.dateGiven),
                 nextDueDate    = s.nextDueDate.takeIf { it.isNotBlank() }?.let { toIso(it) },
-                lotNumber      = s.lotNumber.trim(),
+                lotNumber      = normalizeForCommit(s.lotNumber, InputFieldPolicy.GENERAL_TEXT),
                 status         = "completed",
-                administeredBy = s.administeredBy.trim()
+                administeredBy = normalizeForCommit(s.administeredBy, InputFieldPolicy.GENERAL_TEXT)
             )
 
             FeatureExecutionTracker.track("Add Vaccination") {
