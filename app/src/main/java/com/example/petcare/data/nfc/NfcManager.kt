@@ -12,6 +12,18 @@ import android.nfc.tech.NdefFormatable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+sealed interface NfcReadInspection {
+    data class PetCareTag(val petId: String) : NfcReadInspection
+    object NonPetCareTag : NfcReadInspection
+}
+
+sealed interface NfcWriteInspection {
+    object ReadyToWrite : NfcWriteInspection
+    object ReadOnlyTag : NfcWriteInspection
+    object IncompatibleTag : NfcWriteInspection
+    data class CapacityTooSmall(val requiredBytes: Int, val availableBytes: Int) : NfcWriteInspection
+}
+
 class NfcManager(private val activity: Activity) {
 
     private val adapter: NfcAdapter? = NfcAdapter.getDefaultAdapter(activity)
@@ -76,6 +88,58 @@ class NfcManager(private val activity: Activity) {
         }
     }
 
+    fun inspectTagForRead(tag: Tag): NfcReadInspection {
+        val petId = readPetIdFromTag(tag)
+        return if (petId.isNullOrBlank()) {
+            NfcReadInspection.NonPetCareTag
+        } else {
+            NfcReadInspection.PetCareTag(petId)
+        }
+    }
+
+    fun inspectTagForWrite(tag: Tag, petId: String, jsonPayload: String): NfcWriteInspection {
+        val requiredBytes = buildNdefMessage(petId, jsonPayload).toByteArray().size
+        val ndef = Ndef.get(tag)
+
+        if (ndef != null) {
+            return try {
+                ndef.connect()
+                val result = when {
+                    !ndef.isWritable -> NfcWriteInspection.ReadOnlyTag
+                    ndef.maxSize < requiredBytes -> NfcWriteInspection.CapacityTooSmall(
+                        requiredBytes = requiredBytes,
+                        availableBytes = ndef.maxSize
+                    )
+                    else -> NfcWriteInspection.ReadyToWrite
+                }
+                ndef.close()
+                result
+            } catch (_: Exception) {
+                NfcWriteInspection.IncompatibleTag
+            }
+        }
+
+        return if (NdefFormatable.get(tag) != null) {
+            NfcWriteInspection.ReadyToWrite
+        } else {
+            NfcWriteInspection.IncompatibleTag
+        }
+    }
+
+    fun writeErrorMessage(error: Throwable): String {
+        val message = error.message.orEmpty()
+        return when {
+            message.contains("read-only", ignoreCase = true) ->
+                "This NFC tag is read-only."
+            message.contains("capacity", ignoreCase = true) ||
+                message.contains("too small", ignoreCase = true) ->
+                "This NFC tag does not have enough space for PetCare data."
+            message.contains("ndef-compatible", ignoreCase = true) ->
+                "This NFC tag is not compatible with PetCare."
+            else ->
+                "We couldn't write to this NFC tag. Please try again with a compatible tag."
+        }
+    }
 
 
     fun readPetIdFromTag(tag: Tag): String? {

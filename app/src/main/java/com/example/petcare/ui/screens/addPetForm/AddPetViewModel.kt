@@ -92,11 +92,13 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
         val vetError = validateCommittedInput(s.defaultVet, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC)
         val clinicError = validateCommittedInput(s.defaultClinic, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC)
         val allergiesError = validateCommittedInput(s.knownAllergies, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.NOTES)
+        val birthDateError = if (s.birthDate.isBlank()) "Date of Birth is required." else null
 
         val firstError = listOfNotNull(
             nameError,
             speciesError,
             genderError,
+            birthDateError,
             weightError,
             breedError,
             colorError,

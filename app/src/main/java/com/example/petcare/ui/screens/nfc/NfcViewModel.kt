@@ -3,10 +3,12 @@ package com.example.petcare.ui.screens.nfc
 import android.nfc.Tag
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.nfc.NfcReadInspection
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.repository.NfcPetPayload
 import com.example.petcare.data.repository.NfcRepository
 import com.example.petcare.data.nfc.NfcManager
+import com.example.petcare.data.nfc.NfcWriteInspection
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,6 +47,7 @@ class NfcViewModel(
     private var pendingPetId: String? = null
     private var pendingToken: String? = null
     private var pendingPayloadJson: String? = null
+    private var readModeActive: Boolean = false
 
     // ── Write flow ────────────────────────────────────────────────────────────
 
@@ -56,6 +59,7 @@ class NfcViewModel(
         petId: String,
         firebaseToken: String
     ) {
+        readModeActive = false
         _uiState.value = NfcUiState.Loading
         viewModelScope.launch {
             repository.fetchWritePayload(petId, firebaseToken).fold(
@@ -92,6 +96,22 @@ class NfcViewModel(
         val token   = pendingToken       ?: return
         val payload = pendingPayloadJson ?: return
 
+        when (nfcManager.inspectTagForWrite(tag, petId, payload)) {
+            NfcWriteInspection.ReadOnlyTag -> {
+                _uiState.value = NfcUiState.Error("This NFC tag is read-only.")
+                return
+            }
+            NfcWriteInspection.IncompatibleTag -> {
+                _uiState.value = NfcUiState.Error("This NFC tag is not compatible with PetCare.")
+                return
+            }
+            is NfcWriteInspection.CapacityTooSmall -> {
+                _uiState.value = NfcUiState.Error("This NFC tag is too small for PetCare data.")
+                return
+            }
+            NfcWriteInspection.ReadyToWrite -> Unit
+        }
+
         _uiState.value = NfcUiState.ProcessingTag
         viewModelScope.launch {
             nfcManager.writeTag(tag, petId, payload).fold(
@@ -109,9 +129,7 @@ class NfcViewModel(
                 onFailure = { e ->
                     // On write failure, keep pending state so the user can
                     // try again with the same tag without re-tapping "Start Writing"
-                    _uiState.value = NfcUiState.Error(
-                        e.message ?: "Failed to write tag. Please try again."
-                    )
+                    _uiState.value = NfcUiState.Error(nfcManager.writeErrorMessage(e))
                 }
             )
         }
@@ -132,6 +150,8 @@ class NfcViewModel(
             _uiState.value = NfcUiState.Error("Please enable NFC in your device settings")
             return
         }
+        clearPendingWrite()
+        readModeActive = true
         _uiState.value = NfcUiState.WaitingForTag
     }
 
@@ -141,6 +161,7 @@ class NfcViewModel(
      * Reads the petId from the tag, then fetches public info (mocked).
      */
     fun onTagDetectedForRead(tag: Tag, nfcManager: NfcManager) {
+        if (!readModeActive) return
         _uiState.value = NfcUiState.ProcessingTag
         viewModelScope.launch {
             val petId = nfcManager.readPetIdFromTag(tag)
@@ -159,7 +180,7 @@ class NfcViewModel(
                         e.message ?: "Could not load pet information."
                     )
                 }
-            )
+            }
         }
     }
 
@@ -178,8 +199,11 @@ class NfcViewModel(
      */
     fun reset() {
         clearPendingWrite()
+        readModeActive = false
         _uiState.value = NfcUiState.Idle
     }
+
+    fun resetSession() = reset()
 
     /**
      * Called after a WriteSuccess or Error to allow retrying the write
@@ -194,13 +218,25 @@ class NfcViewModel(
         }
     }
 
+    fun retryRead() {
+        if (readModeActive) {
+            _uiState.value = NfcUiState.WaitingForTag
+        }
+    }
+
     /**
      * Called after a ReadSuccess to scan another tag without navigating away.
      * Goes back to WaitingForTag so the next tap triggers a new read.
      */
     fun readAnother() {
+        readModeActive = true
         _uiState.value = NfcUiState.WaitingForTag
     }
+
+    fun isReadyForReadTag(): Boolean =
+        readModeActive && _uiState.value is NfcUiState.WaitingForTag
+
+    fun isReadModeActive(): Boolean = readModeActive
 
     private fun clearPendingWrite() {
         pendingPetId       = null

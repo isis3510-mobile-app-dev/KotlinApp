@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.petcare.data.model.EventType
+import java.time.LocalDate
+import java.time.Period
 
 data class UpcomingVaccine(
     val vaccineName: String,
@@ -35,7 +38,9 @@ data class HomeUiState(
     val topAlert: GroupedSuggestion? = null,
     val totalAlertCount: Int = 0,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val lastVetVisits: Map<String, Pair<Int, String>> = emptyMap(), // petId -> (daysSince, date)
+    val mostUrgentPet: String = ""
 )
 
 class HomeViewModel : ViewModel() {
@@ -98,7 +103,28 @@ class HomeViewModel : ViewModel() {
                         }
                     }.awaitAll().flatten()
 
-                    val allSuggestions: List<PetSuggestion> = uniquePets.map { pet ->
+                    val lastVetVisits = mutableMapOf<String, Pair<Int, String>>()
+                    var mostUrgentPetId = ""
+                    var maxDays = 0
+
+                    pets.forEach { pet ->
+                        val petEvents = eventResults.filter { it.petId == pet.id }
+                        val lastCheckup = petEvents
+                            .filter { it.eventType == EventType.CHECKUP }
+                            .maxByOrNull { it.date }
+
+                        if (lastCheckup != null) {
+                            val days = calculateDaysSince(lastCheckup.date)
+                            lastVetVisits[pet.id] = Pair(days, lastCheckup.date.take(10))
+
+                            if (days > maxDays) {
+                                maxDays = days
+                                mostUrgentPetId = pet.id
+                            }
+                        }
+                    }
+
+                    val allSuggestions: List<PetSuggestion> = pets.map { pet ->
                         async {
                             RepositoryProvider.petRepository
                                 .getPetSmart(pet.id)
@@ -161,6 +187,8 @@ class HomeViewModel : ViewModel() {
                         overdueVaccinesCount = overdueCount,
                         topAlert             = criticalGrouped.firstOrNull(),
                         totalAlertCount      = criticalGrouped.size,
+                        lastVetVisits        = lastVetVisits,
+                        mostUrgentPet        = mostUrgentPetId,
                         isLoading            = false
                     )
                 },
@@ -172,5 +200,13 @@ class HomeViewModel : ViewModel() {
                 }
             )
         }
+    }
+}
+private fun calculateDaysSince(dateString: String): Int {
+    return try {
+        val eventDate = LocalDate.parse(dateString.take(10))
+        Period.between(eventDate, LocalDate.now()).days
+    } catch (e: Exception) {
+        0
     }
 }
