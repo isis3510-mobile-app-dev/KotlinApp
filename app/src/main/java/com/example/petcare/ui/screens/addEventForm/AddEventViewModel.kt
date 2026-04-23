@@ -1,12 +1,19 @@
 package com.example.petcare.ui.screens.addEventForm
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
+import com.example.petcare.data.local.db.AppDatabase
+import com.example.petcare.data.local.entity.ReminderEntity
+import com.example.petcare.data.local.mapper.toEntity
 import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.EventType
+import com.example.petcare.data.preferences.NotificationPreferencesDataStore
+import com.example.petcare.data.preferences.dataStore
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.navigation.Routes
 import com.example.petcare.util.EventDateUtils
@@ -17,9 +24,11 @@ import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.trimToNullIfBlank
 import com.example.petcare.util.validateCommittedInput
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -57,7 +66,7 @@ data class AddEventFormState(
     val error: String?     = null
 )
 
-class AddEventViewModel : ViewModel() {
+class AddEventViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(AddEventFormState())
     val state: StateFlow<AddEventFormState> = _state.asStateFlow()
@@ -193,6 +202,11 @@ class AddEventViewModel : ViewModel() {
                         )
                     }
 
+                    saveEventLocallyAndScheduleReminder(event, s.petId)
+
+                    _state.value = _state.value.copy(isLoading = false)
+                    onSuccess(event.id)
+
                     _state.value = _state.value.copy(isLoading = false)
                     onSuccess(event.id)
                 },
@@ -214,4 +228,46 @@ class AddEventViewModel : ViewModel() {
             appDate = date,
             appTime = time
         ) ?: date
+
+    private fun saveEventLocallyAndScheduleReminder(
+        event: com.example.petcare.data.model.Event,
+        petId: String
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+
+            // 1. Guardar el evento en Room
+            val eventEntity = event.toEntity()
+            AppDatabase.getInstance(getApplication())
+                .eventDao()
+                .upsertAll(listOf(eventEntity))
+
+
+            // 2. Leer la preferencia de ventana del usuario para esta mascota
+            val notifPrefs = NotificationPreferencesDataStore(
+                getApplication<Application>().dataStore
+            )
+            val window = notifPrefs.getReminderWindow(petId).first()
+
+            // 3. Calcular cuándo disparar el reminder
+            val eventTimeMs = EventDateUtils.parseEventInstant(event.date)
+                ?.toEpochMilli() ?: return@launch
+
+            val triggerMs = notifPrefs.calculateTriggerMs(eventTimeMs, window)
+
+            // 4. Solo programar si el trigger es en el futuro
+            if (triggerMs > System.currentTimeMillis()) {
+                AppDatabase.getInstance(getApplication())
+                    .reminderDao()
+                    .insert(
+                        ReminderEntity(
+                            eventId = event.id,
+                            triggerMs = triggerMs,
+                            windowType = window.name,
+                            fired = false
+                        )
+                    )
+            }
+        }
+    }
 }
+
