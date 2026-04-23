@@ -5,28 +5,27 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Transaction
-import com.example.petcare.data.local.entity.Pet
-import com.example.petcare.data.local.entity.PetWithVaccines
-import com.example.petcare.data.local.entity.Vaccine
+import androidx.room.Update
+import com.example.petcare.data.local.entity.PetEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PetDao {
+    @Query("SELECT * FROM pets ORDER BY name ASC")
+    fun getAllPets(): Flow<List<PetEntity>>
 
-    @Transaction
-    @Query("SELECT * FROM pets")
-    fun getPetsWithVaccines(): Flow<List<PetWithVaccines>>
+    @Query("SELECT * FROM pets WHERE id = :id")
+    suspend fun getPetById(id: Int): PetEntity?
+
+    @Query("SELECT * FROM pets WHERE name LIKE '%' || :query || '%'")
+    suspend fun search(query: String): List<PetEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertPet(pet: Pet): String
+    suspend fun insertPet(pet: PetEntity): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertVaccine(vaccine: Vaccine)
-
-    @Query("SELECT * FROM vaccinations WHERE petId = :petId")
-    fun getVaccinesByPet(petId: String): Flow<List<Vaccine>>
+    @Update
+    suspend fun updatePet(pet: PetEntity)
 
     @Delete
-    suspend fun deletePet(pet: Pet)
+    suspend fun deletePet(pet: PetEntity)
 }

@@ -9,7 +9,7 @@ import androidx.room.PrimaryKey
     tableName = "vaccinations",
     foreignKeys = [
         ForeignKey(
-            entity = Pet::class,
+            entity = PetEntity::class,
             parentColumns = ["id"],
             childColumns = ["petId"],
             onDelete = ForeignKey.CASCADE
@@ -17,7 +17,7 @@ import androidx.room.PrimaryKey
     ],
     indices = [Index("petId")]
 )
-data class Vaccine(
+data class VaccinationEntity(
     @PrimaryKey
     val id: String,
     val petId: String,
