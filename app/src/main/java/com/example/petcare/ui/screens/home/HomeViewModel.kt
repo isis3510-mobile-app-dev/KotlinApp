@@ -16,6 +16,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.example.petcare.data.model.EventType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.update
 import java.time.LocalDate
 import java.time.Period
 
@@ -81,7 +84,35 @@ class HomeViewModel : ViewModel() {
     }
 
     fun loadData() {
-        viewModelScope.launch {
+
+        // Corrutina 2 — Dispatchers.Main
+        // Gestiona feedback visual inmediatamente mientras IO trabaja
+        // Independiente de IO — no espera sus resultados
+        viewModelScope.launch(Dispatchers.Main) {
+            android.util.Log.d("MemberB_Thread",
+                "Coroutine 2 (Main) started on: ${Thread.currentThread().name}")
+
+            _state.update { it.copy(isLoading = true) }
+
+            var dots = 0
+            while (_state.value.isLoading) {
+                delay(500)
+                dots++
+                android.util.Log.d("MemberB_Thread",
+                    "Coroutine 2 (Main) tick $dots on: ${Thread.currentThread().name}")
+                if (dots >= 10) break
+            }
+
+            android.util.Log.d("MemberB_Thread",
+                "Coroutine 2 (Main) done on: ${Thread.currentThread().name}")
+        }
+
+        // Corrutina 1 — Dispatchers.IO
+        // Lee datos del backend, trabajo pesado de red y disco
+        viewModelScope.launch(Dispatchers.IO) {
+            android.util.Log.d("MemberB_Thread",
+                "Coroutine 1 (IO) started on: ${Thread.currentThread().name}")
+
             _state.value = _state.value.copy(isLoading = true, error = null)
 
             FeatureExecutionTracker.track("Load Home Data") {
@@ -89,6 +120,9 @@ class HomeViewModel : ViewModel() {
             }.fold(
                 onSuccess = { pets ->
                     val uniquePets = pets.distinctBy { it.id }
+
+                    android.util.Log.d("MemberB_Thread",
+                        "Coroutine 1 (IO) pets loaded on: ${Thread.currentThread().name}")
 
                     val catalogMap = RepositoryProvider.petRepository
                         .getVaccineCatalog()
@@ -133,7 +167,7 @@ class HomeViewModel : ViewModel() {
                         }
                     }.awaitAll().flatten()
 
-                    val today    = java.time.LocalDate.now()
+                    val today    = LocalDate.now()
                     val upcoming = mutableListOf<UpcomingVaccine>()
                     var overdueCount = 0
 
@@ -141,7 +175,7 @@ class HomeViewModel : ViewModel() {
                         pet.vaccinations.forEach { vacc ->
                             val dueDateStr = vacc.nextDueDate ?: return@forEach
                             try {
-                                val dueDate = java.time.LocalDate.parse(dueDateStr.take(10))
+                                val dueDate = LocalDate.parse(dueDateStr.take(10))
                                 val days    = java.time.temporal.ChronoUnit.DAYS.between(today, dueDate)
                                 when {
                                     days < 0   -> overdueCount++
@@ -151,7 +185,7 @@ class HomeViewModel : ViewModel() {
                                                 ?: vacc.vaccineId.take(8),
                                             petName       = pet.name,
                                             petId         = pet.id,
-                                            vaccinationId = vacc.id,   // ← el _id embebido
+                                            vaccinationId = vacc.id,
                                             dueDate       = dueDateStr.take(10),
                                             daysUntilDue  = days
                                         )
@@ -177,6 +211,9 @@ class HomeViewModel : ViewModel() {
                         }
                         .sortedBy { when (it.type) { "danger" -> 0; "warning" -> 1; else -> 2 } }
 
+                    android.util.Log.d("MemberB_Thread",
+                        "Coroutine 1 (IO) updating state on: ${Thread.currentThread().name}")
+
                     _state.value = _state.value.copy(
                         pets                 = uniquePets,
                         recentEvents         = eventResults
@@ -193,6 +230,8 @@ class HomeViewModel : ViewModel() {
                     )
                 },
                 onFailure = { e ->
+                    android.util.Log.d("MemberB_Thread",
+                        "Coroutine 1 (IO) failed on: ${Thread.currentThread().name}")
                     _state.value = _state.value.copy(
                         isLoading = false,
                         error     = e.message ?: "Failed to load data"
