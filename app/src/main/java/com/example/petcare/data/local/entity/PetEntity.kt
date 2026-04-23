@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 import androidx.room.Relation
 
 @Entity(tableName = "pets")
-data class Pet(
+data class PetEntity(
     @PrimaryKey
     val id: String,
     val name: String,
@@ -25,11 +25,3 @@ data class Pet(
 )
 
 
-data class PetWithVaccines(
-    @Embedded val pet: Pet,
-    @Relation(
-        parentColumn = "id",
-        entityColumn = "petId"
-    )
-    val vaccines: List<Vaccine>
-)
