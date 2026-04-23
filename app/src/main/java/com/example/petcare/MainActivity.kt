@@ -116,7 +116,9 @@ class MainActivity : ComponentActivity() {
 
     lateinit var nfcManager: NfcManager
         private set
-    val nfcViewModel: NfcViewModel by viewModels()
+    val nfcViewModel: NfcViewModel by viewModels {
+        NfcViewModel.NfcViewModelFactory(application)
+    }
 
     val petsViewModel: PetsViewModel by viewModels {
         PetsViewModelFactory(RepositoryProvider.petRepository)
