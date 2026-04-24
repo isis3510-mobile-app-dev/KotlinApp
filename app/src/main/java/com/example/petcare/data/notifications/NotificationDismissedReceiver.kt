@@ -18,7 +18,7 @@ class NotificationDismissedReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                RepositoryProvider.ensureInitialized()
+                RepositoryProvider.ensureInitialized(context)
                 RepositoryProvider.notificationRepository
                     .markNotificationDismissed(notificationId, Instant.now().toString())
             } finally {

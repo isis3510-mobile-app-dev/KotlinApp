@@ -18,13 +18,14 @@ import androidx.room.PrimaryKey
     indices = [Index("petId")]
 )
 data class VaccinationEntity(
-    @PrimaryKey
-    val id: String,
+    @PrimaryKey val id: String,
     val petId: String,
     val vaccineId: String,
     val dateGiven: String,
     val nextDueDate: String? = null,
     val lotNumber: String = "",
     val status: String = "completed",
-    val administeredBy: String = ""
+    val administeredBy: String = "",
+    val pendingSync: Boolean = false,
+    val pendingDelete: Boolean = false
 )

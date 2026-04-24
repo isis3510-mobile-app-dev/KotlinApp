@@ -80,7 +80,7 @@ interface ApiService {
     suspend fun updateVaccination(
         @Path("petId") petId: String,
         @Path("vaccinationId") vaccinationId: String,
-        @Body body: Map<String, @JvmSuppressWildcards Any?>
+        @Body body: UpdateVaccinationRequest
     ): Response<Pet>
 
     // DELETE with body — Retrofit needs @HTTP for this

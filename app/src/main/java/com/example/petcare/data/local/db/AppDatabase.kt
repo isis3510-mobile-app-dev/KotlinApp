@@ -12,11 +12,12 @@ import com.example.petcare.data.local.entity.*
         EventEntity::class,
         ReminderEntity::class,
         PetEntity::class,
-        VaccinationEntity::class
+        VaccinationEntity::class,
+        VaccineCatalogEntity::class
         // TODO: David agrega sus entidades aqui
     ],
 
-    version = 1,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,6 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun reminderDao(): ReminderDao
     abstract fun petDao(): PetDao
     abstract fun vaccineDao(): VaccineDao
+    abstract fun vaccineCatalogDao(): VaccineCatalogDao
     // TODO: David agrega su DAO aquí
 
     companion object {
@@ -35,7 +37,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "petcare_local.db"
-                ).build().also { INSTANCE = it }
+                )
+                    .fallbackToDestructiveMigration()
+                    .build().also { INSTANCE = it }
             }
     }
 }
