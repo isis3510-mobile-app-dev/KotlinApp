@@ -13,6 +13,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import com.example.petcare.data.model.Pet
+import com.example.petcare.data.network.isOnline
 import com.google.firebase.Firebase
 import com.google.firebase.storage.storage
 import com.example.petcare.util.InputFieldPolicy
@@ -113,7 +114,11 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
         }
         viewModelScope.launch {
             _state.value = s.copy(isLoading = true, error = null)
-            val photoUrl = s.photoUri?.let { uploadPhoto(it) }
+            val photoUrl: String? = if (isOnline(getContext())) {
+                s.photoUri?.let { uploadPhoto(it) }
+            } else {
+                s.photoUri?.toString()
+            }
 
             val request = CreatePetRequest(
                 name           = normalizeForCommit(s.name, InputFieldPolicy.GENERAL_TEXT),

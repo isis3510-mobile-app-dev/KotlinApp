@@ -1,8 +1,6 @@
 package com.example.petcare.data.repository
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.util.LruCache
 import androidx.work.*
 import com.example.petcare.data.local.dao.PetDao
@@ -18,11 +16,13 @@ import com.example.petcare.data.local.mapper.toVaccination
 import com.example.petcare.data.local.mapper.toVaccine
 import com.example.petcare.data.model.*
 import com.example.petcare.data.network.ApiService
+import com.example.petcare.data.network.isOnline
 import com.example.petcare.data.worker.SyncWorker
 import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
 import java.util.UUID
+
 
 
 class PetRepository(
@@ -41,12 +41,6 @@ class PetRepository(
     private fun currentUserId(): String =
         FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
-    private fun isOnline(): Boolean {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val cap = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
-        return cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-    }
 
     private fun enqueueSyncWork() {
         val request = OneTimeWorkRequestBuilder<SyncWorker>()
@@ -85,8 +79,8 @@ class PetRepository(
 
     suspend fun getPets(): Result<List<Pet>> {
         val uid = currentUserId()
-        android.util.Log.d("PET_REPO", "isOnline=${isOnline()}, uid=$uid")
-        if (isOnline()) {
+        android.util.Log.d("PET_REPO", "isOnline=${isOnline(context)}, uid=$uid")
+        if (isOnline(context)) {
             android.util.Log.d("Entró", "Deberia guardar Cache")
             val cached = hive.getPets(uid)
             if (cached != null) {
@@ -100,7 +94,7 @@ class PetRepository(
             }
         }
         android.util.Log.d("HIVE_CACHE", "MISS - getPets va a la API")
-        return if (isOnline()) {
+        return if (isOnline(context)) {
             try {
                 val response = api.getPets()
                 if (!response.isSuccessful)
@@ -136,7 +130,7 @@ class PetRepository(
 
     suspend fun getPet(petId: String): Result<Pet> {
         val uid = currentUserId()
-        return if (isOnline()) {
+        return if (isOnline(context)) {
             runCatching {
                 val response = api.getPet(petId)
                 val pet = response.body() ?: error("Pet not found")
@@ -158,7 +152,7 @@ class PetRepository(
 
     suspend fun createPet(request: CreatePetRequest): Result<Pet> = runCatching {
         val uid = currentUserId()
-        return if (isOnline()) {
+        return if (isOnline(context)) {
             runCatching {
                 val response = api.createPet(request)
                 val pet = response.body() ?: error("Failed to create pet")
@@ -200,7 +194,7 @@ class PetRepository(
 
     suspend fun updatePet(petId: String, request: UpdatePetRequest): Result<Pet> = runCatching {
         val uid = currentUserId()
-        return if (isOnline()) {
+        return if (isOnline(context)) {
             runCatching {
                 val response = api.updatePet(petId, request)
                 val pet = response.body()
@@ -237,7 +231,7 @@ class PetRepository(
 
     suspend fun deletePet(petId: String): Result<Unit> {
         val uid = currentUserId()
-        return if (isOnline()) {
+        return if (isOnline(context)) {
             try {
                 val response = api.deletePet(petId)
                 if (response.isSuccessful || response.code() == 204) {
@@ -270,7 +264,7 @@ class PetRepository(
         request: AddVaccinationRequest
     ): Result<Pet> {
         val uid = currentUserId()
-        return if (isOnline()) {
+        return if (isOnline(context)) {
             runCatching {
                 val response = api.addVaccination(petId, request)
                 val pet = response.body() ?: error("Failed to add vaccination")
@@ -325,7 +319,7 @@ class PetRepository(
 
     suspend fun deleteVaccination(petId: String, vaccinationId: String): Result<Pet> {
         val uid = currentUserId()
-        return if (isOnline()) {
+        return if (isOnline(context)) {
             runCatching {
                 val response = api.deleteVaccination(petId, vaccinationId)
                 val pet = response.body()
@@ -362,7 +356,7 @@ class PetRepository(
         lotNumber: String
     ): Result<Pet> = runCatching {
         val uid = currentUserId()
-        return if (isOnline()) {
+        return if (isOnline(context)) {
             runCatching {
                 // Use UpdateVaccinationRequest instead of raw Map
                 val existing = vaccineDao.getById(vaccinationId)
@@ -561,7 +555,7 @@ class PetRepository(
     }
 
     suspend fun getVaccineCatalog(): Result<List<Vaccine>> {
-        return if (isOnline()) {
+        return if (isOnline(context)) {
             runCatching {
                 val response = api.getVaccines()
                 val vaccines = response.body() ?: emptyList()
