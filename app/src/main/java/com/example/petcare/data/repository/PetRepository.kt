@@ -56,7 +56,7 @@ class PetRepository(
         val uid = currentUserId()
         android.util.Log.d("PET_REPO", "isOnline=${isOnline()}, uid=$uid")
         return if (isOnline()) {
-            syncPendingLocalData()
+            //syncPendingLocalData()
             runCatching {
                 val response = api.getPets()
                 if (!response.isSuccessful)
