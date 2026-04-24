@@ -193,7 +193,8 @@ fun AddVaccineInitialForm(
             DateTextField(
                 name = "Date *",
                 onDateSelected = viewModel::setDateGiven,
-                allowFutureDates = false
+                allowFutureDates = false,
+                minDateInclusive = state.petBirthDateIso
             )
         }
 

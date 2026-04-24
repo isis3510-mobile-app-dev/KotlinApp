@@ -5,6 +5,7 @@ import com.example.petcare.data.model.AddVaccinationRequest
 import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.CreateNotificationRequest
 import com.example.petcare.data.model.CreatePetRequest
+import com.example.petcare.data.model.CreateWeightLogRequest
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.NfcPayloadResponse
 import com.example.petcare.data.model.NfcPublicReadResponse
@@ -16,8 +17,10 @@ import com.example.petcare.data.model.UpdateNotificationRequest
 import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.model.UpdateUserRequest
 import com.example.petcare.data.model.UpdateVaccinationRequest
+import com.example.petcare.data.model.UpdateWeightLogRequest
 import com.example.petcare.data.model.User
 import com.example.petcare.data.model.Vaccine
+import com.example.petcare.data.model.WeightLog
 import com.example.petcare.data.model.analytics.CreateFeatureClicksLogRequest
 import com.example.petcare.data.model.analytics.CreateFeatureExecutionLogRequest
 import com.example.petcare.data.model.analytics.CreateScreenTimeLogRequest
@@ -101,6 +104,30 @@ interface ApiService {
         @Path("vaccinationId") vaccinationId: String,
         @Body body: AddDocumentRequest
     ): Response<Pet>
+
+    // ── Weight Logs ──────────────────────────────────────────────────────
+
+    @GET("pets/{petId}/weight-logs/")
+    suspend fun getWeightLogs(@Path("petId") petId: String): Response<List<WeightLog>>
+
+    @POST("pets/{petId}/weight-logs/")
+    suspend fun createWeightLog(
+        @Path("petId") petId: String,
+        @Body body: CreateWeightLogRequest
+    ): Response<WeightLog>
+
+    @PUT("pets/{petId}/weight-logs/{weightLogId}/")
+    suspend fun updateWeightLog(
+        @Path("petId") petId: String,
+        @Path("weightLogId") weightLogId: String,
+        @Body body: UpdateWeightLogRequest
+    ): Response<WeightLog>
+
+    @DELETE("pets/{petId}/weight-logs/{weightLogId}/")
+    suspend fun deleteWeightLog(
+        @Path("petId") petId: String,
+        @Path("weightLogId") weightLogId: String
+    ): Response<Unit>
 
     // ── Events ────────────────────────────────────────────────────────────
 

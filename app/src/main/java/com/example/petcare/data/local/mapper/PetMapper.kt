@@ -24,7 +24,8 @@ fun Pet.toEntity(): PetEntity {
         knownAllergies = this.knownAllergies,
         defaultVet     = this.defaultVet,
         defaultClinic  = this.defaultClinic,
-        owner          = this.owners.firstOrNull() ?: "",
+        clientMutationId = this.clientMutationId,
+        owner          = ownerId,
         pendingSync    = false,
         pendingDelete  = false
     )
@@ -45,6 +46,7 @@ fun PetEntity.toPet() = Pet(
     knownAllergies = this.knownAllergies,
     defaultVet     = this.defaultVet,
     defaultClinic  = this.defaultClinic,
+    clientMutationId = this.clientMutationId,
     owners         = listOf(this.owner),
     vaccinations   = emptyList()
 )

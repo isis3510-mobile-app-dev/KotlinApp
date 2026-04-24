@@ -216,7 +216,7 @@ fun LoginScreen(
             textColor = MaterialTheme.colorScheme.onSecondary,
             width = 342.dp,
             height = 56.dp,
-            text = if (authState is AuthViewModel.AuthState.Loading) "... Loading" else "Create Account"
+            text = if (authState is AuthViewModel.AuthState.Loading) "Loading..." else "Create Account"
         )
 
 

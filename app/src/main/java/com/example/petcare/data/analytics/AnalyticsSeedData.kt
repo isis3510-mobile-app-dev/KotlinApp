@@ -69,6 +69,7 @@ object AnalyticsSeedData {
             ButtonDto(buttonId = "btn_delete_pet", name = "Delete Pet"),
             ButtonDto(buttonId = "btn_add_vaccine", name = "Add Vaccine"),
             ButtonDto(buttonId = "btn_add_event", name = "Add Event"),
+            ButtonDto(buttonId = "btn_open_weight_tracker", name = "Open Weight Tracker"),
             ButtonDto(buttonId = "btn_view_vaccine_detail", name = "View Vaccine Detail"),
             ButtonDto(buttonId = "btn_view_event_detail", name = "View Event Detail"),
             ButtonDto(buttonId = "btn_nfc_write", name = "Write NFC"),
@@ -83,6 +84,11 @@ object AnalyticsSeedData {
             ButtonDto(buttonId = "btn_edit_event", name = "Edit Event"),
             ButtonDto(buttonId = "btn_delete_event", name = "Delete Event"),
             ButtonDto(buttonId = "btn_back_event", name = "Back")
+        )),
+        ScreenDto(name = "weightTracker", buttons = listOf(
+            ButtonDto(buttonId = "btn_submit_weight_log", name = "Submit Weight Log"),
+            ButtonDto(buttonId = "btn_edit_weight_log", name = "Edit Weight Log"),
+            ButtonDto(buttonId = "btn_delete_weight_log", name = "Delete Weight Log")
         )),
 
         // NFC
@@ -167,6 +173,9 @@ object AnalyticsSeedData {
         FeatureDto(name = "Create Event",     originButton = "btn_submit_event",   originScreen = "addEvent3"),
         FeatureDto(name = "Edit Event",       originButton = "btn_edit_event",     originScreen = "eventDetails"),
         FeatureDto(name = "Delete Event",     originButton = "btn_delete_event",   originScreen = "eventDetails"),
+        FeatureDto(name = "Create Weight Log", originButton = "btn_submit_weight_log", originScreen = "weightTracker"),
+        FeatureDto(name = "Edit Weight Log", originButton = "btn_edit_weight_log", originScreen = "weightTracker"),
+        FeatureDto(name = "Delete Weight Log", originButton = "btn_delete_weight_log", originScreen = "weightTracker"),
         FeatureDto(name = "NFC Write",        originButton = "btn_start_write",    originScreen = "nfc/write"),
         FeatureDto(name = "NFC Scan",         originButton = "btn_start_scan",     originScreen = "nfc/scan"),
         FeatureDto(name = "Sign In",          originButton = "btn_sign_in",        originScreen = "signin"),
@@ -205,6 +214,11 @@ object AnalyticsSeedData {
             name = "Add Event Flow",
             originButton = "btn_add_event", originScreen = "petProfile",
             endButton = "btn_submit_event", endScreen = "addEvent3"
+        ),
+        FeatureRouteDto(
+            name = "Weight Log Flow",
+            originButton = "btn_open_weight_tracker", originScreen = "petProfile",
+            endButton = "btn_submit_weight_log", endScreen = "weightTracker"
         ),
         FeatureRouteDto(
             name = "NFC Write Flow",

@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddModerator
+import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Icon
@@ -41,6 +42,7 @@ fun QuickActionGrid(
     onAddVaccineClick: () -> Unit,
     onLostModeClick: () -> Unit,
     onNfcClick: () -> Unit,
+    onWeightTrackerClick: () -> Unit = {},
     isLost: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -70,11 +72,22 @@ fun QuickActionGrid(
             modifier = Modifier.fillMaxWidth()
         ) {
             GridButton(
+                vectorIcon = Icons.Default.Balance,
+                label = "Weight Log",
+                onClick = onWeightTrackerClick,
+                modifier = Modifier.weight(1f)
+            )
+            GridButton(
                 vectorIcon = if (isLost) Icons.Default.CheckCircle else Icons.Default.LocationOn,
                 label = if (isLost) "Report as found" else "Report as lost",
                 onClick = onLostModeClick,
                 modifier = Modifier.weight(1f)
             )
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
             GridButton(
                 vectorIcon = Icons.Outlined.Contactless,
                 label = "Link NFC tag",

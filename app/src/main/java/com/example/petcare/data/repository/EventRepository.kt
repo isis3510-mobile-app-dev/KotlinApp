@@ -1,11 +1,17 @@
 package com.example.petcare.data.repository
 
+import com.example.petcare.data.local.dao.EventDao
+import com.example.petcare.data.local.mapper.toEntity
+import com.example.petcare.data.local.mapper.toEvent
 import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.network.ApiService
 import org.json.JSONObject
 
-class EventRepository(private val api: ApiService) {
+class EventRepository(
+    private val api: ApiService,
+    private val eventDao: EventDao? = null
+) {
 
     suspend fun getEvents(
         petId: String? = null,
@@ -15,11 +21,23 @@ class EventRepository(private val api: ApiService) {
         if (!response.isSuccessful) {
             error("Failed to load events — HTTP ${response.code()}")
         }
-        response.body().orEmpty()
+        val events = response.body().orEmpty()
+        eventDao?.upsertAll(events.map { it.toEntity() })
+        events
+    }.recoverCatching {
+        when {
+            eventDao == null -> throw it
+            petId != null -> eventDao.getForPetSync(petId).map { entity -> entity.toEvent() }
+            else -> eventDao.getAllSync().map { entity -> entity.toEvent() }
+        }
     }
 
     suspend fun getEvent(eventId: String): Result<Event> = runCatching {
-        api.getEvent(eventId).body() ?: error("Event not found")
+        val event = api.getEvent(eventId).body() ?: error("Event not found")
+        eventDao?.upsert(event.toEntity())
+        event
+    }.recoverCatching {
+        eventDao?.getById(eventId)?.toEvent() ?: throw it
     }
 
     suspend fun createEvent(request: CreateEventRequest): Result<Event> = runCatching {
@@ -27,7 +45,9 @@ class EventRepository(private val api: ApiService) {
         if (!response.isSuccessful) {
             error(parseApiError(response.errorBody()?.string(), response.code(), "create event"))
         }
-        response.body() ?: error("Failed to create event — empty response")
+        val event = response.body() ?: error("Failed to create event — empty response")
+        eventDao?.upsert(event.toEntity())
+        event
     }
 
     suspend fun updateEvent(
@@ -51,7 +71,9 @@ class EventRepository(private val api: ApiService) {
         if (!response.isSuccessful) {
             error(parseApiError(response.errorBody()?.string(), response.code(), "update event"))
         }
-        response.body() ?: error("Failed to update event — empty response")
+        val event = response.body() ?: error("Failed to update event — empty response")
+        eventDao?.upsert(event.toEntity())
+        event
     }
 
     suspend fun deleteEvent(eventId: String): Result<Unit> {
@@ -62,6 +84,7 @@ class EventRepository(private val api: ApiService) {
         return try {
             val response = api.deleteEvent(eventId)
             if (response.isSuccessful || response.code() == 204) {
+                eventDao?.deleteById(eventId)
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("Failed to delete event — HTTP ${response.code()}"))
@@ -71,6 +94,7 @@ class EventRepository(private val api: ApiService) {
             // "HTTP 204 had non-zero Content-Length" means the delete succeeded but
             // the server incorrectly included a body. Treat as success.
             if (message.contains("204") && message.contains("Content-Length")) {
+                eventDao?.deleteById(eventId)
                 Result.success(Unit)
             } else {
                 Result.failure(e)

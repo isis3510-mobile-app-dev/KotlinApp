@@ -123,7 +123,11 @@ fun AddEventInitialForm(
                 maxLength = InputTextLimits.EVENT_TITLE
             )
 
-            DateTextField(name = "Date *", onDateSelected = viewModel::setDate)
+            DateTextField(
+                name = "Date *",
+                onDateSelected = viewModel::setDate,
+                minDateInclusive = state.petBirthDateIso
+            )
 
             TimeTextField(
                 name = "Time",

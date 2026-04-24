@@ -20,9 +20,9 @@ data class PetEntity(
     val knownAllergies: String,
     val defaultVet: String,
     val defaultClinic: String,
+    val clientMutationId: String? = null,
     val pendingSync: Boolean = false,
     val pendingDelete: Boolean = false,
     val owner: String = ""
 )
-
 

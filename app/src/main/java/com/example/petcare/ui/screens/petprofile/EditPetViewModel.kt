@@ -9,17 +9,21 @@ import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.PicassoImageCompressor
 import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.trimToNullIfBlank
 import com.example.petcare.util.validateCommittedInput
 import com.google.firebase.Firebase
 import com.google.firebase.storage.storage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 data class EditPetState(
@@ -132,11 +136,21 @@ class EditPetViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private suspend fun uploadPhoto(uri: Uri): String? {
-        return try {
+    private suspend fun uploadPhoto(uri: Uri): String? = withContext(Dispatchers.IO) {
+        try {
+            val context = getApplication<Application>()
+            val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+            val prepared = async(Dispatchers.IO) {
+                PicassoImageCompressor.prepareImageIfNeeded(
+                    context = context,
+                    sourceUri = uri,
+                    mimeType = mimeType,
+                    originalFileName = "pet_photo_${System.currentTimeMillis()}.jpg"
+                )
+            }.await()
             val filename = "pets/${UUID.randomUUID()}.jpg"
             val ref = Firebase.storage.reference.child(filename)
-            ref.putFile(uri).await()
+            ref.putFile(prepared.uri).await()
             val bucket      = ref.bucket
             val encodedPath = filename.replace("/", "%2F")
             "https://firebasestorage.googleapis.com/v0/b/$bucket/o/$encodedPath?alt=media"

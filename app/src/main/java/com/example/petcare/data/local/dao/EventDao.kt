@@ -17,6 +17,15 @@ interface EventDao {
     fun getForPet(petId: String): Flow<List<EventEntity>>
     // petId ahora es String, antes era Int
 
+    @Query("SELECT * FROM events_local WHERE petId = :petId AND pendingDelete = 0 ORDER BY date ASC")
+    suspend fun getForPetSync(petId: String): List<EventEntity>
+
+    @Query("SELECT * FROM events_local WHERE pendingDelete = 0 ORDER BY date ASC")
+    suspend fun getAllSync(): List<EventEntity>
+
+    @Query("SELECT * FROM events_local WHERE id = :id")
+    suspend fun getById(id: String): EventEntity?
+
     @Query("SELECT * FROM events_local ORDER BY date ASC LIMIT 1")
     suspend fun getNext(): EventEntity?
 
@@ -35,6 +44,9 @@ interface EventDao {
 
     @Upsert
     suspend fun upsertAll(events: List<EventEntity>)
+
+    @Upsert
+    suspend fun upsert(event: EventEntity)
 
     // ── Actualizaciones de estado ─────────────────────────────────────────
 

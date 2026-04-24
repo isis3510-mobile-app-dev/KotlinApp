@@ -181,8 +181,9 @@ class HomeViewModel : ViewModel() {
                                     days < 0   -> overdueCount++
                                     days <= 30 -> upcoming.add(
                                         UpcomingVaccine(
-                                            vaccineName   = catalogMap[vacc.vaccineId]?.name
-                                                ?: vacc.vaccineId.take(8),
+                                            vaccineName   = vacc.vaccineName
+                                                ?: catalogMap[vacc.vaccineId]?.name
+                                                ?: "Unknown vaccine",
                                             petName       = pet.name,
                                             petId         = pet.id,
                                             vaccinationId = vacc.id,
@@ -217,7 +218,7 @@ class HomeViewModel : ViewModel() {
                     _state.value = _state.value.copy(
                         pets                 = uniquePets,
                         recentEvents         = eventResults
-                            .filter { EventDateUtils.isTodayOrFuture(it.date) }
+                            .filter { EventDateUtils.isFuture(it.date) }
                             .sortedBy { EventDateUtils.parseEventInstant(it.date) ?: java.time.Instant.MAX }
                             .take(5),
                         upcomingVaccines     = upcoming.sortedBy { it.daysUntilDue },

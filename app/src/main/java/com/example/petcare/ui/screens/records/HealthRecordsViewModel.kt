@@ -66,7 +66,7 @@ class HealthRecordsViewModel : ViewModel() {
                 pet.vaccinations.map { vacc ->
                     VaccineListItemWithIds(
                         data = VaccineListItemData(
-                            vaccineName = catalogMap[vacc.vaccineId]?.name ?: vacc.vaccineId.take(8),
+                            vaccineName = resolveVaccineName(vacc.vaccineName, vacc.vaccineId, catalogMap),
                             petName     = pet.name,
                             clinicName  = vacc.administeredBy.ifBlank { "—" },
                             status      = vacc.status,
@@ -88,9 +88,12 @@ class HealthRecordsViewModel : ViewModel() {
                         .map { event ->
                             EventListItemWithIds(
                                 data = MedicalEventData(
-                                    eventType  = event.eventType.name
-                                        .lowercase()
-                                        .replaceFirstChar { it.uppercase() },
+                                    title      = event.title.ifBlank {
+                                        event.eventType.name
+                                            .lowercase()
+                                            .replaceFirstChar { it.uppercase() }
+                                    },
+                                    eventType  = event.eventType.name,
                                     petName    = pet.name,
                                     clinicName = event.clinic.ifBlank { event.provider }.ifBlank { "—" },
                                     date       = parseDate(event.date),
@@ -135,5 +138,23 @@ class HealthRecordsViewModel : ViewModel() {
 
     private fun parseTime(iso: String): String {
         return EventDateUtils.splitToAppDateTime(iso).second
+    }
+
+    private fun resolveVaccineName(
+        rawName: String?,
+        vaccineId: String?,
+        catalogMap: Map<String, com.example.petcare.data.model.Vaccine>
+    ): String {
+        val fromRecord = rawName?.trim().takeUnless { it.isNullOrBlank() }
+        if (fromRecord != null) return fromRecord
+
+        val fromCatalog = vaccineId
+            ?.trim()
+            ?.takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }
+            ?.let { catalogMap[it]?.name }
+            ?.trim()
+            .takeUnless { it.isNullOrBlank() }
+
+        return fromCatalog ?: "Unknown vaccine"
     }
 }

@@ -17,6 +17,7 @@ import java.time.LocalDate
 // Lightweight model for vaccine entries on the calendar
 data class CalendarVaccination(
     val vaccineId: String,
+    val vaccineName: String,
     val petName: String,
     val dateGiven: String,
     val nextDueDate: String?
@@ -43,8 +44,10 @@ class CalendarViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            // 1. Load pets
+            // 1. Load pets and vaccine catalog
             val petsResult = RepositoryProvider.petRepository.getPets()
+            val catalogResult = RepositoryProvider.petRepository.getVaccineCatalog()
+
             if (petsResult.isFailure) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -54,12 +57,14 @@ class CalendarViewModel : ViewModel() {
             }
             val pets     = petsResult.getOrDefault(emptyList())
             val petNames = pets.associate { it.id to it.name }
+            val catalog  = catalogResult.getOrDefault(emptyList()).associateBy { it.id }
 
             // 2. Build vaccination calendar entries
             val vaccinations = pets.flatMap { pet ->
                 pet.vaccinations.map { v ->
                     CalendarVaccination(
                         vaccineId   = v.vaccineId,
+                        vaccineName = resolveVaccineName(v.vaccineName, v.vaccineId, catalog),
                         petName     = pet.name,
                         dateGiven   = v.dateGiven,
                         nextDueDate = v.nextDueDate
@@ -95,5 +100,23 @@ class CalendarViewModel : ViewModel() {
                 isLoading       = false
             )
         }
+    }
+
+    private fun resolveVaccineName(
+        rawName: String?,
+        vaccineId: String?,
+        catalogMap: Map<String, com.example.petcare.data.model.Vaccine>
+    ): String {
+        val fromRecord = rawName?.trim().takeUnless { it.isNullOrBlank() }
+        if (fromRecord != null) return fromRecord
+
+        val fromCatalog = vaccineId
+            ?.trim()
+            ?.takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }
+            ?.let { catalogMap[it]?.name }
+            ?.trim()
+            .takeUnless { it.isNullOrBlank() }
+
+        return fromCatalog ?: "Unknown vaccine"
     }
 }

@@ -13,17 +13,23 @@ import com.example.petcare.ui.screens.addEventForm.StagedDocument
 import com.example.petcare.util.FirebaseDocumentUploader
 import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.PicassoImageCompressor
 import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.validateCommittedInput
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.LocalDate
 import java.util.UUID
 
 data class AddVaccineFormState(
     val petId: String = "",
+    val petBirthDateIso: String? = null,
     // Step 1
     val selectedVaccine: Vaccine? = null,
     val catalogVaccines: List<Vaccine> = emptyList(),
@@ -67,7 +73,16 @@ class AddVaccineViewModel : ViewModel() {
         }
     }
 
-    fun setPetId(v: String)             { _state.value = _state.value.copy(petId = v) }
+    fun setPetId(v: String) {
+        _state.value = _state.value.copy(petId = v)
+        if (v.isNotBlank()) {
+            viewModelScope.launch {
+                RepositoryProvider.petRepository.getPet(v).onSuccess { pet ->
+                    _state.value = _state.value.copy(petBirthDateIso = pet.birthDate)
+                }
+            }
+        }
+    }
     fun setSelectedVaccine(v: Vaccine?) { _state.value = _state.value.copy(selectedVaccine = v) }
     fun setDateGiven(v: String)         { _state.value = _state.value.copy(dateGiven = v) }
     fun setAdministeredBy(v: String)    { _state.value = _state.value.copy(administeredBy = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PROVIDER_OR_CLINIC).value) }
@@ -90,33 +105,50 @@ class AddVaccineViewModel : ViewModel() {
             stagedDocuments = _state.value.stagedDocuments + pending
         )
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            val prepared = async(Dispatchers.IO) {
+                PicassoImageCompressor.prepareImageIfNeeded(context, uri, mimeType, fileName)
+            }.await()
+
             FirebaseDocumentUploader
-                .uploadVaccinationDocumentStaging(context, uri, petId, stagingId)
+                .uploadVaccinationDocumentStaging(context, prepared.uri, petId, stagingId)
                 .fold(
                     onSuccess = { uploaded ->
-                        _state.value = _state.value.copy(
-                            stagedDocuments = _state.value.stagedDocuments.map {
-                                if (it.uri == uri && it.isUploading) {
-                                    it.copy(
-                                        downloadUrl = uploaded.downloadUrl,
-                                        isUploading = false
-                                    )
-                                } else it
-                            }
-                        )
+                        withContext(Dispatchers.Main) {
+                            _state.value = _state.value.copy(
+                                stagedDocuments = _state.value.stagedDocuments.map {
+                                    if (it.uri == uri && it.isUploading) {
+                                        it.copy(
+                                            fileName = prepared.fileName,
+                                            mimeType = prepared.mimeType,
+                                            downloadUrl = uploaded.downloadUrl,
+                                            isUploading = false
+                                        )
+                                    } else it
+                                }
+                            )
+                        }
                     },
                     onFailure = { e ->
-                        _state.value = _state.value.copy(
-                            stagedDocuments = _state.value.stagedDocuments.map {
-                                if (it.uri == uri && it.isUploading) {
-                                    it.copy(isUploading = false, error = e.message)
-                                } else it
-                            }
-                        )
+                        withContext(Dispatchers.Main) {
+                            _state.value = _state.value.copy(
+                                stagedDocuments = _state.value.stagedDocuments.map {
+                                    if (it.uri == uri && it.isUploading) {
+                                        it.copy(isUploading = false, error = e.message)
+                                    } else it
+                                }
+                            )
+                        }
                     }
                 )
         }
+    }
+
+    fun addDocument(context: Context, uri: Uri) {
+        val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
+        val fileName = FirebaseDocumentUploader.getFileName(context, uri)
+            ?: "document_${System.currentTimeMillis()}"
+        addDocument(context, uri, mimeType, fileName)
     }
 
     fun removeDocument(doc: StagedDocument) {
@@ -132,8 +164,12 @@ class AddVaccineViewModel : ViewModel() {
         val selectedVaccine = s.selectedVaccine
         val administeredByError = validateCommittedInput(s.administeredBy, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC)
         val lotNumberError = validateCommittedInput(s.lotNumber, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.LOT_NUMBER)
+        val birthDateError = if (s.petBirthDateIso != null && isBeforeBirth(s.dateGiven, s.petBirthDateIso)) {
+            "Vaccination date cannot be before pet's birth date (${s.petBirthDateIso?.take(10)})."
+        } else null
         val firstError = listOfNotNull(
             if (s.petId.isBlank() || selectedVaccine == null || s.dateGiven.isBlank()) "Pet, vaccine and date are required." else null,
+            birthDateError,
             administeredByError,
             lotNumberError
         ).firstOrNull()
@@ -151,11 +187,13 @@ class AddVaccineViewModel : ViewModel() {
 
             val request = AddVaccinationRequest(
                 vaccineId      = selectedVaccine?.id ?: return@launch,
+                vaccineName    = selectedVaccine?.name,
                 dateGiven      = toIso(s.dateGiven),
                 nextDueDate    = s.nextDueDate.takeIf { it.isNotBlank() }?.let { toIso(it) },
                 lotNumber      = normalizeForCommit(s.lotNumber, InputFieldPolicy.GENERAL_TEXT),
                 status         = "completed",
-                administeredBy = normalizeForCommit(s.administeredBy, InputFieldPolicy.GENERAL_TEXT)
+                administeredBy = normalizeForCommit(s.administeredBy, InputFieldPolicy.GENERAL_TEXT),
+                clientMutationId = UUID.randomUUID().toString()
             )
 
             FeatureExecutionTracker.track("Add Vaccination") {
@@ -201,4 +239,21 @@ class AddVaccineViewModel : ViewModel() {
         val p = date.split("/")
         if (p.size == 3) "${p[2]}-${p[1]}-${p[0]}T00:00:00Z" else date
     } catch (_: Exception) { date }
+
+    private fun isBeforeBirth(date: String, birthIso: String): Boolean {
+        val chosen = parseLocalDate(date) ?: return false
+        val birth = parseLocalDate(birthIso) ?: return false
+        return chosen.isBefore(birth)
+    }
+
+    private fun parseLocalDate(raw: String): LocalDate? = runCatching {
+        when {
+            raw.matches(Regex("""\d{2}/\d{2}/\d{4}""")) -> {
+                val p = raw.split("/")
+                LocalDate.of(p[2].toInt(), p[1].toInt(), p[0].toInt())
+            }
+            raw.matches(Regex("""\d{4}-\d{2}-\d{2}.*""")) -> LocalDate.parse(raw.take(10))
+            else -> null
+        }
+    }.getOrNull()
 }

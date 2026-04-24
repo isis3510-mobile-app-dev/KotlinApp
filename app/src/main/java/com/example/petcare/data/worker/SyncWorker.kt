@@ -4,13 +4,15 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.petcare.data.local.db.AppDatabase
+import com.example.petcare.data.local.hive.HiveCacheManager
 import com.example.petcare.data.local.mapper.toEntity
 import com.example.petcare.data.model.AddVaccinationRequest
 import com.example.petcare.data.model.CreatePetRequest
+import com.example.petcare.data.model.CreateWeightLogRequest
 import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.model.UpdateVaccinationRequest
+import com.example.petcare.data.model.UpdateWeightLogRequest
 import com.example.petcare.data.network.ApiService
-import com.example.petcare.data.network.RetrofitClient
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.resume
@@ -19,6 +21,10 @@ class SyncWorker(
     context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
+
+    companion object {
+        const val UNIQUE_WORK_NAME = "pet_sync"
+    }
 
     override suspend fun doWork(): Result {
         android.util.Log.d("SYNC_WORKER", "doWork started")
@@ -55,6 +61,10 @@ class SyncWorker(
             syncPendingVaccinationCreates(db, api)
             syncPendingVaccinationUpdates(db, api)
             syncPendingVaccinationDeletes(db, api)
+            syncPendingWeightLogCreates(db, api)
+            syncPendingWeightLogUpdates(db, api)
+            syncPendingWeightLogDeletes(db, api)
+            HiveCacheManager(applicationContext).invalidatePets(user.uid)
             Result.success()
         } catch (e: Exception) {
             android.util.Log.e("SYNC_WORKER", "Sync failed: ${e.message}")
@@ -133,18 +143,31 @@ class SyncWorker(
                         photoUrl       = entity.photoUrl,
                         knownAllergies = entity.knownAllergies,
                         defaultVet     = entity.defaultVet,
-                        defaultClinic  = entity.defaultClinic
+                        defaultClinic  = entity.defaultClinic,
+                        clientMutationId = entity.clientMutationId ?: entity.id
                     )
                 )
                 android.util.Log.d("SYNC_WORKER", "Response: ${response.code()}, id=${response.body()?.id}")
                 val created = response.body()
                 if (created != null) {
-                    db.petDao().deletePetById(entity.id)
-                    db.petDao().insertPet(entity.copy(id = created.id, pendingSync = false))
+                    db.petDao().insertPet(
+                        created.toEntity().copy(
+                            owner = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: entity.owner,
+                            pendingSync = false,
+                            clientMutationId = entity.clientMutationId
+                        )
+                    )
+
+                    // Update any pending vaccinations for this pet to use the new server ID
                     db.vaccineDao().getVaccinesForPetSync(entity.id).forEach { vax ->
                         db.vaccineDao().deleteVaccineById(vax.id)
                         db.vaccineDao().insertVaccine(vax.copy(petId = created.id))
                     }
+                    db.weightLogDao().moveToServerPet(entity.id, created.id)
+
+                    // Remove the local pet after children moved to the server pet id.
+                    db.petDao().deletePetById(entity.id)
+
                     android.util.Log.d("SYNC_WORKER", "Pet synced: ${entity.id} → ${created.id}")
                 } else {
                     android.util.Log.e("SYNC_WORKER", "Null body, code=${response.code()}, error=${response.errorBody()?.string()}")
@@ -216,19 +239,21 @@ class SyncWorker(
                         entity.petId,
                         AddVaccinationRequest(
                             vaccineId = entity.vaccineId,
+                            vaccineName = entity.vaccineName,
                             dateGiven = entity.dateGiven,
                             nextDueDate = entity.nextDueDate,
                             lotNumber = entity.lotNumber,
                             status = entity.status,
-                            administeredBy = entity.administeredBy
+                            administeredBy = entity.administeredBy,
+                            clientMutationId = entity.clientMutationId ?: entity.id
                         )
                     )
                     val pet = response.body() ?: return@forEach
-                    // Remove temp record, insert all server vaccinations
+                    // Remove the local vaccination we just synced
                     db.vaccineDao().deleteVaccineById(entity.id)
-                    db.vaccineDao().insertAll(
-                        pet.vaccinations.map { it.toEntity(entity.petId) }
-                    )
+                    // Insert all vaccinations from server (will update/replace other remote ones)
+                    val serverEntities = pet.vaccinations.map { it.toEntity(entity.petId) }
+                    db.vaccineDao().insertAll(serverEntities)
                 } catch (e: Exception) { /* skip */ }
             }
     }
@@ -265,6 +290,64 @@ class SyncWorker(
                         db.vaccineDao().deleteVaccineById(entity.id)
                     }
                 } catch (e: Exception) { /* skip */ }
+            }
+    }
+
+    private suspend fun syncPendingWeightLogCreates(db: AppDatabase, api: ApiService) {
+        db.weightLogDao().getPendingSync()
+            .filter { it.id.startsWith("local_weight_") }
+            .filter { !it.petId.startsWith("local_") }
+            .forEach { entity ->
+                try {
+                    val response = api.createWeightLog(
+                        entity.petId,
+                        CreateWeightLogRequest(
+                            weight = entity.weight,
+                            loggedAt = entity.loggedAt,
+                            clientMutationId = entity.clientMutationId ?: entity.id
+                        )
+                    )
+                    val created = response.body() ?: return@forEach
+                    db.weightLogDao().deleteById(entity.id)
+                    db.weightLogDao().insert(created.toEntity())
+                } catch (e: Exception) { /* retry next worker run */ }
+            }
+    }
+
+    private suspend fun syncPendingWeightLogUpdates(db: AppDatabase, api: ApiService) {
+        db.weightLogDao().getPendingSync()
+            .filter { !it.id.startsWith("local_weight_") }
+            .filter { !it.petId.startsWith("local_") }
+            .forEach { entity ->
+                try {
+                    val response = api.updateWeightLog(
+                        entity.petId,
+                        entity.id,
+                        UpdateWeightLogRequest(
+                            weight = entity.weight,
+                            loggedAt = entity.loggedAt
+                        )
+                    )
+                    val updated = response.body()
+                    if (updated != null) {
+                        db.weightLogDao().insert(updated.toEntity())
+                    } else {
+                        db.weightLogDao().update(entity.copy(pendingSync = false))
+                    }
+                } catch (e: Exception) { /* retry next worker run */ }
+            }
+    }
+
+    private suspend fun syncPendingWeightLogDeletes(db: AppDatabase, api: ApiService) {
+        db.weightLogDao().getPendingDelete()
+            .filter { !it.petId.startsWith("local_") }
+            .forEach { entity ->
+                try {
+                    val response = api.deleteWeightLog(entity.petId, entity.id)
+                    if (response.isSuccessful || response.code() == 204) {
+                        db.weightLogDao().deleteById(entity.id)
+                    }
+                } catch (e: Exception) { /* retry next worker run */ }
             }
     }
 

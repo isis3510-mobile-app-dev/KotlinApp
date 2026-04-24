@@ -19,6 +19,7 @@ data class Pet(
     @SerializedName("knownAllergies") val knownAllergies: String = "",
     @SerializedName("defaultVet") val defaultVet: String = "",
     @SerializedName("defaultClinic") val defaultClinic: String = "",
+    @SerializedName("clientMutationId") val clientMutationId: String? = null,
     val vaccinations: List<Vaccination> = emptyList()
 )
 
@@ -33,7 +34,8 @@ data class CreatePetRequest(
     @SerializedName("photoUrl") val photoUrl: String? = null,
     @SerializedName("knownAllergies") val knownAllergies: String = "",
     @SerializedName("defaultVet") val defaultVet: String = "",
-    @SerializedName("defaultClinic") val defaultClinic: String = ""
+    @SerializedName("defaultClinic") val defaultClinic: String = "",
+    @SerializedName("clientMutationId") val clientMutationId: String? = null
 )
 
 data class UpdatePetRequest(

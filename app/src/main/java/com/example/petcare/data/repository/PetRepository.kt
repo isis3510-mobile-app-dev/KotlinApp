@@ -3,6 +3,7 @@ package com.example.petcare.data.repository
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.util.LruCache
 import androidx.work.*
 import com.example.petcare.data.local.dao.PetDao
 import com.example.petcare.data.local.dao.VaccineDao
@@ -21,6 +22,7 @@ import com.example.petcare.data.worker.SyncWorker
 import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
+import java.util.UUID
 
 
 class PetRepository(
@@ -30,6 +32,11 @@ class PetRepository(
     private val context: Context,
     private val hive: HiveCacheManager
 ) {
+    private var vaccineCatalogRevision: Int = 0
+    private val vaccineResponseCache = object : LruCache<String, List<Vaccination>>(120) {
+        override fun sizeOf(key: String, value: List<Vaccination>): Int =
+            value.size.coerceAtLeast(1)
+    }
 
     private fun currentUserId(): String =
         FirebaseAuth.getInstance().currentUser?.uid ?: ""
@@ -50,10 +57,30 @@ class PetRepository(
             )
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(
-            "pet_sync",
+            SyncWorker.UNIQUE_WORK_NAME,
             ExistingWorkPolicy.KEEP,
             request
         )
+    }
+
+    private fun vaccineCacheKey(petId: String): String =
+        "$petId:vaccineCatalogRevision=$vaccineCatalogRevision"
+
+    private fun cacheVaccinations(petId: String, vaccinations: List<Vaccination>) {
+        vaccineResponseCache.put(vaccineCacheKey(petId), vaccinations)
+    }
+
+    private suspend fun getCachedVaccinations(petId: String): List<Vaccination> {
+        vaccineResponseCache.get(vaccineCacheKey(petId))?.let { return it }
+        return vaccineDao.getVaccinesForPetSync(petId)
+            .map { it.toVaccination() }
+            .also { cacheVaccinations(petId, it) }
+    }
+
+    private fun invalidateVaccinationCache(petId: String) {
+        vaccineResponseCache.snapshot().keys
+            .filter { it.startsWith("$petId:") }
+            .forEach { vaccineResponseCache.remove(it) }
     }
 
     suspend fun getPets(): Result<List<Pet>> {
@@ -63,53 +90,45 @@ class PetRepository(
             android.util.Log.d("Entró", "Deberia guardar Cache")
             val cached = hive.getPets(uid)
             if (cached != null) {
-                return runCatching {
+                return try {
                     android.util.Log.d("HIVE_CACHE", "HIT - getPets desde Hive")
-                    Gson().fromJson(cached, Array<Pet>::class.java).toList()
+                    val remotePets = Gson().fromJson(cached, Array<Pet>::class.java).toList()
+                    Result.success(mergePetsWithLocal(uid, remotePets))
+                } catch (e: Exception) {
+                    Result.failure(e)
                 }
             }
         }
         android.util.Log.d("HIVE_CACHE", "MISS - getPets va a la API")
         return if (isOnline()) {
-            //syncPendingLocalData()
-            runCatching {
+            try {
                 val response = api.getPets()
                 if (!response.isSuccessful)
                     error("Failed to load pets — HTTP ${response.code()}")
-                val pets = response.body().orEmpty()
-                android.util.Log.d("HIVE_CACHE", "Guardando ${pets.size} pets en Hive")
-                hive.putPets(uid, Gson().toJson(pets))
-                android.util.Log.d("PET_REPO", "Caching ${pets.size} pets, uid=$uid")
-                val entities = pets.map { pet ->
-                    pet.toEntity().copy(owner = uid)
-                }
-                android.util.Log.d("PET_REPO", "Caching ${entities.size} pets, uid=$uid")
-                petDao.insertAll(entities)
-                android.util.Log.d("PET_REPO", "Inserted ${entities.size} pet entities")
-                pets.forEach { pet ->
-                    val vaxEntities = pet.vaccinations.map { it.toEntity(pet.id) }
-                    android.util.Log.d("PET_REPO", "Pet ${pet.name} has ${pet.vaccinations.size} vaccinations → inserting ${vaxEntities.size}")
-                    if (vaxEntities.isNotEmpty()) {
-                        vaccineDao.insertAll(vaxEntities)
-                    }
-                }
-
-                pets
-            }.recoverCatching {
+                val remotePets = response.body().orEmpty()
+                android.util.Log.d("HIVE_CACHE", "Guardando ${remotePets.size} pets en Hive")
+                hive.putPets(uid, Gson().toJson(remotePets))
+                cacheServerSnapshotPreservingPending(uid, remotePets)
+                Result.success(mergePetsWithLocal(uid, remotePets))
+            } catch (e: Exception) {
                 android.util.Log.d("PET_REPO", "Network failed, falling back to Room")
-                petDao.getAllPets(uid).first().map { pet ->
-                    val vaccinations = vaccineDao.getVaccinesForPetSync(pet.id)
-                    pet.toPet().copy(vaccinations = vaccinations.map { it.toVaccination() })
-                }
+                runCatching {
+                    petDao.getAllPets(uid).first().map { pet ->
+                        pet.toPet().copy(vaccinations = getCachedVaccinations(pet.id))
+                    }
+                }.fold(
+                    onSuccess = { Result.success(it) },
+                    onFailure = { Result.failure(it) }
+                )
             }
         } else {
             runCatching {
                 val cached = petDao.getAllPetsSync(uid)
                 android.util.Log.d("PET_REPO", "Offline: found ${cached.size} cached pets for uid=$uid")
                 cached.map { pet ->
-                    val vaccinations = vaccineDao.getVaccinesForPetSync(pet.id)
+                    val vaccinations = getCachedVaccinations(pet.id)
                     android.util.Log.d("PET_REPO", "Pet ${pet.id} has ${vaccinations.size} cached vaccinations")
-                    pet.toPet().copy(vaccinations = vaccinations.map { it.toVaccination() })
+                    pet.toPet().copy(vaccinations = vaccinations)
                 }
             }
         }
@@ -121,23 +140,18 @@ class PetRepository(
             runCatching {
                 val response = api.getPet(petId)
                 val pet = response.body() ?: error("Pet not found")
-                petDao.insertPet(pet.toEntity().copy(owner = uid))
-                // Cache this pet's vaccinations
-                vaccineDao.insertAll(pet.vaccinations.map { it.toEntity(petId) })
-                android.util.Log.d("PET_REPO", "Pet ${pet.name} has ${pet.vaccinations.size} vaccinations")
-                pet
+                cacheServerPetPreservingPending(uid, pet)
+                mergePetWithLocal(uid, pet)
             }.recoverCatching {
                 val cached = petDao.getPetById(uid, petId)
                     ?: error("Pet not found and no cache available")
-                val vaccinations = vaccineDao.getVaccinesForPetSync(petId)
-                cached.toPet().copy(vaccinations = vaccinations.map { it.toVaccination() })
+                cached.toPet().copy(vaccinations = getCachedVaccinations(petId))
             }
         } else {
             runCatching {
                 val cached = petDao.getPetById(uid, petId)
                     ?: error("Pet not found offline")
-                val vaccinations = vaccineDao.getVaccinesForPetSync(petId)
-                cached.toPet().copy(vaccinations = vaccinations.map { it.toVaccination() })
+                cached.toPet().copy(vaccinations = getCachedVaccinations(petId))
             }
         }
     }
@@ -148,7 +162,7 @@ class PetRepository(
             runCatching {
                 val response = api.createPet(request)
                 val pet = response.body() ?: error("Failed to create pet")
-                petDao.insertPet(pet.toEntity())
+                petDao.insertPet(pet.toEntity().copy(owner = uid))
                 android.util.Log.d("HIVE_CACHE", "Invalidando cache de pets tras crear")
                 hive.invalidatePets(uid)
                 pet
@@ -156,7 +170,8 @@ class PetRepository(
         } else {
             runCatching {
                 if (uid.isEmpty()) error("No authenticated user — cannot create pet offline")
-                val tempId = "local_${System.currentTimeMillis()}"
+                val clientMutationId = UUID.randomUUID().toString()
+                val tempId = "local_$clientMutationId"
                 val entity = PetEntity(
                     id             = tempId,       // ← was wrongly 'remoteId'
                     name           = request.name,
@@ -172,6 +187,7 @@ class PetRepository(
                     knownAllergies = request.knownAllergies,
                     defaultVet     = request.defaultVet,
                     defaultClinic  = request.defaultClinic,
+                    clientMutationId = clientMutationId,
                     owner          = uid,
                     pendingSync    = true,
                     pendingDelete  = false
@@ -191,8 +207,8 @@ class PetRepository(
                 val response = api.updatePet(petId, request)
                 val pet = response.body()
                     ?: error("Failed to update pet — HTTP ${response.code()}")
-                petDao.insertPet(pet.toEntity())
-                pet
+                cacheServerPetPreservingPending(uid, pet)
+                mergePetWithLocal(uid, pet)
             }
         } else {
             runCatching {
@@ -260,11 +276,10 @@ class PetRepository(
             runCatching {
                 val response = api.addVaccination(petId, request)
                 val pet = response.body() ?: error("Failed to add vaccination")
-                // Cache the updated pet and all its vaccinations
-                petDao.insertPet(pet.toEntity().copy(owner = uid))
-                vaccineDao.insertAll(pet.vaccinations.map { it.toEntity(petId) })
+                cacheServerPetPreservingPending(uid, pet)
+                hive.invalidatePets(uid)
                 android.util.Log.d("VAX_REPO", "Online: vaccination added, pet has ${pet.vaccinations.size} vaccinations")
-                pet
+                mergePetWithLocal(uid, pet)
             }
         } else {
             runCatching {
@@ -272,16 +287,19 @@ class PetRepository(
                 val cachedPet = petDao.getPetById(uid, petId)
                 android.util.Log.d("PET_REPO", "Cached pet for vaccination: ${cachedPet?.name ?: "NULL"}")
 
-                val tempId = "local_vax_${System.currentTimeMillis()}"
+                val clientMutationId = request.clientMutationId ?: UUID.randomUUID().toString()
+                val tempId = "local_vax_$clientMutationId"
                 val entity = VaccinationEntity(
                     id             = tempId,
                     petId          = petId,
                     vaccineId      = request.vaccineId,
+                    vaccineName    = request.vaccineName,
                     dateGiven      = request.dateGiven,
                     nextDueDate    = request.nextDueDate,
                     lotNumber      = request.lotNumber,
                     status         = request.status,
                     administeredBy = request.administeredBy,
+                    clientMutationId = clientMutationId,
                     pendingSync    = true,
                     pendingDelete  = false
                 )
@@ -290,11 +308,12 @@ class PetRepository(
                 enqueueSyncWork()
 
                 // Build response manually from cache + new vaccination
-                val allVaccinations = vaccineDao.getVaccinesForPetSync(petId)
+                invalidateVaccinationCache(petId)
+                val allVaccinations = getCachedVaccinations(petId)
                 android.util.Log.d("PET_REPO", "Total cached vaccinations for pet: ${allVaccinations.size}")
 
                 cachedPet?.toPet()?.copy(
-                    vaccinations = allVaccinations.map { it.toVaccination() }
+                    vaccinations = allVaccinations
                 ) ?: error("Pet not found offline — cannot add vaccination")
             }
         }
@@ -318,8 +337,9 @@ class PetRepository(
                     ?: error("Failed to delete vaccination — HTTP ${response.code()}")
                 // Remove from local cache too
                 vaccineDao.deleteVaccineById(vaccinationId)
-                petDao.insertPet(pet.toEntity())
-                pet
+                cacheServerPetPreservingPending(uid, pet)
+                hive.invalidatePets(uid)
+                mergePetWithLocal(uid, pet)
             }
         } else {
             runCatching {
@@ -327,13 +347,13 @@ class PetRepository(
                 val existing = vaccineDao.getById(vaccinationId)
                     ?: error("Vaccination not found offline")
                 vaccineDao.updateVaccine(existing.copy(pendingDelete = true))
+                invalidateVaccinationCache(petId)
                 enqueueSyncWork()
                 // Return cached pet without the flagged vaccination
                 val cachedPet = petDao.getPetById(uid, petId)
                     ?: error("Pet not found offline")
-                val cachedVaccinations = vaccineDao.getVaccinesForPetSync(petId)
                 cachedPet.toPet().copy(
-                    vaccinations = cachedVaccinations.map { it.toVaccination() }
+                    vaccinations = getCachedVaccinations(petId)
                 )
             }
         }
@@ -362,10 +382,9 @@ class PetRepository(
                 val response = api.updateVaccination(petId, vaccinationId, body)
                 val pet = response.body()
                     ?: error("Failed to update vaccination — HTTP ${response.code()}")
-                // Refresh cache
-                petDao.insertPet(pet.toEntity())
-                vaccineDao.insertAll(pet.vaccinations.map { it.toEntity(petId) })
-                pet
+                cacheServerPetPreservingPending(uid, pet)
+                hive.invalidatePets(uid)
+                mergePetWithLocal(uid, pet)
             }
         } else {
             runCatching {
@@ -378,13 +397,13 @@ class PetRepository(
                     pendingSync    = true
                 )
                 vaccineDao.updateVaccine(updated)
+                invalidateVaccinationCache(petId)
                 enqueueSyncWork()
                 // Return cached pet with updated vaccinations
                 val cachedPet = petDao.getPetById(uid, petId)
                     ?: error("Pet not found offline")
-                val cachedVaccinations = vaccineDao.getVaccinesForPetSync(petId)
                 cachedPet.toPet().copy(
-                    vaccinations = cachedVaccinations.map { it.toVaccination() }
+                    vaccinations = getCachedVaccinations(petId)
                 )
             }
         }
@@ -437,6 +456,88 @@ class PetRepository(
 
         // ── Helpers ───────────────────────────────────────────────────────────────
 
+    private suspend fun cacheServerSnapshotPreservingPending(uid: String, remotePets: List<Pet>) {
+        remotePets.forEach { remotePet ->
+            cacheServerPetPreservingPending(uid, remotePet)
+        }
+    }
+
+    private suspend fun cacheServerPetPreservingPending(uid: String, remotePet: Pet) {
+        val localPet = petDao.getPetById(uid, remotePet.id)
+        if (localPet == null || (!localPet.pendingSync && !localPet.pendingDelete)) {
+            petDao.insertPet(remotePet.toEntity().copy(owner = uid))
+        }
+        upsertServerVaccinationsPreservingPending(remotePet.id, remotePet.vaccinations)
+    }
+
+    private suspend fun upsertServerVaccinationsPreservingPending(
+        petId: String,
+        remoteVaccinations: List<Vaccination>
+    ) {
+        remoteVaccinations.forEach { remoteVaccination ->
+            if (remoteVaccination.id.isBlank()) return@forEach
+            val localVaccine = vaccineDao.getById(remoteVaccination.id)
+            if (localVaccine == null || (!localVaccine.pendingSync && !localVaccine.pendingDelete)) {
+                vaccineDao.insertVaccine(remoteVaccination.toEntity(petId))
+            }
+        }
+    }
+
+    private suspend fun mergePetWithLocal(uid: String, remotePet: Pet): Pet {
+        return mergePetsWithLocal(uid, listOf(remotePet)).firstOrNull { it.id == remotePet.id }
+            ?: remotePet
+    }
+
+    private suspend fun mergePetsWithLocal(uid: String, remotePets: List<Pet>): List<Pet> {
+        val localPets = petDao.getAllPetsSync(uid)
+        val localPetsById = localPets.associateBy { it.id }
+        val mergedPets = remotePets.map { remotePet ->
+            val localPet = localPetsById[remotePet.id]
+            val localVaccinations = vaccineDao.getVaccinesForPetSync(remotePet.id)
+            val mergedVaccinations = mergeVaccinations(remotePet.vaccinations, localVaccinations)
+            val mergedPet = if (localPet?.pendingSync == true) {
+                localPet.toPet().copy(vaccinations = mergedVaccinations)
+            } else {
+                remotePet.copy(vaccinations = mergedVaccinations)
+            }
+            cacheVaccinations(mergedPet.id, mergedPet.vaccinations)
+            mergedPet
+        }.toMutableList()
+
+        val knownIds = mergedPets.map { it.id }.toHashSet()
+        localPets
+            .asSequence()
+            .filter { (it.pendingSync || it.id.startsWith("local_")) && !knownIds.contains(it.id) }
+            .forEach { localPet ->
+                val localVaccinations = vaccineDao.getVaccinesForPetSync(localPet.id)
+                    .map { it.toVaccination() }
+                val pendingPet = localPet.toPet().copy(vaccinations = localVaccinations)
+                cacheVaccinations(pendingPet.id, pendingPet.vaccinations)
+                mergedPets += pendingPet
+            }
+
+        return mergedPets
+    }
+
+    private fun mergeVaccinations(
+        remoteVaccinations: List<Vaccination>,
+        localVaccinations: List<VaccinationEntity>
+    ): List<Vaccination> {
+        val merged = linkedMapOf<String, Vaccination>()
+        remoteVaccinations.forEach { vaccination ->
+            if (vaccination.id.isNotBlank()) {
+                merged[vaccination.id] = vaccination
+            }
+        }
+        localVaccinations.forEach { local ->
+            val keepLocalCopy = local.pendingSync || local.id.startsWith("local_vax_") || !merged.containsKey(local.id)
+            if (keepLocalCopy) {
+                merged[local.id] = local.toVaccination()
+            }
+        }
+        return merged.values.toList()
+    }
+
     /**
      * Converts a date string to ISO-8601 format expected by the backend.
      *
@@ -469,6 +570,7 @@ class PetRepository(
             runCatching {
                 val response = api.getVaccines()
                 val vaccines = response.body() ?: emptyList()
+                vaccineCatalogRevision++
                 // Cache the catalog for offline use
                 val db = AppDatabase.getInstance(context)
                 db.vaccineCatalogDao().clearAll()

@@ -46,6 +46,7 @@ data class AddEventFormState(
     val petId: String   = "",
     val ownerId: String = "",
     val originRoute: String = Routes.Records,
+    val petBirthDateIso: String? = null,
     // Step 1
     val title: String        = "",
     val date: String         = "",
@@ -71,7 +72,20 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
     private val _state = MutableStateFlow(AddEventFormState())
     val state: StateFlow<AddEventFormState> = _state.asStateFlow()
 
-    fun setPetId(v: String)            { _state.value = _state.value.copy(petId = normalizeForCommit(v, InputFieldPolicy.GENERAL_TEXT)) }
+    fun setPetId(v: String) {
+        _state.value = _state.value.copy(petId = normalizeForCommit(v, InputFieldPolicy.GENERAL_TEXT))
+        fetchPetBirthDate(v)
+    }
+
+    private fun fetchPetBirthDate(petId: String) {
+        if (petId.isBlank()) return
+        viewModelScope.launch {
+            RepositoryProvider.petRepository.getPet(petId).onSuccess { pet ->
+                _state.value = _state.value.copy(petBirthDateIso = pet.birthDate)
+            }
+        }
+    }
+
     fun setOwnerId(v: String)          { _state.value = _state.value.copy(ownerId = normalizeForCommit(v, InputFieldPolicy.GENERAL_TEXT)) }
     fun setOriginRoute(v: String)      { _state.value = _state.value.copy(originRoute = v) }
     fun setTitle(v: String)            { _state.value = _state.value.copy(title = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.EVENT_TITLE).value) }
@@ -148,9 +162,16 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
         val clinicError = validateCommittedInput(s.clinic, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC)
         val priceError = validateCommittedInput(s.price, InputFieldPolicy.DECIMAL, maxLength = InputTextLimits.PRICE, fieldName = "Price")
 
+        val eventDate = EventDateUtils.parseEventDate(toIso(s.date, s.time))
+        val birthDate = EventDateUtils.parseEventDate(s.petBirthDateIso)
+        val birthDateError = if (eventDate != null && birthDate != null && eventDate.isBefore(birthDate)) {
+            "Event date cannot be before pet's birth date (${s.petBirthDateIso?.take(10)})."
+        } else null
+
         val firstError = listOfNotNull(
-            if (s.petId.isBlank() || s.ownerId.isBlank()) "Pet and user profile are required." else null,
+            if (s.petId.isBlank()) "Pet is required." else null,
             if (s.date.isBlank()) "Date is required." else null,
+            birthDateError,
             titleError,
             descriptionError,
             providerError,
@@ -203,9 +224,6 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
                     }
 
                     saveEventLocallyAndScheduleReminder(event, s.petId)
-
-                    _state.value = _state.value.copy(isLoading = false)
-                    onSuccess(event.id)
 
                     _state.value = _state.value.copy(isLoading = false)
                     onSuccess(event.id)
@@ -270,4 +288,3 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
         }
     }
 }
-
