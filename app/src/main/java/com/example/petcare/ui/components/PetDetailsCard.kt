@@ -139,6 +139,7 @@ fun PetDetailsCard(
                                 .data(Uri.parse(photoUrl))
                                 .crossfade(true)
                                 .build(),
+                            imageLoader = coil.Coil.imageLoader(context),
                             contentDescription = petName,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier

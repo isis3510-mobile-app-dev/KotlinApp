@@ -15,10 +15,13 @@ interface EventDao {
 
     @Query("SELECT * FROM events_local WHERE petId = :petId ORDER BY date ASC")
     fun getForPet(petId: String): Flow<List<EventEntity>>
-    // petId ahora es String, antes era Int
 
     @Query("SELECT * FROM events_local WHERE petId = :petId AND pendingDelete = 0 ORDER BY date ASC")
     suspend fun getForPetSync(petId: String): List<EventEntity>
+
+    // ── NUEVO: para getEvents(ownerId) en EventRepository ─────────────────
+    @Query("SELECT * FROM events_local WHERE ownerId = :ownerId AND pendingDelete = 0 ORDER BY date ASC")
+    suspend fun getForOwnerSync(ownerId: String): List<EventEntity>
 
     @Query("SELECT * FROM events_local WHERE pendingDelete = 0 ORDER BY date ASC")
     suspend fun getAllSync(): List<EventEntity>
@@ -52,7 +55,6 @@ interface EventDao {
 
     @Query("UPDATE events_local SET synced = 1 WHERE id = :id")
     suspend fun markSynced(id: String)
-    // id ahora es String
 
     @Query("UPDATE events_local SET pendingDelete = 1, synced = 0 WHERE id = :id")
     suspend fun markPendingDelete(id: String)
@@ -62,4 +64,30 @@ interface EventDao {
 
     @Query("DELETE FROM events_local WHERE synced = 1 AND pendingDelete = 0")
     suspend fun clearSynced()
+
+    // ── NUEVO: para updateEvent offline en EventRepository ────────────────
+    @Query("""
+        UPDATE events_local
+        SET title        = :title,
+            eventType    = :eventType,
+            date         = :date,
+            price        = :price,
+            provider     = :provider,
+            clinic       = :clinic,
+            description  = :description,
+            followUpDate = :followUpDate,
+            synced       = 0
+        WHERE id = :id
+    """)
+    suspend fun updateEvent(
+        id: String,
+        title: String,
+        eventType: String,
+        date: String,
+        price: Double?,
+        provider: String,
+        clinic: String,
+        description: String,
+        followUpDate: String?
+    )
 }
