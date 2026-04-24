@@ -46,7 +46,7 @@ class NetworkObserver(private val context: Context) {
             )
             .setBackoffCriteria(
                 BackoffPolicy.EXPONENTIAL,
-                androidx.work.WorkRequest.MIN_BACKOFF_MILLIS,
+                WorkRequest.MIN_BACKOFF_MILLIS,
                 java.util.concurrent.TimeUnit.MILLISECONDS
             )
             .build()
@@ -56,4 +56,12 @@ class NetworkObserver(private val context: Context) {
             request
         )
     }
+
+}
+
+fun isOnline(context: Context): Boolean {
+    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val cap = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+    return cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 }
