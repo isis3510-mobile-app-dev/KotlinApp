@@ -64,7 +64,7 @@ class CalendarViewModel : ViewModel() {
                 pet.vaccinations.map { v ->
                     CalendarVaccination(
                         vaccineId   = v.vaccineId,
-                        vaccineName = resolveVaccineName(v.vaccineName, v.vaccineId, catalog),
+                        vaccineName = resolveVaccineName(v.vaccineId, catalog),
                         petName     = pet.name,
                         dateGiven   = v.dateGiven,
                         nextDueDate = v.nextDueDate
@@ -103,13 +103,9 @@ class CalendarViewModel : ViewModel() {
     }
 
     private fun resolveVaccineName(
-        rawName: String?,
         vaccineId: String?,
         catalogMap: Map<String, com.example.petcare.data.model.Vaccine>
     ): String {
-        val fromRecord = rawName?.trim().takeUnless { it.isNullOrBlank() }
-        if (fromRecord != null) return fromRecord
-
         val fromCatalog = vaccineId
             ?.trim()
             ?.takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }

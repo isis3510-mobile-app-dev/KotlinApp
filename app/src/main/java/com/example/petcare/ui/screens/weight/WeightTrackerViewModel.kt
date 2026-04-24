@@ -7,6 +7,7 @@ import com.example.petcare.PetCareApplication
 import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.CreateWeightLogRequest
 import com.example.petcare.data.model.UpdateWeightLogRequest
+import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.model.WeightLog
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.util.EventDateUtils
@@ -26,6 +27,8 @@ data class WeightTrackerUiState(
     val weightInput: String = "",
     val dateInput: String = "",
     val editingLogId: String? = null,
+    val selectedRange: WeightGraphRange = WeightGraphRange.WEEK,
+    val selectedLogId: String? = null,
     val preferredUnit: String = "kg",
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
@@ -60,6 +63,8 @@ class WeightTrackerViewModel(application: Application) : AndroidViewModel(applic
                 petName = pet?.name.orEmpty(),
                 petBirthDateIso = pet?.birthDate,
                 logs = logsResult.getOrDefault(emptyList()),
+                selectedLogId = _uiState.value.selectedLogId
+                    ?.takeIf { id -> logsResult.getOrDefault(emptyList()).any { it.id == id } },
                 isLoading = false,
                 error = petResult.exceptionOrNull()?.message ?: logsResult.exceptionOrNull()?.message
             )
@@ -79,6 +84,18 @@ class WeightTrackerViewModel(application: Application) : AndroidViewModel(applic
 
     fun setPreferredUnit(unit: String) {
         viewModelScope.launch { preferences.setPreferredWeightUnit(unit) }
+    }
+
+    fun setSelectedRange(range: WeightGraphRange) {
+        val graphLogs = logsForGraph(_uiState.value.logs, range)
+        _uiState.value = _uiState.value.copy(
+            selectedRange = range,
+            selectedLogId = _uiState.value.selectedLogId?.takeIf { id -> graphLogs.any { it.id == id } }
+        )
+    }
+
+    fun selectLog(log: WeightLog?) {
+        _uiState.value = _uiState.value.copy(selectedLogId = log?.id)
     }
 
     fun startEditing(log: WeightLog) {
@@ -144,13 +161,15 @@ class WeightTrackerViewModel(application: Application) : AndroidViewModel(applic
 
             result.fold(
                 onSuccess = {
+                    val logs = refreshLogsAndSyncCurrentWeight(s.petId)
                     _uiState.value = _uiState.value.copy(
                         isSaving = false,
                         editingLogId = null,
                         weightInput = "",
-                        dateInput = ""
+                        dateInput = "",
+                        logs = logs,
+                        selectedLogId = null
                     )
-                    load(s.petId)
                 },
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
@@ -168,7 +187,13 @@ class WeightTrackerViewModel(application: Application) : AndroidViewModel(applic
             FeatureExecutionTracker.track("Delete Weight Log") {
                 RepositoryProvider.weightLogRepository.deleteWeightLog(petId, log.id)
             }.fold(
-                onSuccess = { load(petId) },
+                onSuccess = {
+                    val logs = refreshLogsAndSyncCurrentWeight(petId)
+                    _uiState.value = _uiState.value.copy(
+                        logs = logs,
+                        selectedLogId = null
+                    )
+                },
                 onFailure = { e -> _uiState.value = _uiState.value.copy(error = e.message) }
             )
         }
@@ -193,4 +218,15 @@ class WeightTrackerViewModel(application: Application) : AndroidViewModel(applic
             else -> null
         }
     }.getOrNull()
+
+    private suspend fun refreshLogsAndSyncCurrentWeight(petId: String): List<WeightLog> {
+        val logs = RepositoryProvider.weightLogRepository.getWeightLogs(petId).getOrDefault(emptyList())
+        latestWeightLog(logs)?.let { latest ->
+            RepositoryProvider.petRepository.updatePet(
+                petId,
+                UpdatePetRequest(weight = latest.weight)
+            )
+        }
+        return logs
+    }
 }

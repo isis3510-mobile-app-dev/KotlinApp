@@ -100,7 +100,7 @@ class PetProfileViewModel : ViewModel() {
                 }
                 VaccineRecord(
                     id          = v.id,
-                    name        = v.vaccineName ?: catalogMap[v.vaccineId]?.name ?: "Unknown vaccine",
+                    name        = catalogMap[v.vaccineId]?.name ?: "Unknown vaccine",
                     provider    = v.administeredBy,
                     dateGiven   = v.dateGiven.take(10),
                     nextDueDate = v.nextDueDate?.take(10),

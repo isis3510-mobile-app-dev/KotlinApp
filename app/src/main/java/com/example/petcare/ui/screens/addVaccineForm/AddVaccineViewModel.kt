@@ -187,13 +187,11 @@ class AddVaccineViewModel : ViewModel() {
 
             val request = AddVaccinationRequest(
                 vaccineId      = selectedVaccine?.id ?: return@launch,
-                vaccineName    = selectedVaccine?.name,
                 dateGiven      = toIso(s.dateGiven),
                 nextDueDate    = s.nextDueDate.takeIf { it.isNotBlank() }?.let { toIso(it) },
                 lotNumber      = normalizeForCommit(s.lotNumber, InputFieldPolicy.GENERAL_TEXT),
                 status         = "completed",
-                administeredBy = normalizeForCommit(s.administeredBy, InputFieldPolicy.GENERAL_TEXT),
-                clientMutationId = UUID.randomUUID().toString()
+                administeredBy = normalizeForCommit(s.administeredBy, InputFieldPolicy.GENERAL_TEXT)
             )
 
             FeatureExecutionTracker.track("Add Vaccination") {

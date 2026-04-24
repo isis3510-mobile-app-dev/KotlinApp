@@ -143,8 +143,7 @@ class SyncWorker(
                         photoUrl       = entity.photoUrl,
                         knownAllergies = entity.knownAllergies,
                         defaultVet     = entity.defaultVet,
-                        defaultClinic  = entity.defaultClinic,
-                        clientMutationId = entity.clientMutationId ?: entity.id
+                        defaultClinic  = entity.defaultClinic
                     )
                 )
                 android.util.Log.d("SYNC_WORKER", "Response: ${response.code()}, id=${response.body()?.id}")
@@ -153,8 +152,7 @@ class SyncWorker(
                     db.petDao().insertPet(
                         created.toEntity().copy(
                             owner = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: entity.owner,
-                            pendingSync = false,
-                            clientMutationId = entity.clientMutationId
+                            pendingSync = false
                         )
                     )
 
@@ -239,13 +237,11 @@ class SyncWorker(
                         entity.petId,
                         AddVaccinationRequest(
                             vaccineId = entity.vaccineId,
-                            vaccineName = entity.vaccineName,
                             dateGiven = entity.dateGiven,
                             nextDueDate = entity.nextDueDate,
                             lotNumber = entity.lotNumber,
                             status = entity.status,
-                            administeredBy = entity.administeredBy,
-                            clientMutationId = entity.clientMutationId ?: entity.id
+                            administeredBy = entity.administeredBy
                         )
                     )
                     val pet = response.body() ?: return@forEach

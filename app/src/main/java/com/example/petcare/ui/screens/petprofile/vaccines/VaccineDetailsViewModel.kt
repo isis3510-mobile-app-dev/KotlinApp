@@ -76,7 +76,7 @@ class VaccineDetailsViewModel : ViewModel() {
 
                     val record = VaccineRecord(
                         id                = vacc.id,
-                        name              = resolveVaccineName(vacc.vaccineName, vacc.vaccineId, catalogMap),
+                        name              = resolveVaccineName(vacc.vaccineId, catalogMap),
                         provider          = vacc.administeredBy,
                         dateGiven         = vacc.dateGiven.take(10),
                         nextDueDate       = vacc.nextDueDate?.take(10),
@@ -274,13 +274,9 @@ class VaccineDetailsViewModel : ViewModel() {
     fun clearError() { _uiState.value = _uiState.value.copy(error = null) }
 
     private fun resolveVaccineName(
-        rawName: String?,
         vaccineId: String?,
         catalogMap: Map<String, com.example.petcare.data.model.Vaccine>
     ): String {
-        val fromRecord = rawName?.trim().takeUnless { it.isNullOrBlank() }
-        if (fromRecord != null) return fromRecord
-
         val fromCatalog = vaccineId
             ?.trim()
             ?.takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }

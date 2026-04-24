@@ -170,8 +170,7 @@ class PetRepository(
         } else {
             runCatching {
                 if (uid.isEmpty()) error("No authenticated user — cannot create pet offline")
-                val clientMutationId = UUID.randomUUID().toString()
-                val tempId = "local_$clientMutationId"
+                val tempId = "local_${UUID.randomUUID()}"
                 val entity = PetEntity(
                     id             = tempId,       // ← was wrongly 'remoteId'
                     name           = request.name,
@@ -187,7 +186,6 @@ class PetRepository(
                     knownAllergies = request.knownAllergies,
                     defaultVet     = request.defaultVet,
                     defaultClinic  = request.defaultClinic,
-                    clientMutationId = clientMutationId,
                     owner          = uid,
                     pendingSync    = true,
                     pendingDelete  = false
@@ -287,19 +285,16 @@ class PetRepository(
                 val cachedPet = petDao.getPetById(uid, petId)
                 android.util.Log.d("PET_REPO", "Cached pet for vaccination: ${cachedPet?.name ?: "NULL"}")
 
-                val clientMutationId = request.clientMutationId ?: UUID.randomUUID().toString()
-                val tempId = "local_vax_$clientMutationId"
+                val tempId = "local_vax_${UUID.randomUUID()}"
                 val entity = VaccinationEntity(
                     id             = tempId,
                     petId          = petId,
                     vaccineId      = request.vaccineId,
-                    vaccineName    = request.vaccineName,
                     dateGiven      = request.dateGiven,
                     nextDueDate    = request.nextDueDate,
                     lotNumber      = request.lotNumber,
                     status         = request.status,
                     administeredBy = request.administeredBy,
-                    clientMutationId = clientMutationId,
                     pendingSync    = true,
                     pendingDelete  = false
                 )

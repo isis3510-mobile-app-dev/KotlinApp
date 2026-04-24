@@ -66,7 +66,7 @@ class HealthRecordsViewModel : ViewModel() {
                 pet.vaccinations.map { vacc ->
                     VaccineListItemWithIds(
                         data = VaccineListItemData(
-                            vaccineName = resolveVaccineName(vacc.vaccineName, vacc.vaccineId, catalogMap),
+                            vaccineName = resolveVaccineName(vacc.vaccineId, catalogMap),
                             petName     = pet.name,
                             clinicName  = vacc.administeredBy.ifBlank { "—" },
                             status      = vacc.status,
@@ -141,13 +141,9 @@ class HealthRecordsViewModel : ViewModel() {
     }
 
     private fun resolveVaccineName(
-        rawName: String?,
         vaccineId: String?,
         catalogMap: Map<String, com.example.petcare.data.model.Vaccine>
     ): String {
-        val fromRecord = rawName?.trim().takeUnless { it.isNullOrBlank() }
-        if (fromRecord != null) return fromRecord
-
         val fromCatalog = vaccineId
             ?.trim()
             ?.takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }

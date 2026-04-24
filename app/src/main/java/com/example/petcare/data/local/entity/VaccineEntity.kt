@@ -21,13 +21,11 @@ data class VaccinationEntity(
     @PrimaryKey val id: String,
     val petId: String,
     val vaccineId: String,
-    val vaccineName: String? = null,
     val dateGiven: String,
     val nextDueDate: String? = null,
     val lotNumber: String = "",
     val status: String = "completed",
     val administeredBy: String = "",
-    val clientMutationId: String? = null,
     val pendingSync: Boolean = false,
     val pendingDelete: Boolean = false
 )

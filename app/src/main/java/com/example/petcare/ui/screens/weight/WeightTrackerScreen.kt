@@ -1,9 +1,13 @@
 package com.example.petcare.ui.screens.weight
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -29,6 +32,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,8 +45,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,6 +63,7 @@ import com.example.petcare.data.model.WeightLog
 import com.example.petcare.ui.components.DateTextField
 import com.example.petcare.util.EventDateUtils
 import java.util.Locale
+import kotlin.math.abs
 
 @Composable
 fun WeightTrackerScreen(
@@ -111,7 +124,7 @@ fun WeightTrackerScreen(
                     item {
                         WeightSummaryCard(
                             petName = state.petName,
-                            latest = state.logs.firstOrNull(),
+                            latest = latestWeightLog(state.logs),
                             unit = state.preferredUnit,
                             onUnitSelected = viewModel::setPreferredUnit
                         )
@@ -137,24 +150,14 @@ fun WeightTrackerScreen(
                         }
                     }
 
-                    if (state.logs.isEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().height(160.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("No weight logs yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    } else {
-                        items(state.logs, key = { it.id }) { log ->
-                            WeightLogRow(
-                                log = log,
-                                unit = state.preferredUnit,
-                                onEdit = { viewModel.startEditing(log) },
-                                onDelete = { viewModel.delete(log) }
-                            )
-                        }
+                    item {
+                        WeightGraphCard(
+                            state = state,
+                            onRangeSelected = viewModel::setSelectedRange,
+                            onLogSelected = viewModel::selectLog,
+                            onEdit = viewModel::startEditing,
+                            onDelete = viewModel::delete
+                        )
                     }
                 }
             }
@@ -188,11 +191,30 @@ private fun WeightSummaryCard(
             )
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = unit == "kg", onClick = { onUnitSelected("kg") }, label = { Text("kg") })
-                FilterChip(selected = unit == "lb", onClick = { onUnitSelected("lb") }, label = { Text("lb") })
+                WeightUnitChip(selected = unit == "kg", text = "kg", onClick = { onUnitSelected("kg") })
+                WeightUnitChip(selected = unit == "lb", text = "lb", onClick = { onUnitSelected("lb") })
             }
         }
     }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun WeightUnitChip(
+    selected: Boolean,
+    text: String,
+    onClick: () -> Unit
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(text) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.secondary,
+            selectedLabelColor = MaterialTheme.colorScheme.onSecondary,
+            labelColor = MaterialTheme.colorScheme.onSurface
+        )
+    )
 }
 
 @Composable
@@ -258,36 +280,274 @@ private fun WeightLogForm(
 }
 
 @Composable
-private fun WeightLogRow(
+@OptIn(ExperimentalMaterial3Api::class)
+private fun WeightGraphCard(
+    state: WeightTrackerUiState,
+    onRangeSelected: (WeightGraphRange) -> Unit,
+    onLogSelected: (WeightLog?) -> Unit,
+    onEdit: (WeightLog) -> Unit,
+    onDelete: (WeightLog) -> Unit
+) {
+    val chartLogs = logsForGraph(state.logs, state.selectedRange)
+    val selectedLog = chartLogs.firstOrNull { it.id == state.selectedLogId }
+    val window = graphWindowFor(state.selectedRange, logs = state.logs)
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Weight History",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    WeightGraphRange.entries.forEach { range ->
+                        FilterChip(
+                            selected = state.selectedRange == range,
+                            onClick = { onRangeSelected(range) },
+                            label = { Text(range.label) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSecondary,
+                                labelColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                    }
+                }
+            }
+
+            WeightLineGraph(
+                logs = chartLogs,
+                selectedLogId = state.selectedLogId,
+                unit = state.preferredUnit,
+                window = window,
+                onLogSelected = onLogSelected
+            )
+
+            if (chartLogs.isEmpty()) {
+                Text(
+                    if (state.logs.isEmpty()) "No weight logs yet" else "No logs in this range",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    window.axisLabels.forEach { label ->
+                        Text(
+                            label,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+            }
+
+            selectedLog?.let { log ->
+                SelectedWeightLogCard(
+                    log = log,
+                    unit = state.preferredUnit,
+                    onEdit = { onEdit(log) },
+                    onDelete = { onDelete(log) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeightLineGraph(
+    logs: List<WeightLog>,
+    selectedLogId: String?,
+    unit: String,
+    window: WeightGraphWindow,
+    onLogSelected: (WeightLog?) -> Unit
+) {
+    val lineColor = MaterialTheme.colorScheme.secondary
+    val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+    val pointColor = MaterialTheme.colorScheme.primary
+    val selectedColor = MaterialTheme.colorScheme.error
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(260.dp)
+            .border(1.dp, gridColor, RoundedCornerShape(12.dp))
+            .padding(12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (logs.isEmpty()) {
+            Text(
+                "Add logs to see a trend",
+                color = labelColor,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            return@Box
+        }
+
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(logs, selectedLogId, unit, window) {
+                    detectTapGestures { offset ->
+                        onLogSelected(findNearestLog(offset, size, logs, unit, window))
+                    }
+                }
+        ) {
+            val canvasSize = IntSize(size.width.toInt(), size.height.toInt())
+            val points = chartOffsets(canvasSize, logs, unit, window)
+            val chartLeft = 44f
+            val chartTop = 12f
+            val chartRight = size.width - 12f
+            val chartBottom = size.height - 34f
+
+            repeat(4) { index ->
+                val y = chartTop + ((chartBottom - chartTop) * index / 3f)
+                drawLine(gridColor, Offset(chartLeft, y), Offset(chartRight, y), strokeWidth = 1f)
+            }
+
+            val (minWeight, maxWeight) = weightBounds(logs, unit)
+            drawContext.canvas.nativeCanvas.apply {
+                val paint = android.graphics.Paint().apply {
+                    color = labelColor.toArgb()
+                    textSize = 24f
+                    isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.RIGHT
+                }
+                repeat(4) { index ->
+                    val value = maxWeight - ((maxWeight - minWeight) * index / 3f)
+                    val y = chartTop + ((chartBottom - chartTop) * index / 3f) + 8f
+                    drawText(String.format(Locale.US, "%.1f", value), chartLeft - 8f, y, paint)
+                }
+            }
+
+            if (points.size == 1) {
+                drawCircle(
+                    color = if (logs.first().id == selectedLogId) selectedColor else pointColor,
+                    radius = if (logs.first().id == selectedLogId) 8f else 6f,
+                    center = points.first()
+                )
+            } else {
+                val path = Path().apply {
+                    moveTo(points.first().x, points.first().y)
+                    points.drop(1).forEach { lineTo(it.x, it.y) }
+                }
+                drawPath(path, lineColor, style = Stroke(width = 5f, cap = StrokeCap.Round))
+                points.forEachIndexed { index, point ->
+                    val selected = logs[index].id == selectedLogId
+                    drawCircle(androidx.compose.ui.graphics.Color.White, radius = if (selected) 10f else 8f, center = point)
+                    drawCircle(
+                        color = if (selected) selectedColor else pointColor,
+                        radius = if (selected) 7f else 5f,
+                        center = point
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectedWeightLogCard(
     log: WeightLog,
     unit: String,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(formatWeight(log.weight, unit), fontWeight = FontWeight.Bold)
-                Text(displayDate(log.loggedAt), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (log.id.startsWith("local_weight_")) {
-                    Text("Pending sync", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
-                }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(formatWeight(log.weight, unit), fontWeight = FontWeight.Bold)
+            Text(displayDate(log.loggedAt), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (log.id.startsWith("local_weight_")) {
+                Text("Pending sync", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
             }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = "Edit")
-            }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
-            }
+        }
+        IconButton(onClick = onEdit) {
+            Icon(Icons.Default.Edit, contentDescription = "Edit")
+        }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
         }
     }
 }
+
+private fun findNearestLog(
+    offset: Offset,
+    size: IntSize,
+    logs: List<WeightLog>,
+    unit: String,
+    window: WeightGraphWindow
+): WeightLog? {
+    val points = chartOffsets(size, logs, unit, window)
+    val index = points.indices.minByOrNull { i ->
+        val point = points[i]
+        abs(point.x - offset.x) + abs(point.y - offset.y)
+    } ?: return null
+    val point = points[index]
+    return if (abs(point.x - offset.x) <= 44f && abs(point.y - offset.y) <= 44f) logs[index] else null
+}
+
+private fun chartOffsets(
+    size: IntSize,
+    logs: List<WeightLog>,
+    unit: String,
+    window: WeightGraphWindow
+): List<Offset> {
+    if (logs.isEmpty()) return emptyList()
+    val chartLeft = 44f
+    val chartTop = 12f
+    val chartRight = size.width - 12f
+    val chartBottom = size.height - 34f
+    val days = (window.end.toEpochDay() - window.start.toEpochDay()).coerceAtLeast(1)
+    val (minWeight, maxWeight) = weightBounds(logs, unit)
+    val weightSpan = (maxWeight - minWeight).takeIf { it > 0.0 } ?: 1.0
+
+    return logs.map { log ->
+        val date = parseWeightLogDate(log.loggedAt) ?: window.end
+        val x = chartLeft + ((date.toEpochDay() - window.start.toEpochDay()).coerceIn(0, days).toFloat() / days) *
+            (chartRight - chartLeft)
+        val displayWeight = displayWeightValue(log.weight, unit)
+        val y = chartBottom - (((displayWeight - minWeight) / weightSpan).toFloat() * (chartBottom - chartTop))
+        Offset(x, y)
+    }
+}
+
+private fun weightBounds(logs: List<WeightLog>, unit: String): Pair<Double, Double> {
+    val values = logs.map { displayWeightValue(it.weight, unit) }
+    val min = values.minOrNull() ?: 0.0
+    val max = values.maxOrNull() ?: 1.0
+    if (min == max) {
+        val padding = (min * 0.1).coerceAtLeast(1.0)
+        return (min - padding).coerceAtLeast(0.0) to (max + padding)
+    }
+    val padding = ((max - min) * 0.15).coerceAtLeast(0.5)
+    return (min - padding).coerceAtLeast(0.0) to (max + padding)
+}
+
+private fun displayWeightValue(weightKg: Double, unit: String): Double =
+    if (unit == "lb") weightKg * 2.20462 else weightKg
 
 private fun formatWeight(weightKg: Double, unit: String): String =
     if (unit == "lb") {

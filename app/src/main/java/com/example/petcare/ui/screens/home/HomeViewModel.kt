@@ -181,9 +181,7 @@ class HomeViewModel : ViewModel() {
                                     days < 0   -> overdueCount++
                                     days <= 30 -> upcoming.add(
                                         UpcomingVaccine(
-                                            vaccineName   = vacc.vaccineName
-                                                ?: catalogMap[vacc.vaccineId]?.name
-                                                ?: "Unknown vaccine",
+                                            vaccineName   = catalogMap[vacc.vaccineId]?.name ?: "Unknown vaccine",
                                             petName       = pet.name,
                                             petId         = pet.id,
                                             vaccinationId = vacc.id,

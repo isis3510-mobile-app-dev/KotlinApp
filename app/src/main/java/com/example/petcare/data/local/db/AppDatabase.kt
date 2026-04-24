@@ -19,7 +19,7 @@ import com.example.petcare.data.local.entity.*
         WeightLogEntity::class
     ],
 
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -46,9 +46,6 @@ abstract class AppDatabase : RoomDatabase() {
 
         private val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE pets ADD COLUMN clientMutationId TEXT")
-                db.execSQL("ALTER TABLE vaccinations ADD COLUMN vaccineName TEXT")
-                db.execSQL("ALTER TABLE vaccinations ADD COLUMN clientMutationId TEXT")
                 db.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS weight_logs (
