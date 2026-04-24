@@ -98,6 +98,7 @@ dependencies {
 
     //Camera
     implementation(libs.coil.compose)
+    implementation("com.squareup.picasso:picasso:2.8")
     implementation(libs.firebase.storage)
     implementation(libs.androidx.work.runtime.ktx)
 

@@ -45,6 +45,7 @@ import com.example.petcare.util.DisplayTextLimits
 import com.example.petcare.util.truncateForDisplay
 
 data class MedicalEventData(
+    val title: String,
     val eventType: String,
     val petName: String,
     val clinicName: String,
@@ -58,6 +59,7 @@ fun MedicalEventItem(event: MedicalEventData, onClick: () -> Unit = {}
 ){
     val (icon, iconColor, iconBackground) = when (event.eventType.lowercase()){
         "checkup" -> Triple(Icons.Default.ContentPaste, PurpleContent, PurpleContainer)
+        "appointment" -> Triple(Icons.Default.ContentPaste, PurpleContent, PurpleContainer)
         "emergency" -> Triple(Icons.Default.AddBox, ErrorContent, ErrorContainer)
         "dental" -> Triple(Icons.Default.HealthAndSafety, GrayDark, GrayLight)
         else -> Triple(Icons.Default.MedicalServices, GrayText, GrayMedium)
@@ -92,7 +94,7 @@ fun MedicalEventItem(event: MedicalEventData, onClick: () -> Unit = {}
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = event.eventType.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
+                    text = event.title.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     maxLines = 1,
@@ -131,9 +133,9 @@ fun MedicalEventItemPreview() {
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.padding(8.dp)
     ) {
-        MedicalEventItem(MedicalEventData("Checkup", "Max", "Happy Paws Clinic", "Nov 19, 2024", "10:00 AM", "$120"))
-        MedicalEventItem(MedicalEventData("Checkup", "Luna", "Cat Care Center", "Oct 14, 2024", "02:00 PM", "$95"))
-        MedicalEventItem(MedicalEventData("Emergency", "Luna", "City Animal Emergency", "Aug 29, 2024", "11:30 PM", "$340"))
-        MedicalEventItem(MedicalEventData("Dental", "Max", "City Vet Center", "Jun 4, 2024", "09:15 AM", "$280"))
+        MedicalEventItem(MedicalEventData("General checkup", "CHECKUP", "Max", "Happy Paws Clinic", "Nov 19, 2024", "10:00 AM", "$120"))
+        MedicalEventItem(MedicalEventData("Annual checkup", "CHECKUP", "Luna", "Cat Care Center", "Oct 14, 2024", "02:00 PM", "$95"))
+        MedicalEventItem(MedicalEventData("Late-night emergency", "EMERGENCY", "Luna", "City Animal Emergency", "Aug 29, 2024", "11:30 PM", "$340"))
+        MedicalEventItem(MedicalEventData("Dental cleaning", "DENTAL", "Max", "City Vet Center", "Jun 4, 2024", "09:15 AM", "$280"))
     }
 }

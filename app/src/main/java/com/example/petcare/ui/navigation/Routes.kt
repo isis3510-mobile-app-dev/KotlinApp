@@ -17,6 +17,7 @@ object Routes {
     const val PetProfile = "petProfile/{petId}"
     const val VaccineDetails = "vaccineDetails/{petId}/{vaccineId}"
     const val EventDetails = "eventDetails/{petId}/{eventId}"
+    const val WeightTracker = "weightTracker/{petId}"
 
     const val NfcScan = "nfc/scan"
     const val NfcScanning = "nfc/scanning"

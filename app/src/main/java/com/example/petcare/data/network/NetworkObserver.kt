@@ -51,7 +51,7 @@ class NetworkObserver(private val context: Context) {
             )
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(
-            "pet_sync_on_reconnect",
+            SyncWorker.UNIQUE_WORK_NAME,
             ExistingWorkPolicy.KEEP,  // replace so it doesn't stack on rapid reconnects
             request
         )

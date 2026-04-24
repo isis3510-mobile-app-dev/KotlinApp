@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.petcare.data.local.dao.*
 import com.example.petcare.data.local.entity.*
 
@@ -13,11 +15,11 @@ import com.example.petcare.data.local.entity.*
         ReminderEntity::class,
         PetEntity::class,
         VaccinationEntity::class,
-        VaccineCatalogEntity::class
-        // TODO: David agrega sus entidades aqui
+        VaccineCatalogEntity::class,
+        WeightLogEntity::class
     ],
 
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,7 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun petDao(): PetDao
     abstract fun vaccineDao(): VaccineDao
     abstract fun vaccineCatalogDao(): VaccineCatalogDao
-    // TODO: David agrega su DAO aquí
+    abstract fun weightLogDao(): WeightLogDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -38,8 +40,33 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "petcare_local.db"
                 )
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(MIGRATION_3_4)
                     .build().also { INSTANCE = it }
             }
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weight_logs (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        petId TEXT NOT NULL,
+                        ownerId TEXT NOT NULL,
+                        weight REAL NOT NULL,
+                        loggedAt TEXT NOT NULL,
+                        clientMutationId TEXT,
+                        createdAt TEXT,
+                        updatedAt TEXT,
+                        pendingSync INTEGER NOT NULL DEFAULT 0,
+                        pendingDelete INTEGER NOT NULL DEFAULT 0,
+                        FOREIGN KEY(petId) REFERENCES pets(id) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weight_logs_petId ON weight_logs(petId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weight_logs_ownerId ON weight_logs(ownerId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weight_logs_clientMutationId ON weight_logs(clientMutationId)")
+            }
+        }
     }
 }

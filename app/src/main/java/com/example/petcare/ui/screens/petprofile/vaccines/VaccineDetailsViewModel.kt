@@ -13,14 +13,18 @@ import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineReco
 import com.example.petcare.util.FirebaseDocumentUploader
 import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.PicassoImageCompressor
 import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.trimToNullIfBlank
 import com.example.petcare.util.validateCommittedInput
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class VaccineDetailsUiState(
     val vaccine: VaccineRecord? = null,
@@ -72,8 +76,7 @@ class VaccineDetailsViewModel : ViewModel() {
 
                     val record = VaccineRecord(
                         id                = vacc.id,
-                        name              = catalogMap[vacc.vaccineId]?.name
-                            ?: vacc.vaccineId.take(8),
+                        name              = resolveVaccineName(vacc.vaccineId, catalogMap),
                         provider          = vacc.administeredBy,
                         dateGiven         = vacc.dateGiven.take(10),
                         nextDueDate       = vacc.nextDueDate?.take(10),
@@ -203,56 +206,84 @@ class VaccineDetailsViewModel : ViewModel() {
     fun addDocument(context: Context, uri: Uri) {
         val petId         = _uiState.value.petId
         val vaccinationId = _uiState.value.vaccine?.id ?: return
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
+        viewModelScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) {
+                _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
+            }
+            val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
+            val fileName = FirebaseDocumentUploader.getFileName(context, uri)
+                ?: "document_${System.currentTimeMillis()}"
+            val prepared = async(Dispatchers.IO) {
+                PicassoImageCompressor.prepareImageIfNeeded(context, uri, mimeType, fileName)
+            }.await()
 
             FirebaseDocumentUploader
-                .uploadVaccinationDocument(context, uri, petId, vaccinationId)
+                .uploadVaccinationDocument(context, prepared.uri, petId, vaccinationId)
                 .fold(
                     onSuccess = { uploaded ->
                         RepositoryProvider.petRepository.addVaccinationDocument(
                             petId,
                             vaccinationId,
                             AddDocumentRequest(
-                                fileName = uploaded.fileName,
+                                fileName = prepared.fileName,
                                 fileUri  = uploaded.downloadUrl
                             )
                         ).fold(
                             onSuccess = { updatedPet ->
                                 val updatedVacc = updatedPet.vaccinations
                                     .find { it.id == vaccinationId }
-                                _uiState.value = _uiState.value.copy(
-                                    isUploadingDoc = false,
-                                    vaccine = _uiState.value.vaccine?.copy(
-                                        attachedDocuments = updatedVacc
-                                            ?.attachedDocuments
-                                            ?.map { doc ->
-                                                AttachedDocument(
-                                                    id       = doc.id,
-                                                    fileName = doc.fileName,
-                                                    fileUri  = doc.fileUri
-                                                )
-                                            } ?: emptyList()
+                                withContext(Dispatchers.Main) {
+                                    _uiState.value = _uiState.value.copy(
+                                        isUploadingDoc = false,
+                                        vaccine = _uiState.value.vaccine?.copy(
+                                            attachedDocuments = updatedVacc
+                                                ?.attachedDocuments
+                                                ?.map { doc ->
+                                                    AttachedDocument(
+                                                        id       = doc.id,
+                                                        fileName = doc.fileName,
+                                                        fileUri  = doc.fileUri
+                                                    )
+                                                } ?: emptyList()
+                                        )
                                     )
-                                )
+                                }
                             },
                             onFailure = { e ->
-                                _uiState.value = _uiState.value.copy(
-                                    isUploadingDoc = false,
-                                    error = "Uploaded but failed to save: ${e.message}"
-                                )
+                                withContext(Dispatchers.Main) {
+                                    _uiState.value = _uiState.value.copy(
+                                        isUploadingDoc = false,
+                                        error = "Uploaded but failed to save: ${e.message}"
+                                    )
+                                }
                             }
                         )
                     },
                     onFailure = { e ->
-                        _uiState.value = _uiState.value.copy(
-                            isUploadingDoc = false,
-                            error          = "Upload failed: ${e.message}"
-                        )
+                        withContext(Dispatchers.Main) {
+                            _uiState.value = _uiState.value.copy(
+                                isUploadingDoc = false,
+                                error          = "Upload failed: ${e.message}"
+                            )
+                        }
                     }
                 )
         }
     }
 
     fun clearError() { _uiState.value = _uiState.value.copy(error = null) }
+
+    private fun resolveVaccineName(
+        vaccineId: String?,
+        catalogMap: Map<String, com.example.petcare.data.model.Vaccine>
+    ): String {
+        val fromCatalog = vaccineId
+            ?.trim()
+            ?.takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }
+            ?.let { catalogMap[it]?.name }
+            ?.trim()
+            .takeUnless { it.isNullOrBlank() }
+
+        return fromCatalog ?: "Unknown vaccine"
+    }
 }

@@ -24,7 +24,7 @@ fun Pet.toEntity(): PetEntity {
         knownAllergies = this.knownAllergies,
         defaultVet     = this.defaultVet,
         defaultClinic  = this.defaultClinic,
-        owner          = this.owners.firstOrNull() ?: "",
+        owner          = ownerId,
         pendingSync    = false,
         pendingDelete  = false
     )

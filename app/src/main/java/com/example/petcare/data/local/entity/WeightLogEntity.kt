@@ -6,7 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "vaccinations",
+    tableName = "weight_logs",
     foreignKeys = [
         ForeignKey(
             entity = PetEntity::class,
@@ -15,17 +15,21 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("petId")]
+    indices = [
+        Index("petId"),
+        Index("ownerId"),
+        Index(value = ["clientMutationId"], unique = false)
+    ]
 )
-data class VaccinationEntity(
+data class WeightLogEntity(
     @PrimaryKey val id: String,
     val petId: String,
-    val vaccineId: String,
-    val dateGiven: String,
-    val nextDueDate: String? = null,
-    val lotNumber: String = "",
-    val status: String = "completed",
-    val administeredBy: String = "",
+    val ownerId: String,
+    val weight: Double,
+    val loggedAt: String,
+    val clientMutationId: String? = null,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
     val pendingSync: Boolean = false,
     val pendingDelete: Boolean = false
 )

@@ -43,6 +43,7 @@ fun PetProfileScreen(
     onPetDeleted: () -> Unit = {},
     onAddEvent: () -> Unit = {},
     onAddVaccine: () -> Unit = {},
+    onWeightTracker: () -> Unit = {},
     onNFCScan: () -> Unit = {},
     onNavigateToVaccineDetail: (petId: String, vaccineId: String) -> Unit = { _, _ -> },
     onNavigateToEventDetail: (petId: String, eventId: String) -> Unit = { _, _ -> },
@@ -223,6 +224,7 @@ fun PetProfileScreen(
                 viewModel    = viewModel,
                 onAddEvent   = onAddEvent,
                 onAddVaccine = onAddVaccine,
+                onWeightTracker = onWeightTracker,
                 onNFCScan    = onNFCScan
             )
 
@@ -263,6 +265,7 @@ private fun LazyListScope.overviewTabContent(
     onAddEvent: () -> Unit,
     onNFCScan: () -> Unit,
     onAddVaccine: () -> Unit,
+    onWeightTracker: () -> Unit,
 ) {
     item {
         Column(
@@ -301,6 +304,10 @@ private fun LazyListScope.overviewTabContent(
                 onLostModeClick   = {
                     FeatureClicksTracker.recordClick()
                     viewModel.onLostModeClicked()
+                },
+                onWeightTrackerClick = {
+                    FeatureClicksTracker.startRoute("Weight Log Flow")
+                    onWeightTracker()
                 },
                 onNfcClick        = onNFCScan,
                 isLost            = uiState.isLost

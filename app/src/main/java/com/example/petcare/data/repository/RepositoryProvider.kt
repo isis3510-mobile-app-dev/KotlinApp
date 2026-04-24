@@ -26,6 +26,9 @@ object RepositoryProvider {
     lateinit var notificationRepository: NotificationRepository
         private set
 
+    lateinit var weightLogRepository: WeightLogRepository
+        private set
+
     fun ensureInitialized(context: Context) {
         if (!::apiService.isInitialized) {
             init(AuthRepository(), context)
@@ -48,7 +51,12 @@ object RepositoryProvider {
             context    = appContext,
             hive       = hive
         )
-        eventRepository = EventRepository(apiService)
+        eventRepository = EventRepository(apiService, db.eventDao())
+        weightLogRepository = WeightLogRepository(
+            weightLogDao = db.weightLogDao(),
+            api = apiService,
+            context = appContext
+        )
         nfcRepository   = NfcRepository(apiService)
         notificationRepository = NotificationRepository(apiService)
     }

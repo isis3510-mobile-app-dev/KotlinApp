@@ -30,6 +30,8 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun CalendarScreen(
     paddingValues: PaddingValues = PaddingValues(0.dp),
+    reloadTrigger: Boolean = false,
+    onReloadConsumed: () -> Unit = {},
     onAddEvent: () -> Unit = {},
     onNavigateToEvent: (petId: String, eventId: String) -> Unit = { _, _ -> }
 ) {
@@ -43,6 +45,13 @@ fun CalendarScreen(
 
     // Load data once
     LaunchedEffect(Unit) { viewModel.loadData() }
+
+    LaunchedEffect(reloadTrigger) {
+        if (reloadTrigger) {
+            viewModel.loadData()
+            onReloadConsumed()
+        }
+    }
 
     // Events that fall on selected date(s)
     val eventsForRange = remember(uiState.events, startDate, endDate, selectedFilter) {
@@ -153,7 +162,7 @@ fun CalendarScreen(
                 ?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                 ?: sourceDate.take(10)
             EventCard(
-                eventName = "Vaccine due: ${vacc.vaccineId.take(8)}",
+                eventName = "Vaccine due: ${vacc.vaccineName}",
                 pet       = vacc.petName,
                 date      = dateLabel
             )

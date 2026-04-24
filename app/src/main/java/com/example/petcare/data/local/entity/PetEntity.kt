@@ -24,5 +24,3 @@ data class PetEntity(
     val pendingDelete: Boolean = false,
     val owner: String = ""
 )
-
-
