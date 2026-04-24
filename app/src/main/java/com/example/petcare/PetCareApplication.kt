@@ -2,6 +2,7 @@
 package com.example.petcare
 
 import android.app.Application
+import com.example.petcare.data.local.hive.HiveCacheManager
 import com.example.petcare.data.repository.AuthRepository
 import com.example.petcare.data.network.ApiClientProvider
 import com.example.petcare.data.notifications.NotificationScheduler
@@ -22,5 +23,6 @@ class PetCareApplication : Application() {
         RepositoryProvider.init(AuthRepository())
         com.example.petcare.data.analytics.FeatureExecutionTracker.init(this)
         NotificationScheduler.schedule(this)
+
     }
 }
