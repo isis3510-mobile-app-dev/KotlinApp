@@ -1,6 +1,5 @@
 package com.example.petcare.data.local.hive
 
-
 import android.content.Context
 import androidx.core.content.edit
 
@@ -13,7 +12,7 @@ class HiveCacheManager(context: Context) {
     // ── TTL definidos por el equipo ───────────────────────────────────────
 
     companion object {
-        private const val TTL_5_MIN  = 1 * 60 * 1000L       // 5 minutos en ms
+        private const val TTL_5_MIN  = 5 * 60 * 1000L       // 5 minutos en ms
         private const val TTL_12_HRS = 12 * 60 * 60 * 1000L // 12 horas en ms
     }
 
@@ -22,7 +21,7 @@ class HiveCacheManager(context: Context) {
     private fun put(key: String, json: String) {
         prefs.edit {
             putString(key, json)
-                .putLong("${key}_ts", System.currentTimeMillis())
+            putLong("${key}_ts", System.currentTimeMillis())
         }
     }
 
@@ -38,7 +37,7 @@ class HiveCacheManager(context: Context) {
     private fun delete(key: String) {
         prefs.edit {
             remove(key)
-                .remove("${key}_ts")
+            remove("${key}_ts")
         }
     }
 
@@ -53,6 +52,8 @@ class HiveCacheManager(context: Context) {
     fun isPetsFresh(userId: String): Boolean =
         isFresh("pets_$userId", TTL_5_MIN)
 
+    fun invalidatePets(userId: String) = delete("pets_$userId")
+
     // ── Events por mascota (TTL: 5 minutos) ───────────────────────────────
 
     fun putEvents(petId: String, json: String) =
@@ -63,6 +64,22 @@ class HiveCacheManager(context: Context) {
 
     fun isEventsFresh(petId: String): Boolean =
         isFresh("events_$petId", TTL_5_MIN)
+
+    fun invalidateEvents(petId: String) = delete("events_$petId")
+
+    // ── Events por owner (TTL: 5 minutos) ────────────────────────────────
+    // Usado cuando se cargan eventos del dueño en Home/Records sin petId específico
+
+    fun putEventsByOwner(ownerId: String, json: String) =
+        put("events_owner_$ownerId", json)
+
+    fun getEventsByOwner(ownerId: String): String? =
+        get("events_owner_$ownerId").takeIf { isFresh("events_owner_$ownerId", TTL_5_MIN) }
+
+    fun isEventsByOwnerFresh(ownerId: String): Boolean =
+        isFresh("events_owner_$ownerId", TTL_5_MIN)
+
+    fun invalidateEventsByOwner(ownerId: String) = delete("events_owner_$ownerId")
 
     // ── Usuario actual (TTL: 5 minutos) ───────────────────────────────────
 
@@ -75,6 +92,8 @@ class HiveCacheManager(context: Context) {
     fun isUserFresh(userId: String): Boolean =
         isFresh("user_$userId", TTL_5_MIN)
 
+    fun invalidateUser(userId: String) = delete("user_$userId")
+
     // ── Smart suggestions (TTL: 5 minutos) ───────────────────────────────
 
     fun putSuggestions(petId: String, json: String) =
@@ -85,6 +104,8 @@ class HiveCacheManager(context: Context) {
 
     fun isSuggestionsFresh(petId: String): Boolean =
         isFresh("suggestions_$petId", TTL_5_MIN)
+
+    fun invalidateSuggestions(petId: String) = delete("suggestions_$petId")
 
     // ── Vacunas catálogo (TTL: 12 horas) ─────────────────────────────────
 
@@ -112,7 +133,20 @@ class HiveCacheManager(context: Context) {
 
     fun clearAll() = prefs.edit { clear() }
 
-    fun invalidatePets(userId: String) = delete("pets_$userId")
-    fun invalidateEvents(petId: String) = delete("events_$petId")
-    fun invalidateSuggestions(petId: String) = delete("suggestions_$petId")
+    // Invalida todo lo relacionado a un pet de una vez
+    fun invalidateAllForPet(petId: String, userId: String) {
+        invalidatePets(userId)
+        invalidateEvents(petId)
+        invalidateSuggestions(petId)
+    }
+
+    // Solo para debug/testing — pone todos los timestamps en 0
+    // para forzar que isFresh() devuelva false en el próximo acceso
+    fun expireAllForTesting() {
+        prefs.edit {
+            prefs.all.keys
+                .filter { it.endsWith("_ts") }
+                .forEach { key -> putLong(key, 0L) }
+        }
+    }
 }
