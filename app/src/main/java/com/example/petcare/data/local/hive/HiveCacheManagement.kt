@@ -13,7 +13,7 @@ class HiveCacheManager(context: Context) {
     // ── TTL definidos por el equipo ───────────────────────────────────────
 
     companion object {
-        private const val TTL_5_MIN  = 5 * 60 * 1000L       // 5 minutos en ms
+        private const val TTL_5_MIN  = 1 * 60 * 1000L       // 5 minutos en ms
         private const val TTL_12_HRS = 12 * 60 * 60 * 1000L // 12 horas en ms
     }
 

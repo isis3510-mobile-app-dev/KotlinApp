@@ -9,6 +9,7 @@ import com.example.petcare.data.local.dao.VaccineDao
 import com.example.petcare.data.local.db.AppDatabase
 import com.example.petcare.data.local.entity.PetEntity
 import com.example.petcare.data.local.entity.VaccinationEntity
+import com.example.petcare.data.local.hive.HiveCacheManager
 import com.example.petcare.data.local.mapper.toCatalogEntity
 import com.example.petcare.data.local.mapper.toEntity
 import com.example.petcare.data.local.mapper.toPet
@@ -18,6 +19,7 @@ import com.example.petcare.data.model.*
 import com.example.petcare.data.network.ApiService
 import com.example.petcare.data.worker.SyncWorker
 import com.google.firebase.auth.FirebaseAuth
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
 
 
@@ -25,7 +27,8 @@ class PetRepository(
     private val petDao: PetDao,
     private val vaccineDao: VaccineDao,
     private val api: ApiService,
-    private val context: Context
+    private val context: Context,
+    private val hive: HiveCacheManager
 ) {
 
     private fun currentUserId(): String =
@@ -34,7 +37,8 @@ class PetRepository(
     private fun isOnline(): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val cap = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
-        return cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        return cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
     private fun enqueueSyncWork() {
@@ -55,6 +59,17 @@ class PetRepository(
     suspend fun getPets(): Result<List<Pet>> {
         val uid = currentUserId()
         android.util.Log.d("PET_REPO", "isOnline=${isOnline()}, uid=$uid")
+        if (isOnline()) {
+            android.util.Log.d("Entró", "Deberia guardar Cache")
+            val cached = hive.getPets(uid)
+            if (cached != null) {
+                return runCatching {
+                    android.util.Log.d("HIVE_CACHE", "HIT - getPets desde Hive")
+                    Gson().fromJson(cached, Array<Pet>::class.java).toList()
+                }
+            }
+        }
+        android.util.Log.d("HIVE_CACHE", "MISS - getPets va a la API")
         return if (isOnline()) {
             //syncPendingLocalData()
             runCatching {
@@ -62,6 +77,8 @@ class PetRepository(
                 if (!response.isSuccessful)
                     error("Failed to load pets — HTTP ${response.code()}")
                 val pets = response.body().orEmpty()
+                android.util.Log.d("HIVE_CACHE", "Guardando ${pets.size} pets en Hive")
+                hive.putPets(uid, Gson().toJson(pets))
                 android.util.Log.d("PET_REPO", "Caching ${pets.size} pets, uid=$uid")
                 val entities = pets.map { pet ->
                     pet.toEntity().copy(owner = uid)
@@ -132,6 +149,8 @@ class PetRepository(
                 val response = api.createPet(request)
                 val pet = response.body() ?: error("Failed to create pet")
                 petDao.insertPet(pet.toEntity())
+                android.util.Log.d("HIVE_CACHE", "Invalidando cache de pets tras crear")
+                hive.invalidatePets(uid)
                 pet
             }
         } else {
