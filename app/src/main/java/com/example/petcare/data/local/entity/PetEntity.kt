@@ -1,9 +1,7 @@
 package com.example.petcare.data.local.entity
 
-import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.Relation
 
 @Entity(tableName = "pets")
 data class PetEntity(
@@ -21,7 +19,10 @@ data class PetEntity(
     val isNfcSynced: Boolean,
     val knownAllergies: String,
     val defaultVet: String,
-    val defaultClinic: String
+    val defaultClinic: String,
+    val pendingSync: Boolean = false,
+    val pendingDelete: Boolean = false,
+    val owner: String = ""
 )
 
 

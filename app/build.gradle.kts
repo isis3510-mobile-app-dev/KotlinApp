@@ -49,6 +49,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.compose.remote.creation.core)
     val room_version = "2.8.4"
     //ROOM DB
     implementation("androidx.room:room-runtime:${room_version}")
