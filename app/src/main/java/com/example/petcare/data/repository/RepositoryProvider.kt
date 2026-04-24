@@ -2,6 +2,7 @@ package com.example.petcare.data.repository
 
 import android.content.Context
 import com.example.petcare.data.local.db.AppDatabase
+import com.example.petcare.data.local.hive.HiveCacheManager
 import com.example.petcare.data.network.ApiClient
 import com.example.petcare.data.network.ApiService
 
@@ -34,6 +35,7 @@ object RepositoryProvider {
     fun init(authRepository: AuthRepository, context: Context) {
         val appContext = context.applicationContext
         val db = AppDatabase.getInstance(appContext)
+        val hive = HiveCacheManager(appContext)
 
         android.util.Log.d("REPO_PROVIDER", "Initializing with db=${db}, petDao=${db.petDao()}")
 
@@ -43,7 +45,8 @@ object RepositoryProvider {
             petDao     = db.petDao(),
             vaccineDao = db.vaccineDao(),
             api        = apiService,
-            context    = appContext
+            context    = appContext,
+            hive       = hive
         )
         eventRepository = EventRepository(apiService)
         nfcRepository   = NfcRepository(apiService)
