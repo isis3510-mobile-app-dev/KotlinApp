@@ -76,13 +76,7 @@ class PetRepository(
                         vaccineDao.insertAll(vaxEntities)
                     }
                 }
-                val pendingVax = vaccineDao.getPendingSync()
-                    .filter { it.id.startsWith("local_vax_") }
-                    .filter { !it.petId.startsWith("local_") }  // only for real pets
-                android.util.Log.d("PET_REPO", "Preserving ${pendingVax.size} pending vaccinations after server refresh")
-                if (pendingVax.isNotEmpty()) {
-                    vaccineDao.insertAll(pendingVax)  // re-insert with REPLACE — keeps them alive
-                }
+
                 pets
             }.recoverCatching {
                 android.util.Log.d("PET_REPO", "Network failed, falling back to Room")
