@@ -165,6 +165,29 @@ class NfcManager(private val activity: Activity) {
         }
     }
 
+    fun readRawPayloadFromTag(tag: Tag): String? {
+        return try {
+            val ndef = Ndef.get(tag) ?: return null
+            ndef.connect()
+            val message = ndef.ndefMessage
+            ndef.close()
+
+            NfcPayloadCodec.extractTextPayload(
+                message?.records
+                    ?.asSequence()
+                    ?.map { record ->
+                        NfcPayloadCodec.ContractRecord(
+                            payload = record.payload,
+                            isTextRecord = isTextRecord(record)
+                        )
+                    }
+                    ?: emptySequence()
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     /**
      * Convenience: extracts the Tag from an Intent delivered by the system,
      * then calls [readPetIdFromTag].

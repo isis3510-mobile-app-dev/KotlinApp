@@ -1,36 +1,34 @@
 package com.example.petcare.ui.screens.nfc
 
 import android.app.Application
+import android.content.Context
 import android.nfc.Tag
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.local.db.AppDatabase
-import com.example.petcare.data.nfc.NfcReadInspection
 import com.example.petcare.data.model.Pet
-import com.example.petcare.data.repository.NfcPetPayload
-import com.example.petcare.data.repository.NfcRepository
 import com.example.petcare.data.nfc.NfcManager
 import com.example.petcare.data.nfc.NfcWriteInspection
+import com.example.petcare.data.repository.INfcRepository
+import com.example.petcare.data.repository.NfcPetPayload
+import com.example.petcare.data.repository.RepositoryProvider
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.json.JSONObject
-import com.example.petcare.data.repository.INfcRepository
-import com.example.petcare.data.repository.RepositoryProvider
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
-
-// ── UI State ──────────────────────────────────────────────────────────────────
+import org.json.JSONObject
 
 data class PetsUiState(
     val pets: List<Pet> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null // <--- ADD THIS LINE
+    val error: String? = null
 )
+
 sealed interface NfcUiState {
     object Idle : NfcUiState
     object Loading : NfcUiState
@@ -41,50 +39,41 @@ sealed interface NfcUiState {
     data class Error(val message: String) : NfcUiState
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 class NfcViewModel(
     application: Application,
     private val repository: INfcRepository = RepositoryProvider.nfcRepository
-) : AndroidViewModel(application){
+) : AndroidViewModel(application) {
+
+    companion object {
+        private const val NFC_CACHE_PREFS = "nfc_cache_prefs"
+        private const val NFC_CACHE_PREFIX = "write_payload_"
+    }
 
     private val _uiState = MutableStateFlow<NfcUiState>(NfcUiState.Idle)
     val uiState: StateFlow<NfcUiState> = _uiState.asStateFlow()
 
-    // Write-flow context
     private var pendingPetId: String? = null
     private var pendingToken: String? = null
     private var pendingPayloadJson: String? = null
     private var readModeActive: Boolean = false
 
-    // ── Write flow ────────────────────────────────────────────────────────────
-
-    /**
-     * Step 1 — Called when "Start Writing" is tapped.
-     * With mocks: no real network call, goes straight a WaitingForTag.
-     */
     fun prepareWrite(
         petId: String,
         firebaseToken: String
     ) {
         readModeActive = false
         _uiState.value = NfcUiState.Loading
-        viewModelScope.launch {
-            repository.fetchWritePayload(petId, firebaseToken).fold(
-                onSuccess = { payload ->
-                    val json = JSONObject().apply {
-                        put("petId",      payload.petId)
-                        put("petName",    payload.petName)
-                        put("species",    payload.species)
-                        put("breed",      payload.breed)
-                        put("ownerName",  payload.ownerName)
-                        put("ownerPhone", payload.ownerPhone)
-                    }.toString()
 
-                    pendingPetId       = petId
-                    pendingToken       = firebaseToken
+        viewModelScope.launch {
+            val payload = loadBestWritePayload(petId, firebaseToken)
+            payload.fold(
+                onSuccess = { resolved ->
+                    val json = payloadToTagJson(resolved)
+                    pendingPetId = petId
+                    pendingToken = firebaseToken
                     pendingPayloadJson = json
-                    _uiState.value     = NfcUiState.WaitingForTag
+                    cacheWritePayload(resolved)
+                    _uiState.value = NfcUiState.WaitingForTag
                 },
                 onFailure = { e ->
                     _uiState.value = NfcUiState.Error(
@@ -95,13 +84,9 @@ class NfcViewModel(
         }
     }
 
-    /**
-     * Step 2 — Called from MainActivity.onNewIntent() when a physical tag
-     * is detected while in write mode.
-     */
     fun onTagDetectedForWrite(tag: Tag, nfcManager: NfcManager) {
-        val petId   = pendingPetId       ?: return
-        val token   = pendingToken       ?: return
+        val petId = pendingPetId ?: return
+        val token = pendingToken ?: ""
         val payload = pendingPayloadJson ?: return
 
         when (nfcManager.inspectTagForWrite(tag, petId, payload)) {
@@ -124,9 +109,8 @@ class NfcViewModel(
         viewModelScope.launch {
             nfcManager.writeTag(tag, petId, payload).fold(
                 onSuccess = {
-                    // Fire-and-forget — mock returns success immediately
+                    // Best effort sync; do not block offline flow on backend connectivity.
                     repository.markNfcSynced(petId, token)
-
                     val name = runCatching {
                         JSONObject(payload).optString("petName", "your pet")
                     }.getOrDefault("your pet")
@@ -135,20 +119,12 @@ class NfcViewModel(
                     _uiState.value = NfcUiState.WriteSuccess(name)
                 },
                 onFailure = { e ->
-                    // On write failure, keep pending state so the user can
-                    // try again with the same tag without re-tapping "Start Writing"
                     _uiState.value = NfcUiState.Error(nfcManager.writeErrorMessage(e))
                 }
             )
         }
     }
 
-    // ── Read flow ─────────────────────────────────────────────────────────────
-
-    /**
-     * Transitions to WaitingForTag for read mode.
-     * Called when "Start Scanning" is tapped.
-     */
     fun startReadMode(nfcManager: NfcManager) {
         if (!nfcManager.isNfcSupported) {
             _uiState.value = NfcUiState.Error("NFC is not supported on this device")
@@ -158,92 +134,56 @@ class NfcViewModel(
             _uiState.value = NfcUiState.Error("Please enable NFC in your device settings")
             return
         }
+
         clearPendingWrite()
         readModeActive = true
         _uiState.value = NfcUiState.WaitingForTag
     }
 
-
-    /**
-     * Called from MainActivity.onNewIntent() when a tag is detected in read mode.
-     * Reads the petId from the tag, then fetches public info (mocked).
-     */
     fun onTagDetectedForRead(tag: Tag, nfcManager: NfcManager) {
         if (!readModeActive) return
         _uiState.value = NfcUiState.ProcessingTag
 
-        // Outer coroutine en IO — orquesta el flujo
         viewModelScope.launch(Dispatchers.IO) {
-            android.util.Log.d("MemberB_Thread",
-                "Outer coroutine started on: ${Thread.currentThread().name}")
+            val rawPayload = nfcManager.readRawPayloadFromTag(tag)
+            val petId = nfcManager.readPetIdFromTag(tag)
 
-            // Inner coroutine async(IO) — parsea el petId del tag en paralelo
-            // mientras outer prepara la llamada al servidor
-            val parsedDeferred = async(Dispatchers.IO) {
-                android.util.Log.d("MemberB_Thread",
-                    "Inner coroutine parsing tag on: ${Thread.currentThread().name}")
-                nfcManager.readPetIdFromTag(tag)
-            }
-
-            // outer espera a que inner termine el parseo
-            val petId = parsedDeferred.await()
-
-            android.util.Log.d("MemberB_Thread",
-                "Inner finished, petId: $petId")
-
-            if (petId == null) {
+            if (petId.isNullOrBlank()) {
                 withContext(Dispatchers.Main) {
                     _uiState.value = NfcUiState.Error(
                         "This NFC tag doesn't contain a valid PetCare payload.\n" +
-                                "Make sure it was written with the current app format."
+                            "Make sure it was written with the current app format."
                     )
                 }
                 return@launch
             }
 
-            // outer llama al backend real con el petId parseado
-            val petInfoResult = repository.fetchPublicPetInfo(petId)
+            val fallbackFromTag = rawPayload?.let(::payloadFromTagJson)
+            val backend = repository.fetchPublicPetInfo(petId)
 
-            // guarda en Room si la respuesta fue exitosa
-            petInfoResult.onSuccess { payload ->
-                android.util.Log.d("MemberB_Thread",
-                    "Saving to Room on: ${Thread.currentThread().name}")
-                AppDatabase.getInstance(getApplication())
-                    .eventDao()
-                    .getNext() // lectura Room en IO
-            }
-
-            // actualiza UI en Main
             withContext(Dispatchers.Main) {
-                android.util.Log.d("MemberB_Thread",
-                    "Updating UI on: ${Thread.currentThread().name}")
-                petInfoResult.fold(
+                backend.fold(
                     onSuccess = { payload ->
+                        cacheWritePayload(payload)
                         _uiState.value = NfcUiState.ReadSuccess(payload)
                     },
                     onFailure = { e ->
-                        _uiState.value = NfcUiState.Error(
-                            e.message ?: "Could not load pet information."
-                        )
+                        if (fallbackFromTag != null) {
+                            cacheWritePayload(fallbackFromTag)
+                            _uiState.value = NfcUiState.ReadSuccess(fallbackFromTag)
+                        } else {
+                            _uiState.value = NfcUiState.Error(
+                                e.message ?: "Could not load pet information."
+                            )
+                        }
                     }
                 )
             }
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    /** True when a write payload is staged and we're waiting for a tag tap. */
     fun isPendingWrite(): Boolean = pendingPetId != null
 
-    /**
-     * Resets to Idle and clears any pending write state.
-     *
-     * For multiple test cycles: after a WriteSuccess or ReadSuccess, the
-     * UI navigates away and the user can come back and start again.
-     * This is called from the Back button and the Cancel button inside
-     * ScanningNFCScreen, so state never gets stuck.
-     */
     fun reset() {
         clearPendingWrite()
         readModeActive = false
@@ -252,13 +192,6 @@ class NfcViewModel(
 
     fun resetSession() = reset()
 
-    /**
-     * Called after a WriteSuccess or Error to allow retrying the write
-     * on the same tag WITHOUT going back to WriteNFCScreen.
-     *
-     * Usage: show a "Try again" button in the error state inside
-     * ScanningNFCScreen when isPendingWrite() is still true.
-     */
     fun retryWrite() {
         if (pendingPetId != null) {
             _uiState.value = NfcUiState.WaitingForTag
@@ -271,10 +204,6 @@ class NfcViewModel(
         }
     }
 
-    /**
-     * Called after a ReadSuccess to scan another tag without navigating away.
-     * Goes back to WaitingForTag so the next tap triggers a new read.
-     */
     fun readAnother() {
         readModeActive = true
         _uiState.value = NfcUiState.WaitingForTag
@@ -285,9 +214,111 @@ class NfcViewModel(
 
     fun isReadModeActive(): Boolean = readModeActive
 
+    private suspend fun loadBestWritePayload(
+        petId: String,
+        firebaseToken: String
+    ): Result<NfcPetPayload> {
+        val remote = repository.fetchWritePayload(petId, firebaseToken)
+        if (remote.isSuccess) return remote
+
+        loadCachedWritePayload(petId)?.let { return Result.success(it) }
+        loadLocalWritePayloadFromRoom(petId)?.let { return Result.success(it) }
+
+        return Result.failure(
+            remote.exceptionOrNull()
+                ?: IllegalStateException("No payload available for offline NFC write.")
+        )
+    }
+
+    private suspend fun loadLocalWritePayloadFromRoom(petId: String): NfcPetPayload? {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return null
+        val localPet = AppDatabase.getInstance(getApplication())
+            .petDao()
+            .getPetById(uid, petId)
+            ?: return null
+
+        val ownerName = FirebaseAuth.getInstance().currentUser?.displayName.orEmpty()
+        val ownerPhone = FirebaseAuth.getInstance().currentUser?.phoneNumber.orEmpty()
+
+        return NfcPetPayload(
+            petId = localPet.id,
+            petName = localPet.name,
+            species = localPet.species,
+            breed = localPet.breed,
+            ownerName = ownerName,
+            ownerPhone = ownerPhone,
+            ownerInitials = ownerName.trim()
+                .split(" ")
+                .filter { it.isNotBlank() }
+                .take(2)
+                .joinToString("") { it.first().uppercase() },
+            photoUrl = localPet.photoUrl.orEmpty(),
+            status = localPet.status,
+            appDeepLink = "petcare://pet/${localPet.id}",
+            knownAllergies = localPet.knownAllergies,
+            defaultVet = localPet.defaultVet,
+            defaultClinic = localPet.defaultClinic
+        )
+    }
+
+    private fun payloadToTagJson(payload: NfcPetPayload): String {
+        return JSONObject().apply {
+            put("petId", payload.petId)
+            put("petName", payload.petName)
+            put("species", payload.species)
+            put("breed", payload.breed)
+            put("ownerName", payload.ownerName)
+            put("ownerPhone", payload.ownerPhone)
+            put("ownerInitials", payload.ownerInitials)
+            put("photoUrl", payload.photoUrl)
+            put("status", payload.status)
+            put("knownAllergies", payload.knownAllergies)
+            put("defaultVet", payload.defaultVet)
+            put("defaultClinic", payload.defaultClinic)
+        }.toString()
+    }
+
+    private fun payloadFromTagJson(raw: String): NfcPetPayload? {
+        return runCatching {
+            val json = JSONObject(raw)
+            val petId = json.optString("petId").ifBlank { json.optString("pet_id") }
+            if (petId.isBlank()) return null
+
+            NfcPetPayload(
+                petId = petId,
+                petName = json.optString("petName"),
+                species = json.optString("species"),
+                breed = json.optString("breed"),
+                ownerName = json.optString("ownerName"),
+                ownerPhone = json.optString("ownerPhone"),
+                ownerInitials = json.optString("ownerInitials"),
+                photoUrl = json.optString("photoUrl"),
+                status = json.optString("status", "Unknown"),
+                appDeepLink = "petcare://pet/$petId",
+                knownAllergies = json.optString("knownAllergies"),
+                defaultVet = json.optString("defaultVet"),
+                defaultClinic = json.optString("defaultClinic")
+            )
+        }.getOrNull()
+    }
+
+    private fun cacheWritePayload(payload: NfcPetPayload) {
+        getPrefs().edit()
+            .putString("$NFC_CACHE_PREFIX${payload.petId}", payloadToTagJson(payload))
+            .apply()
+    }
+
+    private fun loadCachedWritePayload(petId: String): NfcPetPayload? {
+        val raw = getPrefs().getString("$NFC_CACHE_PREFIX$petId", null) ?: return null
+        return payloadFromTagJson(raw)
+    }
+
+    private fun getPrefs() = getApplication<Application>()
+        .getSharedPreferences(NFC_CACHE_PREFS, Context.MODE_PRIVATE)
+
     private fun clearPendingWrite() {
-        pendingPetId       = null
-        pendingToken       = null
+        pendingPetId = null
+        pendingToken = null
         pendingPayloadJson = null
     }
 
@@ -303,5 +334,4 @@ class NfcViewModel(
             throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")
         }
     }
-
 }

@@ -8,6 +8,7 @@ import com.example.petcare.data.local.hive.HiveCacheManager
 import com.example.petcare.data.local.mapper.toEntity
 import com.example.petcare.data.model.AddDocumentRequest
 import com.example.petcare.data.model.AddVaccinationRequest
+import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.CreatePetRequest
 import com.example.petcare.data.model.PendingVaccinationDocument
 import com.example.petcare.data.model.CreateWeightLogRequest
@@ -24,10 +25,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import kotlin.coroutines.resume
 import androidx.core.net.toUri
 
 class SyncWorker(
@@ -37,6 +36,9 @@ class SyncWorker(
 
     companion object {
         const val UNIQUE_WORK_NAME = "pet_sync"
+        private const val EVENT_MAX_RETRY = 6
+        private const val EVENT_BASE_RETRY_MS = 2_000L
+        private const val EVENT_MAX_RETRY_MS = 5 * 60_000L
     }
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO){
@@ -71,6 +73,7 @@ class SyncWorker(
             syncPendingCreates(db, api)
             syncPendingUpdates(db, api)
             syncPendingDeletes(db, api)
+            val eventSyncHadFailures = syncPendingEventOperations(db, api)
 
             coroutineScope {
                 launch(Dispatchers.IO + CoroutineName("vaccination-sync")) {
@@ -88,7 +91,7 @@ class SyncWorker(
                 }
             }
             HiveCacheManager(applicationContext).invalidatePets(user.uid)
-            Result.success()
+            if (eventSyncHadFailures) Result.retry() else Result.success()
         } catch (e: Exception) {
             android.util.Log.e("SYNC_WORKER", "Sync failed: ${e.message}")
             Result.retry()
@@ -511,6 +514,89 @@ class SyncWorker(
                     }
                 } catch (e: Exception) { /* retry next worker run */ }
             }
+    }
+
+    private suspend fun syncPendingEventOperations(db: AppDatabase, api: ApiService): Boolean {
+        val nowMs = System.currentTimeMillis()
+        var hadFailures = false
+
+        db.eventDao().getPendingCreatesForSync(nowMs).forEach { entity ->
+            try {
+                if (entity.petId.startsWith("local_")) {
+                    scheduleEventCreateRetry(db, entity.id, entity.retryCount)
+                    hadFailures = true
+                    return@forEach
+                }
+
+                val response = api.createEvent(
+                    CreateEventRequest(
+                        petId = entity.petId,
+                        ownerId = entity.ownerId,
+                        title = entity.title,
+                        eventType = entity.eventType.lowercase(),
+                        date = entity.date,
+                        price = entity.price,
+                        provider = entity.provider,
+                        clinic = entity.clinic,
+                        description = entity.description,
+                        followUpDate = entity.followUpDate
+                    )
+                )
+
+                val created = response.body()
+                if (response.isSuccessful && created != null) {
+                    db.eventDao().deleteById(entity.id)
+                    db.eventDao().upsert(created.toEntity())
+                    HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
+                } else {
+                    scheduleEventCreateRetry(db, entity.id, entity.retryCount)
+                    hadFailures = true
+                }
+            } catch (_: Exception) {
+                scheduleEventCreateRetry(db, entity.id, entity.retryCount)
+                hadFailures = true
+            }
+        }
+
+        db.eventDao().getPendingDeletesForSync(nowMs).forEach { entity ->
+            try {
+                if (entity.id.startsWith("local_ev_")) {
+                    db.eventDao().deleteById(entity.id)
+                    return@forEach
+                }
+
+                val response = api.deleteEvent(entity.id)
+                if (response.isSuccessful || response.code() == 204 || response.code() == 404) {
+                    db.eventDao().deleteById(entity.id)
+                    HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
+                } else {
+                    scheduleEventDeleteRetry(db, entity.id, entity.retryCount)
+                    hadFailures = true
+                }
+            } catch (_: Exception) {
+                scheduleEventDeleteRetry(db, entity.id, entity.retryCount)
+                hadFailures = true
+            }
+        }
+
+        return hadFailures
+    }
+
+    private suspend fun scheduleEventCreateRetry(db: AppDatabase, eventId: String, currentRetry: Int) {
+        val nextRetry = (currentRetry + 1).coerceAtMost(EVENT_MAX_RETRY)
+        val nextRetryAt = System.currentTimeMillis() + retryDelay(nextRetry)
+        db.eventDao().markCreateSyncFailed(eventId, nextRetry, nextRetryAt)
+    }
+
+    private suspend fun scheduleEventDeleteRetry(db: AppDatabase, eventId: String, currentRetry: Int) {
+        val nextRetry = (currentRetry + 1).coerceAtMost(EVENT_MAX_RETRY)
+        val nextRetryAt = System.currentTimeMillis() + retryDelay(nextRetry)
+        db.eventDao().markDeleteSyncFailed(eventId, nextRetry, nextRetryAt)
+    }
+
+    private fun retryDelay(retryCount: Int): Long {
+        val exponential = EVENT_BASE_RETRY_MS * (1L shl retryCount.coerceIn(0, 12))
+        return exponential.coerceAtMost(EVENT_MAX_RETRY_MS)
     }
 
 }
