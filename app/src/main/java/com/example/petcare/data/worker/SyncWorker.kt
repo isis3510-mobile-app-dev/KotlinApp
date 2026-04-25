@@ -10,6 +10,7 @@ import com.example.petcare.data.model.AddDocumentRequest
 import com.example.petcare.data.model.AddVaccinationRequest
 import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.CreatePetRequest
+import com.example.petcare.data.model.PendingEventDocument
 import com.example.petcare.data.model.PendingVaccinationDocument
 import com.example.petcare.data.model.CreateWeightLogRequest
 import com.example.petcare.data.model.UpdatePetRequest
@@ -73,7 +74,9 @@ class SyncWorker(
             syncPendingCreates(db, api)
             syncPendingUpdates(db, api)
             syncPendingDeletes(db, api)
-            val eventSyncHadFailures = syncPendingEventOperations(db, api)
+            val eventOperationFailures = syncPendingEventOperations(db, api)
+            val eventDocumentFailures = syncPendingEventDocuments(api)
+            val eventSyncHadFailures = eventOperationFailures || eventDocumentFailures
 
             coroutineScope {
                 launch(Dispatchers.IO + CoroutineName("vaccination-sync")) {
@@ -545,6 +548,12 @@ class SyncWorker(
 
                 val created = response.body()
                 if (response.isSuccessful && created != null) {
+                    movePendingDocumentsToServerEvent(
+                        oldPetId = entity.petId,
+                        oldEventId = entity.id,
+                        newPetId = created.petId,
+                        newEventId = created.id
+                    )
                     db.eventDao().deleteById(entity.id)
                     db.eventDao().upsert(created.toEntity())
                     HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
@@ -580,6 +589,111 @@ class SyncWorker(
         }
 
         return hadFailures
+    }
+
+    private suspend fun syncPendingEventDocuments(api: ApiService): Boolean {
+        val hive = HiveCacheManager(applicationContext)
+        val gson = Gson()
+        val pendingByKey = hive.getAllPendingEventDocumentJson()
+        var hadFailures = false
+        android.util.Log.d("EVENT_DOC_UPLOAD", "Worker pending event documents groups=${pendingByKey.size}")
+
+        pendingByKey.forEach { (key, json) ->
+            val pendingDocs = runCatching {
+                gson.fromJson(json, Array<PendingEventDocument>::class.java).toList()
+            }.getOrElse {
+                android.util.Log.e("EVENT_DOC_UPLOAD", "Worker failed to parse pending event docs key=$key: ${it.message}", it)
+                emptyList()
+            }
+            if (pendingDocs.isEmpty()) return@forEach
+
+            val remaining = pendingDocs.toMutableList()
+            pendingDocs.forEach { pending ->
+                try {
+                    if (pending.eventId.startsWith("local_ev_") || pending.petId.startsWith("local_")) {
+                        android.util.Log.d(
+                            "EVENT_DOC_UPLOAD",
+                            "Worker pending event document waits for server ids pendingDoc=${pending.id} petId=${pending.petId} eventId=${pending.eventId}"
+                        )
+                        hadFailures = true
+                        return@forEach
+                    }
+
+                    val safeFileName = pending.fileName.replace(Regex("""[^\w.\-]"""), "_")
+                    val path = "pets/${pending.petId}/documents/events/${pending.eventId}/${java.util.UUID.randomUUID()}_$safeFileName"
+                    val ref = Firebase.storage.reference.child(path)
+                    val metadata = com.google.firebase.storage.StorageMetadata.Builder()
+                        .setContentType(pending.mimeType)
+                        .build()
+                    android.util.Log.d(
+                        "EVENT_DOC_UPLOAD",
+                        "Worker Firebase upload pendingEventDoc=${pending.id} path=$path"
+                    )
+                    ref.putFile(pending.localUri.toUri(), metadata).await()
+                    val downloadUrl = ref.downloadUrl.await().toString()
+                    val response = api.addEventDocument(
+                        pending.eventId,
+                        mapOf(
+                            "fileName" to pending.fileName,
+                            "fileUri" to downloadUrl
+                        )
+                    )
+                    if (!response.isSuccessful || response.body() == null) {
+                        android.util.Log.w(
+                            "EVENT_DOC_UPLOAD",
+                            "Worker backend event document rejected pendingDoc=${pending.id} http=${response.code()}"
+                        )
+                        hadFailures = true
+                        return@forEach
+                    }
+
+                    remaining.remove(pending)
+                    deleteLocalPendingDocument(pending.localUri)
+                    HiveCacheManager(applicationContext).invalidateEvents(pending.petId)
+                    android.util.Log.d("EVENT_DOC_UPLOAD", "Worker synced pending event document id=${pending.id}")
+                } catch (e: Exception) {
+                    hadFailures = true
+                    android.util.Log.e("EVENT_DOC_UPLOAD", "Worker pending event document sync failed id=${pending.id}: ${e.message}", e)
+                }
+            }
+
+            if (remaining.isEmpty()) {
+                hive.invalidatePendingEventDocumentsByKey(key)
+            } else {
+                hive.putPendingEventDocumentsByKey(key, gson.toJson(remaining))
+            }
+        }
+
+        return hadFailures
+    }
+
+    private fun movePendingDocumentsToServerEvent(
+        oldPetId: String,
+        oldEventId: String,
+        newPetId: String,
+        newEventId: String
+    ) {
+        val hive = HiveCacheManager(applicationContext)
+        val gson = Gson()
+        hive.movePendingEventDocuments(
+            oldPetId = oldPetId,
+            oldEventId = oldEventId,
+            newPetId = newPetId,
+            newEventId = newEventId
+        ) { json ->
+            val updated = gson.fromJson(json, Array<PendingEventDocument>::class.java)
+                .map {
+                    it.copy(
+                        petId = newPetId,
+                        eventId = newEventId
+                    )
+                }
+            gson.toJson(updated)
+        }
+        android.util.Log.d(
+            "EVENT_DOC_UPLOAD",
+            "Moved pending docs from event=$oldEventId to server event=$newEventId"
+        )
     }
 
     private suspend fun scheduleEventCreateRetry(db: AppDatabase, eventId: String, currentRetry: Int) {

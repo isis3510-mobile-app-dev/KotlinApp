@@ -272,8 +272,8 @@ fun EventDetailsScreen(
                             AttachedDocumentsCard(
                                 documents        = event.attachedDocuments,
                                 isUploading      = uiState.isUploadingDoc,
-                                onDocumentPicked = { uri, _, _ ->
-                                    viewModel.addDocument(context, petId, uri)
+                                onDocumentPicked = { uri, mimeType, fileName ->
+                                    viewModel.addDocument(context, petId, uri, mimeType, fileName)
                                 }
                             )
 
@@ -340,8 +340,8 @@ fun EventDetailsScreen(
                             AttachedDocumentsCard(
                                 documents        = event.attachedDocuments,
                                 isUploading      = uiState.isUploadingDoc,
-                                onDocumentPicked = { uri, _, _ ->
-                                    viewModel.addDocument(context, petId, uri)
+                                onDocumentPicked = { uri, mimeType, fileName ->
+                                    viewModel.addDocument(context, petId, uri, mimeType, fileName)
                                 }
                             )
                         }

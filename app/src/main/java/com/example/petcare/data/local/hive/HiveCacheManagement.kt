@@ -149,6 +149,48 @@ class HiveCacheManager(context: Context) {
         delete(oldKey)
     }
 
+    // ── Pending event documents (no TTL: offline queue) ─────────────────
+
+    fun putPendingEventDocuments(
+        petId: String,
+        eventId: String,
+        json: String
+    ) = put("pending_event_docs_${petId}_$eventId", json)
+
+    fun getPendingEventDocuments(
+        petId: String,
+        eventId: String
+    ): String? = get("pending_event_docs_${petId}_$eventId")
+
+    fun invalidatePendingEventDocuments(
+        petId: String,
+        eventId: String
+    ) = delete("pending_event_docs_${petId}_$eventId")
+
+    fun getAllPendingEventDocumentJson(): Map<String, String> =
+        prefs.all
+            .filterKeys { it.startsWith("pending_event_docs_") && !it.endsWith("_ts") }
+            .mapValues { it.value as? String ?: "" }
+            .filterValues { it.isNotBlank() }
+
+    fun putPendingEventDocumentsByKey(key: String, json: String) =
+        put(key, json)
+
+    fun invalidatePendingEventDocumentsByKey(key: String) = delete(key)
+
+    fun movePendingEventDocuments(
+        oldPetId: String,
+        oldEventId: String,
+        newPetId: String,
+        newEventId: String,
+        transformJson: (String) -> String
+    ) {
+        val oldKey = "pending_event_docs_${oldPetId}_$oldEventId"
+        val json = get(oldKey) ?: return
+        put("pending_event_docs_${newPetId}_$newEventId", transformJson(json))
+        delete(oldKey)
+    }
+
     // ── Vacunas catálogo (TTL: 12 horas) ─────────────────────────────────
 
     fun putVaccineCatalog(json: String) =
