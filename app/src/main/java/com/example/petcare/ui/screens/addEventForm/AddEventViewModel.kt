@@ -73,12 +73,11 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
     val state: StateFlow<AddEventFormState> = _state.asStateFlow()
 
     fun setPetId(v: String) {
-        _state.value = _state.value.copy(petId = normalizeForCommit(v, InputFieldPolicy.GENERAL_TEXT))
-        fetchPetBirthDate(v)
+        _state.value = _state.value.copy(petId = v)
+        if (v.isNotBlank()) fetchPetBirthDate(v)
     }
 
     private fun fetchPetBirthDate(petId: String) {
-        if (petId.isBlank()) return
         viewModelScope.launch {
             RepositoryProvider.petRepository.getPet(petId).onSuccess { pet ->
                 _state.value = _state.value.copy(petBirthDateIso = pet.birthDate)

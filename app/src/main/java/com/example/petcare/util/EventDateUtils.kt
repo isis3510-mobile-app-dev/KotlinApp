@@ -51,8 +51,14 @@ object EventDateUtils {
     }
 
     fun isFuture(raw: String?, today: LocalDate = LocalDate.now()): Boolean {
-        val localDate = parseEventDate(raw) ?: return false
-        return localDate.isAfter(today)
+        val eventDate = parseEventDate(raw) ?: return false
+        // Un evento es futuro SOLO si la fecha es estrictamente posterior a hoy
+        return eventDate.isAfter(today)
+    }
+
+    fun isPast(raw: String?, today: LocalDate = LocalDate.now()): Boolean {
+        val eventDate = parseEventDate(raw) ?: return false
+        return eventDate.isBefore(today)
     }
 
     fun splitToAppDateTime(raw: String?): Pair<String, String> {
