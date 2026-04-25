@@ -168,6 +168,11 @@ class SyncWorker(
                         db.vaccineDao().insertVaccine(vax.copy(petId = created.id))
                     }
                     db.weightLogDao().moveToServerPet(entity.id, created.id)
+                    db.eventDao().moveToServerPet(entity.id, created.id)
+                    movePendingDocumentsToServerPet(
+                        oldPetId = entity.id,
+                        newPetId = created.id
+                    )
 
                     // Remove the local pet after children moved to the server pet id.
                     db.petDao().deletePetById(entity.id)
@@ -523,14 +528,21 @@ class SyncWorker(
         val nowMs = System.currentTimeMillis()
         var hadFailures = false
 
-        db.eventDao().getPendingCreatesForSync(nowMs).forEach { entity ->
+        val pendingCreates = db.eventDao().getPendingCreatesForSync(nowMs)
+        android.util.Log.d("EVENT_SYNC", "Pending event creates eligible=${pendingCreates.size}")
+        pendingCreates.forEach { entity ->
             try {
                 if (entity.petId.startsWith("local_")) {
+                    android.util.Log.d(
+                        "EVENT_SYNC",
+                        "POST event create waits for server pet localEventId=${entity.id} petId=${entity.petId}"
+                    )
                     scheduleEventCreateRetry(db, entity.id, entity.retryCount)
                     hadFailures = true
                     return@forEach
                 }
 
+                android.util.Log.d("EVENT_SYNC", "POST event create localId=${entity.id} petId=${entity.petId}")
                 val response = api.createEvent(
                     CreateEventRequest(
                         petId = entity.petId,
@@ -547,6 +559,7 @@ class SyncWorker(
                 )
 
                 val created = response.body()
+                android.util.Log.d("EVENT_SYNC", "POST event create response=${response.code()} localId=${entity.id} serverId=${created?.id}")
                 if (response.isSuccessful && created != null) {
                     movePendingDocumentsToServerEvent(
                         oldPetId = entity.petId,
@@ -557,32 +570,88 @@ class SyncWorker(
                     db.eventDao().deleteById(entity.id)
                     db.eventDao().upsert(created.toEntity())
                     HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
+                    HiveCacheManager(applicationContext).invalidateEvents(created.petId)
+                    android.util.Log.d("EVENT_SYNC", "Event create synced localId=${entity.id} serverId=${created.id}")
                 } else {
+                    android.util.Log.w("EVENT_SYNC", "Event create rejected localId=${entity.id} http=${response.code()}")
                     scheduleEventCreateRetry(db, entity.id, entity.retryCount)
                     hadFailures = true
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                android.util.Log.e("EVENT_SYNC", "Event create sync failed id=${entity.id}: ${e.message}", e)
                 scheduleEventCreateRetry(db, entity.id, entity.retryCount)
                 hadFailures = true
             }
         }
 
-        db.eventDao().getPendingDeletesForSync(nowMs).forEach { entity ->
+        val pendingUpdates = db.eventDao().getPendingUpdatesForSync(nowMs)
+        android.util.Log.d("EVENT_SYNC", "Pending event updates eligible=${pendingUpdates.size}")
+        pendingUpdates.forEach { entity ->
             try {
-                if (entity.id.startsWith("local_ev_")) {
-                    db.eventDao().deleteById(entity.id)
+                if (entity.petId.startsWith("local_") || entity.id.startsWith("local_ev_")) {
+                    android.util.Log.d(
+                        "EVENT_SYNC",
+                        "PUT event update waits for server ids eventId=${entity.id} petId=${entity.petId}"
+                    )
+                    scheduleEventUpdateRetry(db, entity.id, entity.retryCount)
+                    hadFailures = true
                     return@forEach
                 }
 
+                android.util.Log.d("EVENT_SYNC", "PUT event update id=${entity.id} petId=${entity.petId}")
+                val response = api.updateEvent(
+                    entity.id,
+                    mapOf(
+                        "title" to entity.title,
+                        "description" to entity.description,
+                        "provider" to entity.provider,
+                        "clinic" to entity.clinic,
+                        "date" to entity.date,
+                        "price" to entity.price
+                    )
+                )
+                android.util.Log.d("EVENT_SYNC", "PUT event update response=${response.code()} id=${entity.id}")
+                val updated = response.body()
+                if (response.isSuccessful && updated != null) {
+                    db.eventDao().upsert(updated.toEntity())
+                    HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
+                    HiveCacheManager(applicationContext).invalidateEvents(updated.petId)
+                    android.util.Log.d("EVENT_SYNC", "Event update synced id=${entity.id}")
+                } else {
+                    android.util.Log.w("EVENT_SYNC", "Event update rejected id=${entity.id} http=${response.code()}")
+                    scheduleEventUpdateRetry(db, entity.id, entity.retryCount)
+                    hadFailures = true
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("EVENT_SYNC", "Event update sync failed id=${entity.id}: ${e.message}", e)
+                scheduleEventUpdateRetry(db, entity.id, entity.retryCount)
+                hadFailures = true
+            }
+        }
+
+        val pendingDeletes = db.eventDao().getPendingDeletesForSync(nowMs)
+        android.util.Log.d("EVENT_SYNC", "Pending event deletes eligible=${pendingDeletes.size}")
+        pendingDeletes.forEach { entity ->
+            try {
+                if (entity.id.startsWith("local_ev_")) {
+                    db.eventDao().deleteById(entity.id)
+                    android.util.Log.d("EVENT_SYNC", "Deleted unsynced local event id=${entity.id}")
+                    return@forEach
+                }
+
+                android.util.Log.d("EVENT_SYNC", "DELETE event id=${entity.id}")
                 val response = api.deleteEvent(entity.id)
+                android.util.Log.d("EVENT_SYNC", "DELETE event response=${response.code()} id=${entity.id}")
                 if (response.isSuccessful || response.code() == 204 || response.code() == 404) {
                     db.eventDao().deleteById(entity.id)
                     HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
+                    android.util.Log.d("EVENT_SYNC", "Event delete synced id=${entity.id}")
                 } else {
                     scheduleEventDeleteRetry(db, entity.id, entity.retryCount)
                     hadFailures = true
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                android.util.Log.e("EVENT_SYNC", "Event delete sync failed id=${entity.id}: ${e.message}", e)
                 scheduleEventDeleteRetry(db, entity.id, entity.retryCount)
                 hadFailures = true
             }
@@ -696,6 +765,38 @@ class SyncWorker(
         )
     }
 
+    private fun movePendingDocumentsToServerPet(
+        oldPetId: String,
+        newPetId: String
+    ) {
+        val hive = HiveCacheManager(applicationContext)
+        val gson = Gson()
+        hive.getAllPendingEventDocumentJson().forEach { (_, json) ->
+            val docs = runCatching {
+                gson.fromJson(json, Array<PendingEventDocument>::class.java).toList()
+            }.getOrElse {
+                android.util.Log.e("EVENT_DOC_UPLOAD", "Failed to inspect pending event docs during pet remap: ${it.message}", it)
+                emptyList()
+            }
+            docs.firstOrNull { it.petId == oldPetId }?.let { first ->
+                hive.movePendingEventDocuments(
+                    oldPetId = oldPetId,
+                    oldEventId = first.eventId,
+                    newPetId = newPetId,
+                    newEventId = first.eventId
+                ) { pendingJson ->
+                    val updated = gson.fromJson(pendingJson, Array<PendingEventDocument>::class.java)
+                        .map { pending -> pending.copy(petId = newPetId) }
+                    gson.toJson(updated)
+                }
+                android.util.Log.d(
+                    "EVENT_DOC_UPLOAD",
+                    "Moved pending event docs from pet=$oldPetId to server pet=$newPetId event=${first.eventId}"
+                )
+            }
+        }
+    }
+
     private suspend fun scheduleEventCreateRetry(db: AppDatabase, eventId: String, currentRetry: Int) {
         val nextRetry = (currentRetry + 1).coerceAtMost(EVENT_MAX_RETRY)
         val nextRetryAt = System.currentTimeMillis() + retryDelay(nextRetry)
@@ -706,6 +807,12 @@ class SyncWorker(
         val nextRetry = (currentRetry + 1).coerceAtMost(EVENT_MAX_RETRY)
         val nextRetryAt = System.currentTimeMillis() + retryDelay(nextRetry)
         db.eventDao().markDeleteSyncFailed(eventId, nextRetry, nextRetryAt)
+    }
+
+    private suspend fun scheduleEventUpdateRetry(db: AppDatabase, eventId: String, currentRetry: Int) {
+        val nextRetry = (currentRetry + 1).coerceAtMost(EVENT_MAX_RETRY)
+        val nextRetryAt = System.currentTimeMillis() + retryDelay(nextRetry)
+        db.eventDao().markCreateSyncFailed(eventId, nextRetry, nextRetryAt)
     }
 
     private fun retryDelay(retryCount: Int): Long {

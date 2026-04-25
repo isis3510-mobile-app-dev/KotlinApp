@@ -164,7 +164,11 @@ class EventRepository(
                     nextRetryAt = 0L
                 )
                 eventDao.upsert(entity)
+                hive.invalidateEvents(request.petId)
+                lru.invalidateList(listCacheKey(request.petId, null))
+                Log.d("EVENT_SYNC", "ROOM PENDING_CREATE eventId=$tempId petId=${request.petId}")
                 enqueueSyncWork()
+                Log.d("EVENT_SYNC", "Queued SyncWorker after offline event create id=$tempId")
                 entity.toEvent()
             }
         }
@@ -208,7 +212,9 @@ class EventRepository(
                 if (!response.isSuccessful) error("Update fail: ${response.code()}")
                 val event = response.body() ?: error("Empty update response")
                 eventDao.upsert(event.toEntity())
+                hive.invalidateEvents(event.petId)
                 lru.invalidateEvent(eventId)
+                lru.invalidateList(listCacheKey(event.petId, null))
                 event
             }
         } else {
@@ -225,7 +231,12 @@ class EventRepository(
                     description = description,
                     followUpDate = existing.followUpDate
                 )
+                hive.invalidateEvents(existing.petId)
+                lru.invalidateEvent(eventId)
+                lru.invalidateList(listCacheKey(existing.petId, null))
+                Log.d("EVENT_SYNC", "ROOM PENDING_UPDATE eventId=$eventId petId=${existing.petId}")
                 enqueueSyncWork()
+                Log.d("EVENT_SYNC", "Queued SyncWorker after offline event update id=$eventId")
                 eventDao.getById(eventId)?.toEvent() ?: error("Error after update")
             }
         }
