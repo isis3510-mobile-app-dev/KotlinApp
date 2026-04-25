@@ -2,12 +2,14 @@ package com.example.petcare.ui.screens.addVaccineForm
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.AddDocumentRequest
 import com.example.petcare.data.model.AddVaccinationRequest
 import com.example.petcare.data.model.Vaccine
+import com.example.petcare.data.network.isOnline
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.addEventForm.StagedDocument
 import com.example.petcare.util.FirebaseDocumentUploader
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.time.LocalDate
 import java.util.UUID
 
@@ -54,6 +57,7 @@ class AddVaccineViewModel : ViewModel() {
 
     fun loadCatalog(petSpecies: String = "") {
         viewModelScope.launch {
+            Log.d(TAG, "loadCatalog start species=$petSpecies")
             _state.value = _state.value.copy(isCatalogLoading = true)
             RepositoryProvider.petRepository.getVaccineCatalog().fold(
                 onSuccess = { all ->
@@ -65,8 +69,10 @@ class AddVaccineViewModel : ViewModel() {
                         catalogVaccines  = filtered,
                         isCatalogLoading = false
                     )
+                    Log.d(TAG, "loadCatalog success total=${all.size} filtered=${filtered.size}")
                 },
                 onFailure = {
+                    Log.e(TAG, "loadCatalog failed: ${it.message}", it)
                     _state.value = _state.value.copy(isCatalogLoading = false)
                 }
             )
@@ -104,43 +110,132 @@ class AddVaccineViewModel : ViewModel() {
         _state.value = _state.value.copy(
             stagedDocuments = _state.value.stagedDocuments + pending
         )
+        Log.d(
+            TAG,
+            "Queued vaccination staging document petId=$petId stagingId=$stagingId fileName=$fileName mimeType=$mimeType"
+        )
 
         viewModelScope.launch(Dispatchers.IO) {
-            val prepared = async(Dispatchers.IO) {
-                PicassoImageCompressor.prepareImageIfNeeded(context, uri, mimeType, fileName)
-            }.await()
-
-            FirebaseDocumentUploader
-                .uploadVaccinationDocumentStaging(context, prepared.uri, petId, stagingId)
-                .fold(
-                    onSuccess = { uploaded ->
-                        withContext(Dispatchers.Main) {
-                            _state.value = _state.value.copy(
-                                stagedDocuments = _state.value.stagedDocuments.map {
-                                    if (it.uri == uri && it.isUploading) {
-                                        it.copy(
-                                            fileName = prepared.fileName,
-                                            mimeType = prepared.mimeType,
-                                            downloadUrl = uploaded.downloadUrl,
-                                            isUploading = false
-                                        )
-                                    } else it
-                                }
-                            )
-                        }
-                    },
-                    onFailure = { e ->
-                        withContext(Dispatchers.Main) {
-                            _state.value = _state.value.copy(
-                                stagedDocuments = _state.value.stagedDocuments.map {
-                                    if (it.uri == uri && it.isUploading) {
-                                        it.copy(isUploading = false, error = e.message)
-                                    } else it
-                                }
-                            )
-                        }
+            Log.d(TAG, "Staging coroutine started thread=${Thread.currentThread().name}")
+            try {
+                if (!isOnline(context)) {
+                    val local = copyStagedDocumentLocally(context, uri, fileName)
+                    withContext(Dispatchers.Main) {
+                        _state.value = _state.value.copy(
+                            stagedDocuments = _state.value.stagedDocuments.map {
+                                if (it.uri == uri && it.isUploading) {
+                                    it.copy(
+                                        uri = local,
+                                        downloadUrl = local.toString(),
+                                        isUploading = false
+                                    )
+                                } else it
+                            }
+                        )
                     }
+                    Log.d(TAG, "Staging saved locally offline fileName=$fileName uri=$local")
+                    return@launch
+                }
+
+                val prepared = async(Dispatchers.IO) {
+                    PicassoImageCompressor.prepareImageIfNeeded(context, uri, mimeType, fileName)
+                }.await()
+                Log.d(
+                    TAG,
+                    "Prepared staging document original=$fileName prepared=${prepared.fileName} mimeType=${prepared.mimeType}"
                 )
+
+                FirebaseDocumentUploader
+                    .uploadVaccinationDocumentStaging(context, prepared.uri, petId, stagingId)
+                    .fold(
+                        onSuccess = { uploaded ->
+                            Log.d(
+                                TAG,
+                                "Staging upload success petId=$petId stagingId=$stagingId fileName=${uploaded.fileName}"
+                            )
+                            withContext(Dispatchers.Main) {
+                                _state.value = _state.value.copy(
+                                    stagedDocuments = _state.value.stagedDocuments.map {
+                                        if (it.uri == uri && it.isUploading) {
+                                            it.copy(
+                                                fileName = prepared.fileName,
+                                                mimeType = prepared.mimeType,
+                                                downloadUrl = uploaded.downloadUrl,
+                                                isUploading = false
+                                            )
+                                        } else it
+                                    }
+                                )
+                                Log.d(TAG, "Staging document UI state updated on ${Thread.currentThread().name}")
+                            }
+                        },
+                        onFailure = { e ->
+                            Log.e(TAG, "Staging upload failed petId=$petId stagingId=$stagingId: ${e.message}", e)
+                            runCatching {
+                                val local = copyStagedDocumentLocally(context, prepared.uri, prepared.fileName)
+                                withContext(Dispatchers.Main) {
+                                    _state.value = _state.value.copy(
+                                        stagedDocuments = _state.value.stagedDocuments.map {
+                                            if (it.uri == uri && it.isUploading) {
+                                                it.copy(
+                                                    uri = local,
+                                                    fileName = prepared.fileName,
+                                                    mimeType = prepared.mimeType,
+                                                    downloadUrl = local.toString(),
+                                                    isUploading = false,
+                                                    error = null
+                                                )
+                                            } else it
+                                        }
+                                    )
+                                }
+                                Log.d(TAG, "Staging upload failed; saved locally for later sync fileName=${prepared.fileName} uri=$local")
+                            }.onFailure { localError ->
+                                Log.e(TAG, "Staging local fallback failed fileName=$fileName: ${localError.message}", localError)
+                                withContext(Dispatchers.Main) {
+                                    _state.value = _state.value.copy(
+                                        stagedDocuments = _state.value.stagedDocuments.map {
+                                            if (it.uri == uri && it.isUploading) {
+                                                it.copy(isUploading = false, error = e.message)
+                                            } else it
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    )
+            } catch (e: Exception) {
+                Log.e(TAG, "Staging preparation failed petId=$petId stagingId=$stagingId: ${e.message}", e)
+                runCatching {
+                    val local = copyStagedDocumentLocally(context, uri, fileName)
+                    withContext(Dispatchers.Main) {
+                        _state.value = _state.value.copy(
+                            stagedDocuments = _state.value.stagedDocuments.map {
+                                if (it.uri == uri && it.isUploading) {
+                                    it.copy(
+                                        uri = local,
+                                        downloadUrl = local.toString(),
+                                        isUploading = false,
+                                        error = null
+                                    )
+                                } else it
+                            }
+                        )
+                    }
+                    Log.d(TAG, "Staging preparation failed; saved original locally for later sync fileName=$fileName uri=$local")
+                }.onFailure { localError ->
+                    Log.e(TAG, "Staging local fallback failed fileName=$fileName: ${localError.message}", localError)
+                    withContext(Dispatchers.Main) {
+                        _state.value = _state.value.copy(
+                            stagedDocuments = _state.value.stagedDocuments.map {
+                                if (it.uri == uri && it.isUploading) {
+                                    it.copy(isUploading = false, error = e.message)
+                                } else it
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -165,7 +260,7 @@ class AddVaccineViewModel : ViewModel() {
         val administeredByError = validateCommittedInput(s.administeredBy, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC)
         val lotNumberError = validateCommittedInput(s.lotNumber, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.LOT_NUMBER)
         val birthDateError = if (s.petBirthDateIso != null && isBeforeBirth(s.dateGiven, s.petBirthDateIso)) {
-            "Vaccination date cannot be before pet's birth date (${s.petBirthDateIso?.take(10)})."
+            "Vaccination date cannot be before pet's birth date (${s.petBirthDateIso.take(10)})."
         } else null
         val firstError = listOfNotNull(
             if (s.petId.isBlank() || selectedVaccine == null || s.dateGiven.isBlank()) "Pet, vaccine and date are required." else null,
@@ -174,19 +269,26 @@ class AddVaccineViewModel : ViewModel() {
             lotNumberError
         ).firstOrNull()
         if (firstError != null) {
+            Log.d(TAG, "submit blocked validationError=$firstError")
             _state.value = s.copy(error = firstError)
             return
         }
         if (s.stagedDocuments.any { it.isUploading }) {
+            Log.d(TAG, "submit blocked waitingForUploads count=${s.stagedDocuments.count { it.isUploading }}")
             _state.value = s.copy(error = "Please wait for documents to finish uploading")
             return
         }
+        val vaccine = selectedVaccine ?: return
 
         viewModelScope.launch {
+            Log.d(
+                TAG,
+                "submit start petId=${s.petId} selectedVaccine=${vaccine.id} stagedDocs=${s.stagedDocuments.size}"
+            )
             _state.value = s.copy(isLoading = true, error = null)
 
             val request = AddVaccinationRequest(
-                vaccineId      = selectedVaccine?.id ?: return@launch,
+                vaccineId      = vaccine.id,
                 dateGiven      = toIso(s.dateGiven),
                 nextDueDate    = s.nextDueDate.takeIf { it.isNotBlank() }?.let { toIso(it) },
                 lotNumber      = normalizeForCommit(s.lotNumber, InputFieldPolicy.GENERAL_TEXT),
@@ -200,27 +302,59 @@ class AddVaccineViewModel : ViewModel() {
                 onSuccess = { pet ->
                     // Buscar la vacunación recién creada (la última)
                     val newVaccinationId = pet.vaccinations.lastOrNull()?.id
+                    Log.d(
+                        TAG,
+                        "submit add vaccination success petId=${s.petId} newVaccinationId=$newVaccinationId"
+                    )
 
                     if (newVaccinationId != null) {
                         val successfulDocs = s.stagedDocuments
                             .filter { it.downloadUrl != null && it.error == null }
+                        Log.d(TAG, "submit attaching stagedDocs=${successfulDocs.size} to vaccinationId=$newVaccinationId")
 
                         successfulDocs.forEach { doc ->
-                            RepositoryProvider.petRepository.addVaccinationDocument(
-                                s.petId,
-                                newVaccinationId,
-                                AddDocumentRequest(
+                            val localUri = doc.downloadUrl.orEmpty()
+                            if (localUri.startsWith("file:")) {
+                                RepositoryProvider.petRepository.queueVaccinationDocument(
+                                    sourceUri = doc.uri,
+                                    petId = s.petId,
+                                    vaccinationId = newVaccinationId,
                                     fileName = doc.fileName,
-                                    fileUri  = doc.downloadUrl
+                                    mimeType = doc.mimeType
+                                ).fold(
+                                    onSuccess = {
+                                        Log.d(TAG, "submit queued local staged document fileName=${doc.fileName} vaccinationId=$newVaccinationId")
+                                    },
+                                    onFailure = {
+                                        Log.e(TAG, "submit queue local staged document failed fileName=${doc.fileName}: ${it.message}", it)
+                                    }
                                 )
-                            )
+                            } else {
+                                RepositoryProvider.petRepository.addVaccinationDocument(
+                                    s.petId,
+                                    newVaccinationId,
+                                    AddDocumentRequest(
+                                        fileName = doc.fileName,
+                                        fileUri  = doc.downloadUrl
+                                    )
+                                ).fold(
+                                    onSuccess = {
+                                        Log.d(TAG, "submit document metadata saved fileName=${doc.fileName}")
+                                    },
+                                    onFailure = {
+                                        Log.e(TAG, "submit document metadata failed fileName=${doc.fileName}: ${it.message}", it)
+                                    }
+                                )
+                            }
                         }
                     }
 
                     _state.value = _state.value.copy(isLoading = false)
+                    Log.d(TAG, "submit completed petId=${s.petId}")
                     onSuccess()
                 },
                 onFailure = { e ->
+                    Log.e(TAG, "submit failed petId=${s.petId}: ${e.message}", e)
                     _state.value = _state.value.copy(
                         isLoading = false,
                         error     = e.message ?: "Error"
@@ -254,4 +388,23 @@ class AddVaccineViewModel : ViewModel() {
             else -> null
         }
     }.getOrNull()
+
+    private fun copyStagedDocumentLocally(
+        context: Context,
+        sourceUri: Uri,
+        fileName: String
+    ): Uri {
+        val dir = File(context.filesDir, "pending_vaccination_staging/${_state.value.stagingId}")
+        dir.mkdirs()
+        val safeFileName = fileName.replace(Regex("""[^\w.\-]"""), "_")
+        val file = File(dir, "${UUID.randomUUID()}_$safeFileName")
+        context.contentResolver.openInputStream(sourceUri)?.use { input ->
+            file.outputStream().use { output -> input.copyTo(output) }
+        } ?: error("Could not read selected document")
+        return Uri.fromFile(file)
+    }
+
+    private companion object {
+        const val TAG = "DOC_UPLOAD"
+    }
 }

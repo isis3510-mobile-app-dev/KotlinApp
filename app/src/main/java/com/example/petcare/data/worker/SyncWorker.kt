@@ -6,8 +6,10 @@ import androidx.work.WorkerParameters
 import com.example.petcare.data.local.db.AppDatabase
 import com.example.petcare.data.local.hive.HiveCacheManager
 import com.example.petcare.data.local.mapper.toEntity
+import com.example.petcare.data.model.AddDocumentRequest
 import com.example.petcare.data.model.AddVaccinationRequest
 import com.example.petcare.data.model.CreatePetRequest
+import com.example.petcare.data.model.PendingVaccinationDocument
 import com.example.petcare.data.model.CreateWeightLogRequest
 import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.model.UpdateVaccinationRequest
@@ -16,6 +18,7 @@ import com.example.petcare.data.network.ApiService
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.storage
+import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -71,9 +74,12 @@ class SyncWorker(
 
             coroutineScope {
                 launch(Dispatchers.IO + CoroutineName("vaccination-sync")) {
+                    android.util.Log.d("VAX_SYNC", "vaccination-sync coroutine started thread=${Thread.currentThread().name}")
                     syncPendingVaccinationCreates(db, api)
                     syncPendingVaccinationUpdates(db, api)
                     syncPendingVaccinationDeletes(db, api)
+                    syncPendingVaccinationDocuments(api)
+                    android.util.Log.d("VAX_SYNC", "vaccination-sync coroutine finished thread=${Thread.currentThread().name}")
                 }
                 launch(Dispatchers.IO + CoroutineName("weight-sync")) {
                     syncPendingWeightLogCreates(db, api)
@@ -248,66 +254,205 @@ class SyncWorker(
     }
 
     private suspend fun syncPendingVaccinationCreates(db: AppDatabase, api: ApiService) {
-        db.vaccineDao().getPendingSync()
+        val allPending = db.vaccineDao().getPendingSync()
+        val pending = allPending
             .filter { it.id.startsWith("local_vax_") }
             // Skip any whose petId is still a temp — pet must sync first
             .filter { !it.petId.startsWith("local_") }
-            .forEach { entity ->
-                try {
-                    val response = api.addVaccination(
-                        entity.petId,
-                        AddVaccinationRequest(
-                            vaccineId = entity.vaccineId,
-                            dateGiven = entity.dateGiven,
-                            nextDueDate = entity.nextDueDate,
-                            lotNumber = entity.lotNumber,
-                            status = entity.status,
-                            administeredBy = entity.administeredBy
-                        )
+
+        android.util.Log.d(
+            "VAX_SYNC",
+            "Pending vaccination creates total=${allPending.count { it.id.startsWith("local_vax_") }} eligible=${pending.size}"
+        )
+        pending.forEach { entity ->
+            try {
+                android.util.Log.d(
+                    "VAX_SYNC",
+                    "POST vaccination create localId=${entity.id} petId=${entity.petId}"
+                )
+                val response = api.addVaccination(
+                    entity.petId,
+                    AddVaccinationRequest(
+                        vaccineId = entity.vaccineId,
+                        dateGiven = entity.dateGiven,
+                        nextDueDate = entity.nextDueDate,
+                        lotNumber = entity.lotNumber,
+                        status = entity.status,
+                        administeredBy = entity.administeredBy
                     )
-                    val pet = response.body() ?: return@forEach
-                    // Remove the local vaccination we just synced
-                    db.vaccineDao().deleteVaccineById(entity.id)
-                    // Insert all vaccinations from server (will update/replace other remote ones)
-                    val serverEntities = pet.vaccinations.map { it.toEntity(entity.petId) }
-                    db.vaccineDao().insertAll(serverEntities)
-                } catch (e: Exception) { /* skip */ }
+                )
+                android.util.Log.d("VAX_SYNC", "POST vaccination create response=${response.code()} localId=${entity.id}")
+                val pet = response.body() ?: run {
+                    android.util.Log.w("VAX_SYNC", "POST vaccination create null body localId=${entity.id}")
+                    return@forEach
+                }
+                val createdVaccination = pet.vaccinations.lastOrNull()
+                if (createdVaccination?.id?.isNotBlank() == true) {
+                    movePendingDocumentsToServerVaccination(
+                        oldPetId = entity.petId,
+                        oldVaccinationId = entity.id,
+                        newPetId = entity.petId,
+                        newVaccinationId = createdVaccination.id
+                    )
+                } else {
+                    android.util.Log.w("DOC_UPLOAD", "Could not map pending docs for local vaccination ${entity.id}")
+                }
+                // Remove the local vaccination we just synced
+                db.vaccineDao().deleteVaccineById(entity.id)
+                // Insert all vaccinations from server (will update/replace other remote ones)
+                val serverEntities = pet.vaccinations.map { it.toEntity(entity.petId) }
+                db.vaccineDao().insertAll(serverEntities)
+                android.util.Log.d(
+                    "VAX_SYNC",
+                    "Vaccination create synced localId=${entity.id} serverVaccinations=${serverEntities.size}"
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("VAX_SYNC", "Vaccination create sync failed id=${entity.id}: ${e.message}", e)
             }
+        }
     }
 
     private suspend fun syncPendingVaccinationUpdates(db: AppDatabase, api: ApiService) {
-        db.vaccineDao().getPendingSync()
+        val pending = db.vaccineDao().getPendingSync()
             .filter { !it.id.startsWith("local_vax_") }
             .filter { !it.petId.startsWith("local_") }
-            .forEach { entity ->
-                try {
-                    api.updateVaccination(
-                        entity.petId,
-                        entity.id,
-                        UpdateVaccinationRequest(
-                            vaccineId = entity.vaccineId,
-                            dateGiven = entity.dateGiven,
-                            nextDueDate = entity.nextDueDate,
-                            lotNumber = entity.lotNumber,
-                            administeredBy = entity.administeredBy
-                        )
+        android.util.Log.d("VAX_SYNC", "Pending vaccination updates eligible=${pending.size}")
+        pending.forEach { entity ->
+            try {
+                android.util.Log.d("VAX_SYNC", "PUT vaccination update id=${entity.id} petId=${entity.petId}")
+                val response = api.updateVaccination(
+                    entity.petId,
+                    entity.id,
+                    UpdateVaccinationRequest(
+                        vaccineId = entity.vaccineId,
+                        dateGiven = entity.dateGiven,
+                        nextDueDate = entity.nextDueDate,
+                        lotNumber = entity.lotNumber,
+                        administeredBy = entity.administeredBy
                     )
-                    db.vaccineDao().updateVaccine(entity.copy(pendingSync = false))
-                } catch (e: Exception) { /* skip */ }
+                )
+                android.util.Log.d("VAX_SYNC", "PUT vaccination update response=${response.code()} id=${entity.id}")
+                db.vaccineDao().updateVaccine(entity.copy(pendingSync = false))
+            } catch (e: Exception) {
+                android.util.Log.e("VAX_SYNC", "Vaccination update sync failed id=${entity.id}: ${e.message}", e)
             }
+        }
     }
 
     private suspend fun syncPendingVaccinationDeletes(db: AppDatabase, api: ApiService) {
-        db.vaccineDao().getPendingDelete()
+        val pending = db.vaccineDao().getPendingDelete()
             .filter { !it.petId.startsWith("local_") }
-            .forEach { entity ->
-                try {
-                    val response = api.deleteVaccination(entity.petId, entity.id)
-                    if (response.isSuccessful || response.code() == 204) {
-                        db.vaccineDao().deleteVaccineById(entity.id)
-                    }
-                } catch (e: Exception) { /* skip */ }
+        android.util.Log.d("VAX_SYNC", "Pending vaccination deletes eligible=${pending.size}")
+        pending.forEach { entity ->
+            try {
+                android.util.Log.d("VAX_SYNC", "DELETE vaccination id=${entity.id} petId=${entity.petId}")
+                val response = api.deleteVaccination(entity.petId, entity.id)
+                android.util.Log.d("VAX_SYNC", "DELETE vaccination response=${response.code()} id=${entity.id}")
+                if (response.isSuccessful || response.code() == 204) {
+                    db.vaccineDao().deleteVaccineById(entity.id)
+                    android.util.Log.d("VAX_SYNC", "Vaccination delete synced id=${entity.id}")
+                } else {
+                    android.util.Log.w("VAX_SYNC", "Vaccination delete rejected id=${entity.id} http=${response.code()}")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("VAX_SYNC", "Vaccination delete sync failed id=${entity.id}: ${e.message}", e)
             }
+        }
+    }
+
+    private suspend fun syncPendingVaccinationDocuments(api: ApiService) {
+        val hive = HiveCacheManager(applicationContext)
+        val gson = Gson()
+        val pendingByKey = hive.getAllPendingVaccinationDocumentJson()
+        android.util.Log.d("DOC_UPLOAD", "Worker pending vaccination documents groups=${pendingByKey.size}")
+
+        pendingByKey.forEach { (key, json) ->
+            val pendingDocs = runCatching {
+                gson.fromJson(json, Array<PendingVaccinationDocument>::class.java).toList()
+            }.getOrElse {
+                android.util.Log.e("DOC_UPLOAD", "Worker failed to parse pending docs key=$key: ${it.message}", it)
+                emptyList()
+            }
+            if (pendingDocs.isEmpty()) return@forEach
+
+            val remaining = pendingDocs.toMutableList()
+            pendingDocs.forEach { pending ->
+                try {
+                    val safeFileName = pending.fileName.replace(Regex("""[^\w.\-]"""), "_")
+                    val path = "pets/${pending.petId}/documents/vaccinations/${pending.vaccinationId}/${java.util.UUID.randomUUID()}_$safeFileName"
+                    val ref = Firebase.storage.reference.child(path)
+                    android.util.Log.d(
+                        "DOC_UPLOAD",
+                        "Worker Firebase upload pendingDoc=${pending.id} path=$path"
+                    )
+                    ref.putFile(pending.localUri.toUri()).await()
+                    val downloadUrl = ref.downloadUrl.await().toString()
+                    val response = api.addVaccinationDocument(
+                        pending.petId,
+                        pending.vaccinationId,
+                        AddDocumentRequest(
+                            fileName = pending.fileName,
+                            fileUri = downloadUrl
+                        )
+                    )
+                    if (!response.isSuccessful || response.body() == null) {
+                        android.util.Log.w(
+                            "DOC_UPLOAD",
+                            "Worker backend document rejected pendingDoc=${pending.id} http=${response.code()}"
+                        )
+                        return@forEach
+                    }
+
+                    remaining.remove(pending)
+                    deleteLocalPendingDocument(pending.localUri)
+                    android.util.Log.d("DOC_UPLOAD", "Worker synced pending document id=${pending.id}")
+                } catch (e: Exception) {
+                    android.util.Log.e("DOC_UPLOAD", "Worker pending document sync failed id=${pending.id}: ${e.message}", e)
+                }
+            }
+
+            if (remaining.isEmpty()) {
+                hive.invalidatePendingVaccinationDocumentsByKey(key)
+            } else {
+                hive.putPendingVaccinationDocumentsByKey(key, gson.toJson(remaining))
+            }
+        }
+    }
+
+    private fun movePendingDocumentsToServerVaccination(
+        oldPetId: String,
+        oldVaccinationId: String,
+        newPetId: String,
+        newVaccinationId: String
+    ) {
+        val hive = HiveCacheManager(applicationContext)
+        val gson = Gson()
+        hive.movePendingVaccinationDocuments(
+            oldPetId = oldPetId,
+            oldVaccinationId = oldVaccinationId,
+            newPetId = newPetId,
+            newVaccinationId = newVaccinationId
+        ) { json ->
+            val updated = gson.fromJson(json, Array<PendingVaccinationDocument>::class.java)
+                .map {
+                    it.copy(
+                        petId = newPetId,
+                        vaccinationId = newVaccinationId
+                    )
+                }
+            gson.toJson(updated)
+        }
+        android.util.Log.d(
+            "DOC_UPLOAD",
+            "Moved pending docs from vaccination=$oldVaccinationId to server vaccination=$newVaccinationId"
+        )
+    }
+
+    private fun deleteLocalPendingDocument(localUri: String) {
+        runCatching {
+            val path = android.net.Uri.parse(localUri).path ?: return
+            java.io.File(path).delete()
+        }
     }
 
     private suspend fun syncPendingWeightLogCreates(db: AppDatabase, api: ApiService) {

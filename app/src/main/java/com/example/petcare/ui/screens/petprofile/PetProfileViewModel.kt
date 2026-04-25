@@ -1,5 +1,6 @@
 package com.example.petcare.ui.screens.petprofile
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
@@ -59,12 +60,17 @@ class PetProfileViewModel : ViewModel() {
     fun loadPet(petId: String) {
         currentPetId = petId
         viewModelScope.launch {
+            Log.d(TAG, "loadPet start petId=$petId")
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             FeatureExecutionTracker.track("Load Pet Profile") {
                 RepositoryProvider.petRepository.getPet(petId)
             }.fold(
-                onSuccess = { pet -> applyPetToState(pet, petId) },
+                onSuccess = { pet ->
+                    Log.d(TAG, "loadPet success petId=$petId vaccinations=${pet.vaccinations.size}")
+                    applyPetToState(pet, petId)
+                },
                 onFailure = { e ->
+                    Log.e(TAG, "loadPet failed petId=$petId: ${e.message}", e)
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error     = e.message ?: "Failed to load pet"
@@ -78,9 +84,15 @@ class PetProfileViewModel : ViewModel() {
     fun reloadPet() {
         if (currentPetId.isBlank()) return
         viewModelScope.launch {
+            Log.d(TAG, "reloadPet start petId=$currentPetId")
             RepositoryProvider.petRepository.getPet(currentPetId).fold(
-                onSuccess = { pet -> applyPetToState(pet, currentPetId) },
-                onFailure = { /* ignore silent errors */ }
+                onSuccess = { pet ->
+                    Log.d(TAG, "reloadPet success petId=$currentPetId vaccinations=${pet.vaccinations.size}")
+                    applyPetToState(pet, currentPetId)
+                },
+                onFailure = {
+                    Log.e(TAG, "reloadPet failed petId=$currentPetId: ${it.message}", it)
+                }
             )
         }
     }
@@ -116,6 +128,7 @@ class PetProfileViewModel : ViewModel() {
                 )
             }
             .sortedByDescending { it.dateGiven }
+        Log.d(TAG, "applyPetToState petId=$petId vaccines=${vaccines.size}")
 
         val fetchedEvents = mutableListOf<Event>()
         RepositoryProvider.eventRepository.getEvents(petId = petId).fold(
@@ -230,6 +243,10 @@ class PetProfileViewModel : ViewModel() {
             if (nowMonth < birthMonth) years--
             "$years yrs"
         } catch (_: Exception) { "" }
+    }
+
+    private companion object {
+        const val TAG = "PET_PROFILE"
     }
 }
 

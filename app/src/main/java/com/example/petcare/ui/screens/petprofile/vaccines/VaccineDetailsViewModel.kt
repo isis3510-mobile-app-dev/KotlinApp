@@ -2,11 +2,13 @@ package com.example.petcare.ui.screens.petprofile.vaccines
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.AddDocumentRequest
 import com.example.petcare.data.model.AttachedDocument
+import com.example.petcare.data.network.isOnline
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineFilterStatus
 import com.example.petcare.ui.screens.petprofile.components.vaccines.VaccineRecord
@@ -51,6 +53,12 @@ class VaccineDetailsViewModel : ViewModel() {
     fun load(petId: String, vaccineId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, petId = petId, error = null)
+            RepositoryProvider.petRepository.syncPendingVaccinationDocuments(petId, vaccineId)
+                .onSuccess { synced ->
+                    if (synced > 0) {
+                        Log.d(TAG, "Synced pending documents before load count=$synced vaccinationId=$vaccineId")
+                    }
+                }
 
             val catalogMap = RepositoryProvider.petRepository
                 .getVaccineCatalog()
@@ -88,7 +96,7 @@ class VaccineDetailsViewModel : ViewModel() {
                                 fileName = doc.fileName,
                                 fileUri  = doc.fileUri
                             )
-                        }
+                        } + pendingAttachedDocuments(pet.id, vacc.id)
                     )
 
                     _uiState.value = _uiState.value.copy(
@@ -203,24 +211,46 @@ class VaccineDetailsViewModel : ViewModel() {
 
     // ── Documents ─────────────────────────────────────────────────────────
 
-    fun addDocument(context: Context, uri: Uri) {
+    fun addDocument(
+        context: Context,
+        uri: Uri,
+        mimeType: String? = null,
+        fileName: String? = null
+    ) {
         val petId         = _uiState.value.petId
         val vaccinationId = _uiState.value.vaccine?.id ?: return
+        Log.d(TAG, "Detail document upload requested petId=$petId vaccinationId=$vaccinationId")
         viewModelScope.launch(Dispatchers.IO) {
+            Log.d(TAG, "Detail upload coroutine started thread=${Thread.currentThread().name}")
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
+                Log.d(TAG, "Detail upload UI loading state set on ${Thread.currentThread().name}")
             }
-            val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
-            val fileName = FirebaseDocumentUploader.getFileName(context, uri)
+            val resolvedMimeType = mimeType ?: context.contentResolver.getType(uri) ?: "application/octet-stream"
+            val resolvedFileName = fileName ?: FirebaseDocumentUploader.getFileName(context, uri)
                 ?: "document_${System.currentTimeMillis()}"
-            val prepared = async(Dispatchers.IO) {
-                PicassoImageCompressor.prepareImageIfNeeded(context, uri, mimeType, fileName)
-            }.await()
+
+            if (!isOnline(context)) {
+                queuePendingDocument(context, uri, petId, vaccinationId, resolvedFileName, resolvedMimeType)
+                return@launch
+            }
+
+            val prepared = try {
+                async(Dispatchers.IO) {
+                    PicassoImageCompressor.prepareImageIfNeeded(context, uri, resolvedMimeType, resolvedFileName)
+                }.await()
+            } catch (e: Exception) {
+                Log.e(TAG, "Detail document preparation failed fileName=$resolvedFileName: ${e.message}", e)
+                queuePendingDocument(context, uri, petId, vaccinationId, resolvedFileName, resolvedMimeType)
+                return@launch
+            }
+            Log.d(TAG, "Detail document prepared original=$resolvedFileName prepared=${prepared.fileName}")
 
             FirebaseDocumentUploader
                 .uploadVaccinationDocument(context, prepared.uri, petId, vaccinationId)
                 .fold(
                     onSuccess = { uploaded ->
+                        Log.d(TAG, "Detail Firebase upload success fileName=${uploaded.fileName}")
                         RepositoryProvider.petRepository.addVaccinationDocument(
                             petId,
                             vaccinationId,
@@ -230,6 +260,7 @@ class VaccineDetailsViewModel : ViewModel() {
                             )
                         ).fold(
                             onSuccess = { updatedPet ->
+                                Log.d(TAG, "Detail backend metadata saved vaccinationId=$vaccinationId")
                                 val updatedVacc = updatedPet.vaccinations
                                     .find { it.id == vaccinationId }
                                 withContext(Dispatchers.Main) {
@@ -247,9 +278,11 @@ class VaccineDetailsViewModel : ViewModel() {
                                                 } ?: emptyList()
                                         )
                                     )
+                                    Log.d(TAG, "Detail document UI state updated on ${Thread.currentThread().name}")
                                 }
                             },
                             onFailure = { e ->
+                                Log.e(TAG, "Detail backend metadata failed vaccinationId=$vaccinationId: ${e.message}", e)
                                 withContext(Dispatchers.Main) {
                                     _uiState.value = _uiState.value.copy(
                                         isUploadingDoc = false,
@@ -260,12 +293,8 @@ class VaccineDetailsViewModel : ViewModel() {
                         )
                     },
                     onFailure = { e ->
-                        withContext(Dispatchers.Main) {
-                            _uiState.value = _uiState.value.copy(
-                                isUploadingDoc = false,
-                                error          = "Upload failed: ${e.message}"
-                            )
-                        }
+                        Log.e(TAG, "Detail Firebase upload failed vaccinationId=$vaccinationId: ${e.message}", e)
+                        queuePendingDocument(context, uri, petId, vaccinationId, resolvedFileName, resolvedMimeType)
                     }
                 )
         }
@@ -285,5 +314,63 @@ class VaccineDetailsViewModel : ViewModel() {
             .takeUnless { it.isNullOrBlank() }
 
         return fromCatalog ?: "Unknown vaccine"
+    }
+
+    private fun pendingAttachedDocuments(
+        petId: String,
+        vaccinationId: String
+    ): List<AttachedDocument> =
+        RepositoryProvider.petRepository
+            .getPendingVaccinationDocuments(petId, vaccinationId)
+            .map {
+                AttachedDocument(
+                    id = "pending_${it.id}",
+                    fileName = "${it.fileName} (pending sync)",
+                    fileUri = it.localUri
+                )
+            }
+
+    private suspend fun queuePendingDocument(
+        context: Context,
+        uri: Uri,
+        petId: String,
+        vaccinationId: String,
+        fileName: String,
+        mimeType: String
+    ) {
+        RepositoryProvider.petRepository
+            .queueVaccinationDocument(uri, petId, vaccinationId, fileName, mimeType)
+            .fold(
+                onSuccess = { pending ->
+                    Log.d(TAG, "Detail document queued locally id=${pending.id} fileName=${pending.fileName}")
+                    withContext(Dispatchers.Main) {
+                        _uiState.value = _uiState.value.copy(
+                            isUploadingDoc = false,
+                            error = "No internet connection. Document saved locally and will sync when online.",
+                            vaccine = _uiState.value.vaccine?.copy(
+                                attachedDocuments = _uiState.value.vaccine?.attachedDocuments.orEmpty() +
+                                    AttachedDocument(
+                                        id = "pending_${pending.id}",
+                                        fileName = "${pending.fileName} (pending sync)",
+                                        fileUri = pending.localUri
+                                    )
+                            )
+                        )
+                    }
+                },
+                onFailure = { e ->
+                    Log.e(TAG, "Detail document local queue failed fileName=$fileName: ${e.message}", e)
+                    withContext(Dispatchers.Main) {
+                        _uiState.value = _uiState.value.copy(
+                            isUploadingDoc = false,
+                            error = "Could not save document locally: ${e.message}"
+                        )
+                    }
+                }
+            )
+    }
+
+    private companion object {
+        const val TAG = "DOC_UPLOAD"
     }
 }

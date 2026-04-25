@@ -1,6 +1,7 @@
 package com.example.petcare.data.notifications
 
 import android.content.Context
+import android.util.Log
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -29,6 +30,7 @@ object NotificationScheduler {
             ExistingPeriodicWorkPolicy.KEEP,
             request
         )
+        Log.d(TAG, "Scheduled periodic reminders uniqueWork=$UNIQUE_WORK_NAME intervalHours=1 network=CONNECTED")
     }
 
     fun runNow(context: Context) {
@@ -45,5 +47,8 @@ object NotificationScheduler {
             ExistingWorkPolicy.REPLACE,
             request
         )
+        Log.d(TAG, "Scheduled one-time reminders uniqueWork=$UNIQUE_WORK_NAME_NOW network=CONNECTED")
     }
+
+    private const val TAG = "REMINDER_WORKER"
 }

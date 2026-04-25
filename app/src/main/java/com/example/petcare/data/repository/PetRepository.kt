@@ -21,9 +21,12 @@ import com.example.petcare.data.model.*
 import com.example.petcare.data.network.ApiService
 import com.example.petcare.data.network.isOnline
 import com.example.petcare.data.worker.SyncWorker
+import com.example.petcare.util.FirebaseDocumentUploader
 import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
+import android.net.Uri
 import kotlinx.coroutines.flow.first
+import java.io.File
 import java.util.UUID
 
 
@@ -68,19 +71,30 @@ class PetRepository(
 
     private fun cacheVaccinations(petId: String, vaccinations: List<Vaccination>) {
         vaccineResponseCache.put(vaccineCacheKey(petId), vaccinations)
+        Log.d(
+            "VAX_ROOM",
+            "L1 PUT vaccinations petId=$petId count=${vaccinations.size} revision=$vaccineCatalogRevision"
+        )
     }
 
     private suspend fun getCachedVaccinations(petId: String): List<Vaccination> {
-        vaccineResponseCache.get(vaccineCacheKey(petId))?.let { return it }
+        vaccineResponseCache.get(vaccineCacheKey(petId))?.let {
+            Log.d("VAX_ROOM", "L1 HIT vaccinations petId=$petId count=${it.size}")
+            return it
+        }
         return vaccineDao.getVaccinesForPetSync(petId)
             .map { it.toVaccination() }
-            .also { cacheVaccinations(petId, it) }
+            .also {
+                Log.d("VAX_ROOM", "ROOM READ vaccinations petId=$petId count=${it.size}")
+                cacheVaccinations(petId, it)
+            }
     }
 
     private fun invalidateVaccinationCache(petId: String) {
-        vaccineResponseCache.snapshot().keys
+        val keys = vaccineResponseCache.snapshot().keys
             .filter { it.startsWith("$petId:") }
-            .forEach { vaccineResponseCache.remove(it) }
+        keys.forEach { vaccineResponseCache.remove(it) }
+        Log.d("VAX_ROOM", "L1 INVALIDATE vaccinations petId=$petId removedKeys=${keys.size}")
     }
 
     suspend fun getPets(): Result<List<Pet>> {
@@ -284,6 +298,7 @@ class PetRepository(
                 cacheServerPetPreservingPending(uid, pet)
                 hive.invalidatePets(uid)
                 Log.d("VAX_REPO", "Online: vaccination added, pet has ${pet.vaccinations.size} vaccinations")
+                Log.d("VAX_ROOM", "Online add vaccination -> Room snapshot updated petId=$petId")
                 mergePetWithLocal(uid, pet)
             }
         } else {
@@ -307,7 +322,11 @@ class PetRepository(
                 )
                 vaccineDao.insertVaccine(entity)
                 Log.d("PET_REPO", "Vaccination saved locally: $tempId for pet $petId")
+                Log.d("VAX_ROOM", "ROOM PENDING_CREATE vaccinationId=$tempId petId=$petId")
+                hive.invalidatePets(uid)
+                Log.d("VAX_ROOM", "Invalidated pet Hive cache after offline vaccination create petId=$petId")
                 enqueueSyncWork()
+                Log.d("VAX_SYNC", "Queued SyncWorker after offline vaccination create id=$tempId")
 
                 // Build response manually from cache + new vaccination
                 invalidateVaccinationCache(petId)
@@ -326,8 +345,125 @@ class PetRepository(
         vaccinationId: String,
         request: AddDocumentRequest
     ): Result<Pet> = runCatching {
+        val uid = currentUserId()
+        Log.d(
+            "DOC_UPLOAD",
+            "Saving vaccination document metadata petId=$petId vaccinationId=$vaccinationId fileName=${request.fileName}"
+        )
         val response = api.addVaccinationDocument(petId, vaccinationId, request)
-        response.body() ?: error("Failed to add document")
+        val pet = response.body() ?: error("Failed to add document")
+        invalidateVaccinationCache(petId)
+        hive.invalidatePets(uid)
+        Log.d(
+            "DOC_UPLOAD",
+            "Backend document metadata saved petId=$petId vaccinationId=$vaccinationId totalVaccinations=${pet.vaccinations.size}"
+        )
+        pet
+    }
+
+    suspend fun queueVaccinationDocument(
+        sourceUri: Uri,
+        petId: String,
+        vaccinationId: String,
+        fileName: String,
+        mimeType: String
+    ): Result<PendingVaccinationDocument> = runCatching {
+        val id = UUID.randomUUID().toString()
+        val safeFileName = fileName.replace(Regex("""[^\w.\-]"""), "_")
+        val dir = File(context.filesDir, "pending_vaccination_documents/$petId/$vaccinationId")
+        dir.mkdirs()
+        val localFile = File(dir, "${id}_$safeFileName")
+
+        context.contentResolver.openInputStream(sourceUri)?.use { input ->
+            localFile.outputStream().use { output -> input.copyTo(output) }
+        } ?: error("Could not read selected document")
+
+        val pending = PendingVaccinationDocument(
+            id = id,
+            petId = petId,
+            vaccinationId = vaccinationId,
+            fileName = fileName,
+            mimeType = mimeType,
+            localUri = Uri.fromFile(localFile).toString()
+        )
+        val updated = getPendingVaccinationDocuments(petId, vaccinationId) + pending
+        hive.putPendingVaccinationDocuments(petId, vaccinationId, Gson().toJson(updated))
+        Log.d(
+            "DOC_UPLOAD",
+            "Queued pending vaccination document id=$id petId=$petId vaccinationId=$vaccinationId file=${localFile.absolutePath} bytes=${localFile.length()}"
+        )
+        enqueueSyncWork()
+        pending
+    }
+
+    fun getPendingVaccinationDocuments(
+        petId: String,
+        vaccinationId: String
+    ): List<PendingVaccinationDocument> {
+        val json = hive.getPendingVaccinationDocuments(petId, vaccinationId) ?: return emptyList()
+        return runCatching {
+            Gson().fromJson(json, Array<PendingVaccinationDocument>::class.java).toList()
+        }.getOrElse {
+            Log.e("DOC_UPLOAD", "Failed to parse pending vaccination documents: ${it.message}", it)
+            emptyList()
+        }
+    }
+
+    suspend fun syncPendingVaccinationDocuments(
+        petId: String,
+        vaccinationId: String
+    ): Result<Int> = runCatching {
+        if (!isOnline(context)) {
+            Log.d("DOC_UPLOAD", "Pending document sync skipped offline petId=$petId vaccinationId=$vaccinationId")
+            return@runCatching 0
+        }
+
+        val pendingDocs = getPendingVaccinationDocuments(petId, vaccinationId)
+        if (pendingDocs.isEmpty()) return@runCatching 0
+
+        Log.d(
+            "DOC_UPLOAD",
+            "Pending document sync start petId=$petId vaccinationId=$vaccinationId count=${pendingDocs.size}"
+        )
+        val remaining = pendingDocs.toMutableList()
+        var synced = 0
+
+        pendingDocs.forEach { pending ->
+            runCatching {
+                val uploaded = FirebaseDocumentUploader
+                    .uploadVaccinationDocument(context, Uri.parse(pending.localUri), petId, vaccinationId)
+                    .getOrThrow()
+
+                addVaccinationDocument(
+                    petId,
+                    vaccinationId,
+                    AddDocumentRequest(
+                        fileName = pending.fileName,
+                        fileUri = uploaded.downloadUrl
+                    )
+                ).getOrThrow()
+
+                remaining.remove(pending)
+                deleteLocalPendingFile(pending.localUri)
+                synced++
+                Log.d("DOC_UPLOAD", "Pending document synced id=${pending.id} fileName=${pending.fileName}")
+            }.onFailure {
+                Log.e("DOC_UPLOAD", "Pending document sync failed id=${pending.id}: ${it.message}", it)
+            }
+        }
+
+        if (remaining.isEmpty()) {
+            hive.invalidatePendingVaccinationDocuments(petId, vaccinationId)
+        } else {
+            hive.putPendingVaccinationDocuments(petId, vaccinationId, Gson().toJson(remaining))
+        }
+        if (synced > 0) {
+            val uid = currentUserId()
+            invalidateVaccinationCache(petId)
+            hive.invalidatePets(uid)
+            Log.d("DOC_UPLOAD", "Invalidated pet caches after pending document sync petId=$petId synced=$synced")
+        }
+        synced
     }
 
     suspend fun deleteVaccination(petId: String, vaccinationId: String): Result<Pet> {
@@ -339,6 +475,7 @@ class PetRepository(
                     ?: error("Failed to delete vaccination — HTTP ${response.code()}")
                 // Remove from local cache too
                 vaccineDao.deleteVaccineById(vaccinationId)
+                Log.d("VAX_ROOM", "ROOM DELETE vaccinationId=$vaccinationId after online delete")
                 cacheServerPetPreservingPending(uid, pet)
                 hive.invalidatePets(uid)
                 mergePetWithLocal(uid, pet)
@@ -349,8 +486,12 @@ class PetRepository(
                 val existing = vaccineDao.getById(vaccinationId)
                     ?: error("Vaccination not found offline")
                 vaccineDao.updateVaccine(existing.copy(pendingDelete = true))
+                Log.d("VAX_ROOM", "ROOM PENDING_DELETE vaccinationId=$vaccinationId petId=$petId")
+                hive.invalidatePets(uid)
+                Log.d("VAX_ROOM", "Invalidated pet Hive cache after offline vaccination delete petId=$petId")
                 invalidateVaccinationCache(petId)
                 enqueueSyncWork()
+                Log.d("VAX_SYNC", "Queued SyncWorker after offline vaccination delete id=$vaccinationId")
                 // Return cached pet without the flagged vaccination
                 val cachedPet = petDao.getPetById(uid, petId)
                     ?: error("Pet not found offline")
@@ -386,6 +527,7 @@ class PetRepository(
                     ?: error("Failed to update vaccination — HTTP ${response.code()}")
                 cacheServerPetPreservingPending(uid, pet)
                 hive.invalidatePets(uid)
+                Log.d("VAX_ROOM", "Online update vaccination -> Room snapshot updated vaccinationId=$vaccinationId")
                 mergePetWithLocal(uid, pet)
             }
         } else {
@@ -399,8 +541,12 @@ class PetRepository(
                     pendingSync    = true
                 )
                 vaccineDao.updateVaccine(updated)
+                Log.d("VAX_ROOM", "ROOM PENDING_UPDATE vaccinationId=$vaccinationId petId=$petId")
+                hive.invalidatePets(uid)
+                Log.d("VAX_ROOM", "Invalidated pet Hive cache after offline vaccination update petId=$petId")
                 invalidateVaccinationCache(petId)
                 enqueueSyncWork()
+                Log.d("VAX_SYNC", "Queued SyncWorker after offline vaccination update id=$vaccinationId")
                 // Return cached pet with updated vaccinations
                 val cachedPet = petDao.getPetById(uid, petId)
                     ?: error("Pet not found offline")
@@ -411,15 +557,44 @@ class PetRepository(
         }
     }
 
-
-    suspend fun getPetSmart(petId: String): Result<List<SuggestionDto>> = runCatching {
-        val response = api.getPetSmart(petId)
-        if (response.isSuccessful) {
-            response.body()?.suggestions ?: emptyList()
-        } else {
-            emptyList()
+    private fun deleteLocalPendingFile(localUri: String) {
+        runCatching {
+            val path = Uri.parse(localUri).path ?: return
+            File(path).delete()
         }
     }
+
+
+    suspend fun getPetSmart(petId: String): Result<List<SuggestionDto>> = runCatching {
+        val online = isOnline(context)
+        Log.d("SMART_CACHE", "getPetSmart start petId=$petId online=$online")
+
+        hive.getSuggestions(petId)?.let { cachedJson ->
+            val cached = parseSuggestions(cachedJson)
+            Log.d("SMART_CACHE", "HIT Hive suggestions petId=$petId count=${cached.size}")
+            return@runCatching cached
+        }
+
+        if (!online) {
+            Log.d("SMART_CACHE", "MISS offline suggestions petId=$petId -> emptyList")
+            return@runCatching emptyList()
+        }
+
+        Log.d("SMART_CACHE", "MISS online suggestions petId=$petId -> API")
+        val response = api.getPetSmart(petId)
+        if (!response.isSuccessful) {
+            Log.w("SMART_CACHE", "API failed suggestions petId=$petId http=${response.code()}")
+            return@runCatching emptyList()
+        }
+
+        val suggestions = response.body()?.suggestions.orEmpty()
+        hive.putSuggestions(petId, Gson().toJson(suggestions))
+        Log.d("SMART_CACHE", "API success suggestions petId=$petId count=${suggestions.size} -> Hive saved")
+        suggestions
+    }
+
+    private fun parseSuggestions(json: String): List<SuggestionDto> =
+        Gson().fromJson(json, Array<SuggestionDto>::class.java).toList()
 
 
         // ── Helpers ───────────────────────────────────────────────────────────────
@@ -556,22 +731,19 @@ class PetRepository(
                 Log.d("VAX_CACHE", "API returned ${vaccines.size}")
 
                 db.vaccineCatalogDao().clearAll()
-                db.vaccineCatalogDao().insertAll(
-                    vaccines.map { it.toCatalogEntity() }
-                )
-
+                db.vaccineCatalogDao().insertAll(vaccines.map { it.toCatalogEntity() })
                 vaccineCatalogCache.put(vaccines)
-
                 Log.d("VAX_CACHE", "LRU stored")
-
+                android.util.Log.d("PET_REPO", "Cached ${vaccines.size} catalog vaccines")
+                android.util.Log.d("VAX_ROOM", "ROOM UPSERT vaccine catalog count=${vaccines.size} revision=$vaccineCatalogRevision")
                 vaccines
 
             }.recoverCatching {
-
                 Log.e("VAX_CACHE", "API failed, fallback to Room")
 
                 val cached = db.vaccineCatalogDao().getAll()
                 Log.d("VAX_CACHE", "Room returned ${cached.size}")
+                Log.d("VAX_ROOM", "ROOM FALLBACK vaccine catalog count=${cached.size}")
 
                 val domain = cached.map { it.toVaccine() }
 
@@ -586,6 +758,7 @@ class PetRepository(
 
             val cached = db.vaccineCatalogDao().getAll()
             Log.d("VAX_CACHE", "Offline Room ${cached.size}")
+            Log.d("VAX_ROOM", "OFFLINE ROOM READ vaccine catalog count=${cached.size}")
 
             val domain = cached.map { it.toVaccine() }
 

@@ -107,6 +107,48 @@ class HiveCacheManager(context: Context) {
 
     fun invalidateSuggestions(petId: String) = delete("suggestions_$petId")
 
+    // ── Pending vaccination documents (no TTL: offline queue) ───────────
+
+    fun putPendingVaccinationDocuments(
+        petId: String,
+        vaccinationId: String,
+        json: String
+    ) = put("pending_vax_docs_${petId}_$vaccinationId", json)
+
+    fun getPendingVaccinationDocuments(
+        petId: String,
+        vaccinationId: String
+    ): String? = get("pending_vax_docs_${petId}_$vaccinationId")
+
+    fun invalidatePendingVaccinationDocuments(
+        petId: String,
+        vaccinationId: String
+    ) = delete("pending_vax_docs_${petId}_$vaccinationId")
+
+    fun getAllPendingVaccinationDocumentJson(): Map<String, String> =
+        prefs.all
+            .filterKeys { it.startsWith("pending_vax_docs_") && !it.endsWith("_ts") }
+            .mapValues { it.value as? String ?: "" }
+            .filterValues { it.isNotBlank() }
+
+    fun putPendingVaccinationDocumentsByKey(key: String, json: String) =
+        put(key, json)
+
+    fun invalidatePendingVaccinationDocumentsByKey(key: String) = delete(key)
+
+    fun movePendingVaccinationDocuments(
+        oldPetId: String,
+        oldVaccinationId: String,
+        newPetId: String,
+        newVaccinationId: String,
+        transformJson: (String) -> String
+    ) {
+        val oldKey = "pending_vax_docs_${oldPetId}_$oldVaccinationId"
+        val json = get(oldKey) ?: return
+        put("pending_vax_docs_${newPetId}_$newVaccinationId", transformJson(json))
+        delete(oldKey)
+    }
+
     // ── Vacunas catálogo (TTL: 12 horas) ─────────────────────────────────
 
     fun putVaccineCatalog(json: String) =

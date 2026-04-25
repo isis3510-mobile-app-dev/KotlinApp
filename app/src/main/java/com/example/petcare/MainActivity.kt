@@ -569,6 +569,7 @@ class MainActivity : ComponentActivity() {
 
                                     PetProfileScreen(
                                         petId        = petId,
+                                        viewModel    = petProfileViewModel,
                                         onBack       = {
                                             // Señalamos a Pets, Home y Profile que recarguen
                                             runCatching { navController.getBackStackEntry(Routes.Pets) }
@@ -827,6 +828,7 @@ class MainActivity : ComponentActivity() {
                                         viewModel = addVaccineViewModel,
                                         onBack    = { navController.popBackStack() },
                                         onclick   = {
+                                            val completedPetId = addVaccineViewModel.state.value.petId
                                             addVaccineViewModel.reset()
                                             // Señalamos a Records, Home y PetProfile que recarguen
                                             runCatching { navController.getBackStackEntry(Routes.Records) }
@@ -835,8 +837,12 @@ class MainActivity : ComponentActivity() {
                                                 .onSuccess { it.savedStateHandle["reload_home"] = true }
                                             runCatching { navController.getBackStackEntry(Routes.Calendar) }
                                                 .onSuccess { it.savedStateHandle["reload_calendar"] = true }
-                                            runCatching { navController.getBackStackEntry(Routes.PetProfile) }
+                                            runCatching { navController.getBackStackEntry("petProfile/$completedPetId") }
                                                 .onSuccess { it.savedStateHandle["reload_pet"] = true }
+                                                .onFailure {
+                                                    runCatching { navController.getBackStackEntry(Routes.PetProfile) }
+                                                        .onSuccess { it.savedStateHandle["reload_pet"] = true }
+                                                }
                                             navController.popBackStack(Routes.AddVaccine1, inclusive = true)
                                         }
                                     )

@@ -38,6 +38,7 @@ import com.example.petcare.util.truncateForDisplay
 @Composable
 fun PetProfileScreen(
     petId: String,
+    viewModel: PetProfileViewModel = viewModel(),
     contentPadding: PaddingValues = PaddingValues(0.dp),
     onBack: () -> Unit = {},
     onPetDeleted: () -> Unit = {},
@@ -49,7 +50,6 @@ fun PetProfileScreen(
     onNavigateToEventDetail: (petId: String, eventId: String) -> Unit = { _, _ -> },
     onSeeAllNotifications: (petId: String, petName: String) -> Unit = { _, _ -> },
 ) {
-    val viewModel: PetProfileViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedTabIndex by viewModel.selectedTabIndex.collectAsStateWithLifecycle()
 

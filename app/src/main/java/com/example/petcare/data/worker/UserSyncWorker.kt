@@ -23,15 +23,15 @@ class UserSyncWorker(
     }
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-
+        Log.d("USER_SYNC", "Worker started thread=${Thread.currentThread().name}")
         val db = AppDatabase.getInstance(applicationContext)
         val api = RepositoryProvider.apiService
         val userDao = db.userDao()
         val cache = RepositoryProvider.userCache
 
         return@withContext try {
-
             val pendingUsers = userDao.getPendingSync()
+            Log.d("USER_SYNC", "Pending user updates: ${pendingUsers.size}")
 
             if (pendingUsers.isEmpty()) {
                 Log.d("USER_SYNC", "No pending user updates")
@@ -39,7 +39,7 @@ class UserSyncWorker(
             }
 
             for (user in pendingUsers) {
-
+                Log.d("USER_SYNC", "Uploading user update userId=${user.id}")
                 withTimeout(TIMEOUT_MS) {
                     val request = UpdateUserRequest(
                         name = user.name,
