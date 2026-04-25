@@ -42,6 +42,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "petcare_local.db"
                 )
+                    .addMigrations(MIGRATION_3_4)
+                    .addMigrations(MIGRATION_5_6)
                     .addMigrations(MIGRATION_3_4, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .build().also { INSTANCE = it }
             }
@@ -73,6 +75,9 @@ abstract class AppDatabase : RoomDatabase() {
 
         private val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE events_local ADD COLUMN pendingOperation TEXT")
+                db.execSQL("ALTER TABLE events_local ADD COLUMN retryCount INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE events_local ADD COLUMN nextRetryAt INTEGER NOT NULL DEFAULT 0")
                 db.execSQL(
                     """
             CREATE TABLE IF NOT EXISTS user (

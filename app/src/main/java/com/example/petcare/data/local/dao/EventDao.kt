@@ -34,11 +34,29 @@ interface EventDao {
 
     // ── Para WorkManager: qué hay pendiente de subir ──────────────────────
 
-    @Query("SELECT * FROM events_local WHERE synced = 0 AND pendingDelete = 0")
-    suspend fun getUnsynced(): List<EventEntity>
+    @Query("SELECT * FROM events_local WHERE pendingOperation = 'CREATE' AND pendingDelete = 0")
+    suspend fun getPendingCreatesForMerge(): List<EventEntity>
 
     @Query("SELECT * FROM events_local WHERE pendingDelete = 1")
-    suspend fun getPendingDeletes(): List<EventEntity>
+    suspend fun getPendingDeletesForMerge(): List<EventEntity>
+
+    @Query("""
+        SELECT * FROM events_local
+        WHERE pendingOperation = 'CREATE'
+          AND pendingDelete = 0
+          AND nextRetryAt <= :nowMs
+        ORDER BY date ASC
+    """)
+    suspend fun getPendingCreatesForSync(nowMs: Long): List<EventEntity>
+
+    @Query("""
+        SELECT * FROM events_local
+        WHERE pendingOperation = 'DELETE'
+          AND pendingDelete = 1
+          AND nextRetryAt <= :nowMs
+        ORDER BY date ASC
+    """)
+    suspend fun getPendingDeletesForSync(nowMs: Long): List<EventEntity>
 
     // ── Escrituras ────────────────────────────────────────────────────────
 
@@ -53,11 +71,43 @@ interface EventDao {
 
     // ── Actualizaciones de estado ─────────────────────────────────────────
 
-    @Query("UPDATE events_local SET synced = 1 WHERE id = :id")
+    @Query("""
+        UPDATE events_local
+        SET synced = 1,
+            pendingDelete = 0,
+            pendingOperation = NULL,
+            retryCount = 0,
+            nextRetryAt = 0
+        WHERE id = :id
+    """)
     suspend fun markSynced(id: String)
 
-    @Query("UPDATE events_local SET pendingDelete = 1, synced = 0 WHERE id = :id")
+    @Query("""
+        UPDATE events_local
+        SET pendingDelete = 1,
+            synced = 0,
+            pendingOperation = 'DELETE',
+            retryCount = 0,
+            nextRetryAt = 0
+        WHERE id = :id
+    """)
     suspend fun markPendingDelete(id: String)
+
+    @Query("""
+        UPDATE events_local
+        SET retryCount = :retryCount,
+            nextRetryAt = :nextRetryAt
+        WHERE id = :id
+    """)
+    suspend fun markCreateSyncFailed(id: String, retryCount: Int, nextRetryAt: Long)
+
+    @Query("""
+        UPDATE events_local
+        SET retryCount = :retryCount,
+            nextRetryAt = :nextRetryAt
+        WHERE id = :id
+    """)
+    suspend fun markDeleteSyncFailed(id: String, retryCount: Int, nextRetryAt: Long)
 
     @Query("DELETE FROM events_local WHERE id = :id")
     suspend fun deleteById(id: String)
@@ -76,7 +126,9 @@ interface EventDao {
             clinic       = :clinic,
             description  = :description,
             followUpDate = :followUpDate,
-            synced       = 0
+            synced       = 0,
+            retryCount   = 0,
+            nextRetryAt  = 0
         WHERE id = :id
     """)
     suspend fun updateEvent(
