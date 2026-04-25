@@ -3,8 +3,13 @@ package com.example.petcare.data.repository
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import androidx.work.*
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.petcare.data.local.db.AppDatabase
+import com.example.petcare.data.local.entity.EventEntity
 import com.example.petcare.data.local.hive.HiveCacheManager
 import com.example.petcare.data.local.lru.EventLruCache
 import com.example.petcare.data.local.mapper.toEntity
@@ -16,8 +21,6 @@ import com.example.petcare.data.worker.SyncWorker
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import org.json.JSONObject
 
 class EventRepository(
     private val api: ApiService,
@@ -28,17 +31,13 @@ class EventRepository(
 ) {
 
     private val eventDao = AppDatabase.getInstance(context).eventDao()
-    private val gson     = Gson()
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Conectividad y Sincronización (Patrón Pets)
-    // ─────────────────────────────────────────────────────────────────────────
+    private val gson = Gson()
 
     private fun isOnline(): Boolean {
-        val cm  = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val cap = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
         return cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
     private fun enqueueSyncWork() {
@@ -57,40 +56,30 @@ class EventRepository(
     }
 
     private fun listCacheKey(petId: String?, ownerId: String?): String = when {
-        petId   != null -> "pet_$petId"
+        petId != null -> "pet_$petId"
         ownerId != null -> "owner_$ownerId"
-        else            -> "all"
+        else -> "all"
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // GET EVENTS — Con lógica de Mezcla (Merge) para evitar que desaparezcan
-    // ─────────────────────────────────────────────────────────────────────────
 
     suspend fun getEvents(
         petId: String? = null,
         ownerId: String? = null
     ): Result<List<Event>> {
-
         val online = isOnline()
-        val key    = listCacheKey(petId, ownerId)
+        val key = listCacheKey(petId, ownerId)
 
         if (online) {
-            // Capa 1: LRU
-            val lruCached = lru.getList(key)
-            if (lruCached != null) {
-                return Result.success(mergeEventsWithLocal(lruCached, petId, ownerId))
-            }
+            lru.getList(key)?.let { return Result.success(mergeEventsWithLocal(it, petId, ownerId)) }
 
-            // Capa 2: Hive
             val hiveCached = when {
-                petId   != null -> hive.getEvents(petId)
+                petId != null -> hive.getEvents(petId)
                 ownerId != null -> hive.getEventsByOwner(ownerId)
-                else            -> null
+                else -> null
             }
             val isFresh = when {
-                petId   != null -> hive.isEventsFresh(petId)
+                petId != null -> hive.isEventsFresh(petId)
                 ownerId != null -> hive.isEventsByOwnerFresh(ownerId)
-                else            -> false
+                else -> false
             }
 
             if (hiveCached != null && isFresh) {
@@ -101,58 +90,48 @@ class EventRepository(
             }
         }
 
-        // Capa 3: API o Fallback Room
         return if (online) {
             runCatching {
                 val response = api.getEvents(petId = petId, ownerId = ownerId)
-                if (!response.isSuccessful) error("API Fail")
+                if (!response.isSuccessful) error("API fail: ${response.code()}")
                 val remoteEvents = response.body().orEmpty()
-
-                // Persistencia persistente (Room) y caché volátil (Hive)
-                eventDao.upsertAll(remoteEvents.map { it.toEntity().copy(synced = true) })
+                eventDao.upsertAll(remoteEvents.map { it.toEntity() })
                 if (petId != null) hive.putEvents(petId, gson.toJson(remoteEvents))
-
                 mergeEventsWithLocal(remoteEvents, petId, ownerId)
             }.recoverCatching {
                 mergeEventsWithLocal(getListFromRoom(petId, ownerId), petId, ownerId)
             }
         } else {
-            runCatching {
-                mergeEventsWithLocal(getListFromRoom(petId, ownerId), petId, ownerId)
-            }
+            runCatching { mergeEventsWithLocal(getListFromRoom(petId, ownerId), petId, ownerId) }
         }
     }
 
-    /** * Mezcla eventos remotos/caché con los pendientes de subir (synced=0)
-     * Esto evita que el evento "se borre" recién creado offline.
-     */
-    private suspend fun mergeEventsWithLocal(remote: List<Event>, petId: String?, ownerId: String?): List<Event> {
-        val unsynced = eventDao.getUnsynced()
+    private suspend fun mergeEventsWithLocal(
+        remote: List<Event>,
+        petId: String?,
+        ownerId: String?
+    ): List<Event> {
+        val pendingCreates = eventDao.getPendingCreatesForMerge()
             .filter { (petId == null || it.petId == petId) && (ownerId == null || it.ownerId == ownerId) }
             .map { it.toEvent() }
 
         val merged = remote.toMutableList()
         val remoteIds = remote.map { it.id }.toSet()
+        pendingCreates.forEach { if (!remoteIds.contains(it.id)) merged.add(it) }
 
-        unsynced.forEach { if (!remoteIds.contains(it.id)) merged.add(it) }
-
-        val pendingDeletes = eventDao.getPendingDeletes().map { it.id }.toSet()
-        return merged.filterNot { pendingDeletes.contains(it.id) }
-            .sortedBy { it.date } // Orden cronológico
+        val pendingDeletes = eventDao.getPendingDeletesForMerge().map { it.id }.toSet()
+        return merged
+            .filterNot { pendingDeletes.contains(it.id) }
+            .sortedBy { it.date }
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Métodos de acción (CREATE/UPDATE/DELETE) con soporte Offline
-    // ─────────────────────────────────────────────────────────────────────────
 
     suspend fun createEvent(request: CreateEventRequest): Result<Event> {
         return if (isOnline()) {
             runCatching {
                 val response = api.createEvent(request)
-                if (!response.isSuccessful) error("Create fail")
+                if (!response.isSuccessful) error("Create fail: ${response.code()}")
                 val event = response.body() ?: error("Empty response")
-
-                eventDao.upsert(event.toEntity().copy(synced = true))
+                eventDao.upsert(event.toEntity())
                 hive.invalidateEvents(request.petId)
                 lru.invalidateList(listCacheKey(request.petId, null))
                 event
@@ -160,20 +139,23 @@ class EventRepository(
         } else {
             runCatching {
                 val tempId = "local_ev_${System.currentTimeMillis()}"
-                val entity = com.example.petcare.data.local.entity.EventEntity(
-                    id            = tempId,
-                    petId         = request.petId,
-                    ownerId       = request.ownerId,
-                    title         = request.title,
-                    eventType     = request.eventType.uppercase(),
-                    date          = request.date,
-                    price         = request.price,
-                    provider      = request.provider,
-                    clinic        = request.clinic,
-                    description   = request.description,
-                    followUpDate  = request.followUpDate,
-                    synced        = false,
-                    pendingDelete = false
+                val entity = EventEntity(
+                    id = tempId,
+                    petId = request.petId,
+                    ownerId = request.ownerId,
+                    title = request.title,
+                    eventType = request.eventType.uppercase(),
+                    date = request.date,
+                    price = request.price,
+                    provider = request.provider,
+                    clinic = request.clinic,
+                    description = request.description,
+                    followUpDate = request.followUpDate,
+                    synced = false,
+                    pendingDelete = false,
+                    pendingOperation = "CREATE",
+                    retryCount = 0,
+                    nextRetryAt = 0L
                 )
                 eventDao.upsert(entity)
                 enqueueSyncWork()
@@ -184,10 +166,11 @@ class EventRepository(
 
     suspend fun getEvent(eventId: String): Result<Event> {
         lru.getEvent(eventId)?.let { return Result.success(it) }
-
         return runCatching {
             val event = if (isOnline()) {
-                api.getEvent(eventId).body() ?: error("Not found")
+                val response = api.getEvent(eventId)
+                if (!response.isSuccessful) error("Not found: ${response.code()}")
+                response.body() ?: error("Empty event body")
             } else {
                 eventDao.getById(eventId)?.toEvent() ?: error("Not found offline")
             }
@@ -205,20 +188,37 @@ class EventRepository(
         price: Double?,
         date: String
     ): Result<Event> {
-        val online = isOnline()
-        return if (online) {
+        return if (isOnline()) {
             runCatching {
-                val body = mapOf("title" to title, "description" to description, "provider" to provider, "clinic" to clinic, "date" to date, "price" to price)
+                val body = mapOf(
+                    "title" to title,
+                    "description" to description,
+                    "provider" to provider,
+                    "clinic" to clinic,
+                    "date" to date,
+                    "price" to price
+                )
                 val response = api.updateEvent(eventId, body)
-                val event = response.body() ?: error("Update fail")
-                eventDao.upsert(event.toEntity().copy(synced = true))
+                if (!response.isSuccessful) error("Update fail: ${response.code()}")
+                val event = response.body() ?: error("Empty update response")
+                eventDao.upsert(event.toEntity())
                 lru.invalidateEvent(eventId)
                 event
             }
         } else {
             runCatching {
                 val existing = eventDao.getById(eventId) ?: error("Not found")
-                eventDao.updateEvent(eventId, title, existing.eventType, date, price, provider, clinic, description, existing.followUpDate)
+                eventDao.updateEvent(
+                    id = eventId,
+                    title = title,
+                    eventType = existing.eventType,
+                    date = date,
+                    price = price,
+                    provider = provider,
+                    clinic = clinic,
+                    description = description,
+                    followUpDate = existing.followUpDate
+                )
                 enqueueSyncWork()
                 eventDao.getById(eventId)?.toEvent() ?: error("Error after update")
             }
@@ -226,33 +226,46 @@ class EventRepository(
     }
 
     suspend fun deleteEvent(eventId: String): Result<Unit> {
-        val petId = eventDao.getById(eventId)?.petId
+        val existing = eventDao.getById(eventId)
+        val petId = existing?.petId
+
         return if (isOnline()) {
             runCatching {
-                api.deleteEvent(eventId)
+                val response = api.deleteEvent(eventId)
+                if (!(response.isSuccessful || response.code() == 204)) {
+                    error("Delete fail: ${response.code()}")
+                }
                 eventDao.deleteById(eventId)
                 petId?.let { invalidateBothCaches(it, eventId) }
                 Unit
             }
         } else {
             runCatching {
-                eventDao.markPendingDelete(eventId)
+                if (eventId.startsWith("local_ev_")) {
+                    eventDao.deleteById(eventId)
+                } else {
+                    eventDao.markPendingDelete(eventId)
+                }
                 enqueueSyncWork()
+                petId?.let { invalidateBothCaches(it, eventId) }
+                Unit
             }
         }
     }
 
     suspend fun addDocument(eventId: String, fileName: String, fileUri: String?): Result<Event> = runCatching {
         val body = mapOf("fileName" to fileName, "fileUri" to fileUri)
-        val event = api.addEventDocument(eventId, body).body() ?: error("Doc add fail")
+        val response = api.addEventDocument(eventId, body)
+        if (!response.isSuccessful) error("Doc add fail: ${response.code()}")
+        val event = response.body() ?: error("Doc add empty body")
         lru.putEvent(eventId, event)
         event
     }
 
     private suspend fun getListFromRoom(petId: String?, ownerId: String?): List<Event> = when {
-        petId   != null -> eventDao.getForPetSync(petId).map { it.toEvent() }
+        petId != null -> eventDao.getForPetSync(petId).map { it.toEvent() }
         ownerId != null -> eventDao.getForOwnerSync(ownerId).map { it.toEvent() }
-        else            -> emptyList()
+        else -> emptyList()
     }
 
     private fun invalidateBothCaches(petId: String, eventId: String) {

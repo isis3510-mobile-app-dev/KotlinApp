@@ -18,5 +18,8 @@ data class EventEntity(
     val description: String = "",
     val followUpDate: String? = null,
     val synced: Boolean = false,
-    val pendingDelete: Boolean = false  // para borrados offline
+    val pendingDelete: Boolean = false,  // para borrados offline
+    val pendingOperation: String? = null, // CREATE | DELETE
+    val retryCount: Int = 0,
+    val nextRetryAt: Long = 0L
 )

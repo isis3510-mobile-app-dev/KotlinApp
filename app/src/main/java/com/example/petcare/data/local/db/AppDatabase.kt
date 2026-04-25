@@ -19,7 +19,7 @@ import com.example.petcare.data.local.entity.*
         WeightLogEntity::class
     ],
 
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -41,6 +41,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "petcare_local.db"
                 )
                     .addMigrations(MIGRATION_3_4)
+                    .addMigrations(MIGRATION_5_6)
                     .build().also { INSTANCE = it }
             }
 
@@ -66,6 +67,14 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_weight_logs_petId ON weight_logs(petId)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_weight_logs_ownerId ON weight_logs(ownerId)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_weight_logs_clientMutationId ON weight_logs(clientMutationId)")
+            }
+        }
+
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE events_local ADD COLUMN pendingOperation TEXT")
+                db.execSQL("ALTER TABLE events_local ADD COLUMN retryCount INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE events_local ADD COLUMN nextRetryAt INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

@@ -5,18 +5,22 @@ import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.EventType
 
 fun Event.toEntity() = EventEntity(
-    id           = id,
-    petId        = petId,
-    ownerId      = ownerId,
-    title        = title,
-    eventType    = eventType.name,
-    date         = date,
-    price        = price,
-    provider     = provider,
-    clinic       = clinic,
-    description  = description,
+    id = id,
+    petId = petId,
+    ownerId = ownerId,
+    title = title,
+    eventType = eventType.name,
+    date = date,
+    price = price,
+    provider = provider,
+    clinic = clinic,
+    description = description,
     followUpDate = followUpDate,
-    synced       = true  // vino del servidor → ya sincronizado
+    synced = true,
+    pendingDelete = false,
+    pendingOperation = null,
+    retryCount = 0,
+    nextRetryAt = 0L
 )
 
 fun EventEntity.toEvent() = Event(
