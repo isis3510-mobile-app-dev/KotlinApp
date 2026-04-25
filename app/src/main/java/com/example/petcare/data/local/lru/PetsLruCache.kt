@@ -10,7 +10,7 @@ class PetLruCache {
     // ── Configuración ────────────────────────────────────────────────────────
 
     companion object {
-        private const val PET_MAX_ENTRIES       = 15
+        private const val PET_MAX_ENTRIES       = 30
         private const val VACCINE_MAX_ENTRIES   = 120
         private const val PET_TTL_MS            = 5 * 60 * 1_000L   // 5 min
         private const val VACCINE_TTL_MS        = 2 * 60 * 1_000L   // 2 min

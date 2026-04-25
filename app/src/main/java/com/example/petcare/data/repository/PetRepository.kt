@@ -9,8 +9,9 @@ import com.example.petcare.data.local.dao.VaccineDao
 import com.example.petcare.data.local.db.AppDatabase
 import com.example.petcare.data.local.entity.PetEntity
 import com.example.petcare.data.local.entity.VaccinationEntity
+import com.example.petcare.data.local.entity.VaccineCatalogEntity
 import com.example.petcare.data.local.hive.HiveCacheManager
-import com.example.petcare.data.local.lru.PetLruCache
+import com.example.petcare.data.local.lru.VaccineCatalogLruCache
 import com.example.petcare.data.local.mapper.toCatalogEntity
 import com.example.petcare.data.local.mapper.toEntity
 import com.example.petcare.data.local.mapper.toPet
@@ -32,14 +33,16 @@ class PetRepository(
     private val vaccineDao: VaccineDao,
     private val api: ApiService,
     private val context: Context,
-    private val hive: HiveCacheManager,
-    private val lru: PetLruCache = PetLruCache()
+    private val hive: HiveCacheManager
 ) {
+
     private var vaccineCatalogRevision: Int = 0
     private val vaccineResponseCache = object : LruCache<String, List<Vaccination>>(120) {
         override fun sizeOf(key: String, value: List<Vaccination>): Int =
             value.size.coerceAtLeast(1)
     }
+
+    private val vaccineCatalogCache = VaccineCatalogLruCache()
 
     private fun currentUserId(): String =
         FirebaseAuth.getInstance().currentUser?.uid ?: ""
@@ -84,11 +87,6 @@ class PetRepository(
         val uid = currentUserId()
         Log.d("PET_REPO", "isOnline=${isOnline(context)}, uid=$uid")
 
-        lru.getPets(uid)?.let {
-            Log.d("PET_CACHE", "L1 HIT — getPets")
-            return Result.success(it)
-        }
-
         if (isOnline(context)) {
             Log.d("Entró", "Deberia guardar Cache")
             val cached = hive.getPets(uid)
@@ -97,7 +95,6 @@ class PetRepository(
                     Log.d("HIVE_CACHE", "HIT - getPets desde Hive")
                     val remotePets = Gson().fromJson(cached, Array<Pet>::class.java).toList()
                     val merged = mergePetsWithLocal(uid, remotePets)
-                    lru.putPets(uid, merged)
                     Result.success(merged)
                 } catch (e: Exception) {
                     Result.failure(e)
@@ -115,7 +112,6 @@ class PetRepository(
                 hive.putPets(uid, Gson().toJson(remotePets))
                 cacheServerSnapshotPreservingPending(uid, remotePets)
                 val merged = mergePetsWithLocal(uid, remotePets)
-                lru.putPets(uid, merged)
                 Result.success(merged)
             } catch (e: Exception) {
                 android.util.Log.d("PET_REPO", "Network failed, falling back to Room")
@@ -143,17 +139,12 @@ class PetRepository(
 
     suspend fun getPet(petId: String): Result<Pet> {
         val uid = currentUserId()
-        lru.getPet(uid, petId)?.let {
-            Log.d("CACHE", "L1 HIT — getPet $petId")
-            return Result.success(it)
-        }
         return if (isOnline(context)) {
             runCatching {
                 val response = api.getPet(petId)
                 val pet = response.body() ?: error("Pet not found")
                 cacheServerPetPreservingPending(uid, pet)
                 val merged = mergePetWithLocal(uid, pet)
-                lru.putPet(uid, merged)               // puebla L1
                 merged
             }.recoverCatching {
                 val cached = petDao.getPetById(uid, petId)
@@ -177,7 +168,6 @@ class PetRepository(
                 val pet = response.body() ?: error("Failed to create pet")
                 petDao.insertPet(pet.toEntity().copy(owner = uid))
                 Log.d("HIVE_CACHE", "Invalidando cache de pets tras crear")
-                lru.invalidateAllPets(uid)
                 hive.invalidatePets(uid)
                 pet
             }
@@ -219,11 +209,9 @@ class PetRepository(
                 val response = api.updatePet(petId, request)
                 val pet = response.body()
                     ?: error("Failed to update pet — HTTP ${response.code()}")
-                lru.invalidatePet(uid, petId)         // L1 (entrada individual )
                 hive.invalidatePets(uid)              // L2
                 cacheServerPetPreservingPending(uid, pet)
                 val merged = mergePetWithLocal(uid, pet)
-                lru.putPet(uid, merged)               // re-puebla L1
                 merged
             }
         } else {
@@ -268,7 +256,6 @@ class PetRepository(
                 val msg = e.message.orEmpty()
                 if (msg.contains("204") && msg.contains("Content-Length")) {
                     petDao.deletePetById(petId)
-                    lru.invalidatePet(uid, petId)
                     hive.invalidatePets(uid)
                     Result.success(Unit)
                 } else {
@@ -547,31 +534,66 @@ class PetRepository(
     }
 
     suspend fun getVaccineCatalog(): Result<List<Vaccine>> {
+
+        vaccineCatalogCache.get()?.let { cached ->
+            Log.d("VAX_CACHE", "LRU HIT - ${cached.size} vaccines")
+            return Result.success(cached)
+        }
+
+        Log.d("VAX_CACHE", "LRU MISS")
+
+        val db = AppDatabase.getInstance(context)
+
         return if (isOnline(context)) {
+
             runCatching {
+
+                Log.d("VAX_CACHE", "API call")
+
                 val response = api.getVaccines()
-                val vaccines = response.body() ?: emptyList()
-                vaccineCatalogRevision++
-                // Cache the catalog for offline use
-                val db = AppDatabase.getInstance(context)
+                val vaccines = response.body().orEmpty()
+
+                Log.d("VAX_CACHE", "API returned ${vaccines.size}")
+
                 db.vaccineCatalogDao().clearAll()
-                db.vaccineCatalogDao().insertAll(vaccines.map { it.toCatalogEntity() })
-                android.util.Log.d("PET_REPO", "Cached ${vaccines.size} catalog vaccines")
+                db.vaccineCatalogDao().insertAll(
+                    vaccines.map { it.toCatalogEntity() }
+                )
+
+                vaccineCatalogCache.put(vaccines)
+
+                Log.d("VAX_CACHE", "LRU stored")
+
                 vaccines
+
             }.recoverCatching {
-                // Network failed — fall back to cached catalog
-                android.util.Log.d("PET_REPO", "Catalog fetch failed, using cache")
-                val db = AppDatabase.getInstance(context)
-                db.vaccineCatalogDao().getAll().map { it.toVaccine() }
-            }
-        } else {
-            runCatching {
-                val db = AppDatabase.getInstance(context)
+
+                Log.e("VAX_CACHE", "API failed, fallback to Room")
+
                 val cached = db.vaccineCatalogDao().getAll()
-                android.util.Log.d("PET_REPO", "Offline: found ${cached.size} cached catalog vaccines")
-                cached.map { it.toVaccine() }
+                Log.d("VAX_CACHE", "Room returned ${cached.size}")
+
+                val domain = cached.map { it.toVaccine() }
+
+                vaccineCatalogCache.put(domain)
+
+                domain
             }
+
+        } else {
+
+            Log.d("VAX_CACHE", "OFFLINE")
+
+            val cached = db.vaccineCatalogDao().getAll()
+            Log.d("VAX_CACHE", "Offline Room ${cached.size}")
+
+            val domain = cached.map { it.toVaccine() }
+
+            vaccineCatalogCache.put(domain)
+
+            return Result.success(domain)
         }
     }
+
 
 }

@@ -8,6 +8,9 @@ import com.example.petcare.data.local.db.AppDatabase
 import com.example.petcare.data.local.lru.UserLruCache
 import com.example.petcare.data.model.UpdateUserRequest
 import com.example.petcare.data.repository.RepositoryProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 class UserSyncWorker(
     context: Context,
@@ -16,42 +19,52 @@ class UserSyncWorker(
 
     companion object {
         const val UNIQUE_WORK_NAME = "user_sync_work"
+        private const val TIMEOUT_MS = 50_000L
     }
 
-    override suspend fun doWork(): Result {
-        val db      = AppDatabase.getInstance(applicationContext)
-        val api     = RepositoryProvider.apiService
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+
+        val db = AppDatabase.getInstance(applicationContext)
+        val api = RepositoryProvider.apiService
         val userDao = db.userDao()
-        val cache   = RepositoryProvider.userCache
+        val cache = RepositoryProvider.userCache
 
-        val pendingUsers = userDao.getPendingSync()
+        return@withContext try {
 
-        if (pendingUsers.isEmpty()) {
-            Log.d("USER_SYNC", "No pending user updates")
-            return Result.success()
-        }
+            val pendingUsers = userDao.getPendingSync()
 
-        for (user in pendingUsers) {
-            try {
-                // Only name and phone are allowed for offline edits
-                val request = UpdateUserRequest(
-                    name  = user.name,
-                    phone = user.phone
-                )
-                val response = api.updateMe(request)
-                if (!response.isSuccessful) {
-                    Log.e("USER_SYNC", "Server rejected update: ${response.code()}")
-                    return Result.retry()
-                }
-                userDao.insert(user.copy(pendingSync = false))
-                cache.invalidate(UserLruCache.CACHE_KEY_ME)
-                Log.d("USER_SYNC", "User synced successfully")
-            } catch (e: Exception) {
-                Log.e("USER_SYNC", "Error syncing user", e)
-                return Result.retry()
+            if (pendingUsers.isEmpty()) {
+                Log.d("USER_SYNC", "No pending user updates")
+                return@withContext Result.success()
             }
-        }
 
-        return Result.success()
+            for (user in pendingUsers) {
+
+                withTimeout(TIMEOUT_MS) {
+                    val request = UpdateUserRequest(
+                        name = user.name,
+                        phone = user.phone
+                    )
+
+                    val response = api.updateMe(request)
+
+                    if (!response.isSuccessful) {
+                        Log.e("USER_SYNC", "Server rejected update: ${response.code()}")
+                        return@withTimeout Result.retry()
+                    }
+
+                    userDao.insert(user.copy(pendingSync = false))
+                    cache.invalidate(UserLruCache.CACHE_KEY_ME)
+
+                    Log.d("USER_SYNC", "User synced successfully")
+                }
+            }
+
+            Result.success()
+
+        } catch (e: Exception) {
+            Log.e("USER_SYNC", "Error syncing user", e)
+            Result.retry()
+        }
     }
 }
