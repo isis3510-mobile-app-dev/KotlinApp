@@ -4,13 +4,16 @@ import android.content.Context
 import com.example.petcare.data.local.db.AppDatabase
 import com.example.petcare.data.local.hive.HiveCacheManager
 import com.example.petcare.data.local.lru.EventLruCache
+import com.example.petcare.data.local.lru.UserLruCache
 import com.example.petcare.data.network.ApiClient
 import com.example.petcare.data.network.ApiService
+import com.example.petcare.data.network.NetworkObserver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 object RepositoryProvider {
+    val userCache: UserLruCache by lazy { UserLruCache() }
 
     lateinit var apiService: ApiService
         private set
@@ -36,6 +39,11 @@ object RepositoryProvider {
     // Expuesto para poder imprimir stats del LRU (útil para rúbrica)
     lateinit var eventLruCache: EventLruCache
         private set
+
+    lateinit var userRepository: UserRepository
+        private set
+
+    lateinit var networkRepository: NetworkObserver
 
     fun ensureInitialized(context: Context) {
         if (!::apiService.isInitialized) {
@@ -82,5 +90,14 @@ object RepositoryProvider {
         )
         nfcRepository          = NfcRepository(apiService)
         notificationRepository = NotificationRepository(apiService)
+
+        userRepository = UserRepository(
+            api = apiService,
+            dao = db.userDao(),
+            context = appContext,
+            cache = userCache
+        )
+
+        networkRepository = NetworkObserver(appContext)
     }
 }
