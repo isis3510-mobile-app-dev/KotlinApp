@@ -91,7 +91,7 @@ fun ProfileScreen(
                 userPhone = uiState.user?.phone ?: "",
                 onSaveName = { viewModel.updateField(ProfileViewModel.EditField.Name, it) },
                 onSavePhone = { viewModel.updateField(ProfileViewModel.EditField.Phone, it) },
-                onSaveEmail = { newEmail, password -> viewModel.updateEmail(password, newEmail) }
+                onSaveEmail = { newEmail, password -> viewModel.onEmailUpdateRequested(password, newEmail) }
             )
 
             // Preferences Section

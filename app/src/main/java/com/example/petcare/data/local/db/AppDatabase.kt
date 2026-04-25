@@ -1,6 +1,7 @@
 package com.example.petcare.data.local.db
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -16,10 +17,10 @@ import com.example.petcare.data.local.entity.*
         PetEntity::class,
         VaccinationEntity::class,
         VaccineCatalogEntity::class,
-        WeightLogEntity::class
+        WeightLogEntity::class,
+        UserEntity::class
     ],
-
-    version = 6,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,6 +30,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun vaccineDao(): VaccineDao
     abstract fun vaccineCatalogDao(): VaccineCatalogDao
     abstract fun weightLogDao(): WeightLogDao
+    abstract fun userDao(): UserDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -42,6 +44,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                     .addMigrations(MIGRATION_3_4)
                     .addMigrations(MIGRATION_5_6)
+                    .addMigrations(MIGRATION_3_4, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .build().also { INSTANCE = it }
             }
 
@@ -75,6 +78,39 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE events_local ADD COLUMN pendingOperation TEXT")
                 db.execSQL("ALTER TABLE events_local ADD COLUMN retryCount INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE events_local ADD COLUMN nextRetryAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    """
+            CREATE TABLE IF NOT EXISTS user (
+                id TEXT NOT NULL PRIMARY KEY,
+                name TEXT NOT NULL,
+                initials TEXT NOT NULL,
+                phone TEXT,
+                address TEXT,
+                photoUrl TEXT,
+                lastUpdated INTEGER NOT NULL
+            )
+            """.trimIndent()
+                )
+            }
+        }
+
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+            ALTER TABLE user ADD COLUMN email TEXT
+            """.trimIndent()
+                )
+            }
+        }
+
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+            ALTER TABLE user ADD COLUMN pendingSync INTEGER NOT NULL DEFAULT 0
+            """.trimIndent()
+                )
             }
         }
     }

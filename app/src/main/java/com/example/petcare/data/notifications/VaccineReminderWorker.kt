@@ -32,7 +32,7 @@ class VaccineReminderWorker(
         val authUser = RepositoryProvider.authRepository.currentUser ?: return Result.success()
         if (authUser.uid.isBlank()) return Result.success()
 
-        val userId = UserRepository(RepositoryProvider.apiService)
+        val userId = RepositoryProvider.userRepository
             .getMe()
             .getOrNull()
             ?.id
