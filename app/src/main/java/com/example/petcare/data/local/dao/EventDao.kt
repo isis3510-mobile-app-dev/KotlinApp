@@ -112,6 +112,15 @@ interface EventDao {
     @Query("DELETE FROM events_local WHERE id = :id")
     suspend fun deleteById(id: String)
 
+    @Query("""
+        UPDATE events_local
+        SET petId = :serverPetId,
+            retryCount = 0,
+            nextRetryAt = 0
+        WHERE petId = :localPetId
+    """)
+    suspend fun moveToServerPet(localPetId: String, serverPetId: String)
+
     @Query("DELETE FROM events_local WHERE synced = 1 AND pendingDelete = 0")
     suspend fun clearSynced()
 

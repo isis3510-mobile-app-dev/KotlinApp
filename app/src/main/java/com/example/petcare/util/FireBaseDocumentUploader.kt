@@ -2,6 +2,7 @@ package com.example.petcare.util
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.google.firebase.Firebase
 import com.google.firebase.storage.storage
 import kotlinx.coroutines.tasks.await
@@ -16,6 +17,7 @@ data class UploadedDocument(
 object FirebaseDocumentUploader {
 
     private val storage = Firebase.storage
+    private const val TAG = "DOC_UPLOAD"
 
     /**
      * Ruta: pets/{petId}/documents/events/{eventId}/{uuid}_{filename}
@@ -31,8 +33,9 @@ object FirebaseDocumentUploader {
         val mimeType = context.contentResolver.getType(uri)
             ?: "application/octet-stream"
         val path = "pets/$petId/documents/events/$eventId/${UUID.randomUUID()}_$fileName"
+        Log.d(TAG, "Event document upload requested petId=$petId eventId=$eventId path=$path")
         upload(uri, path, mimeType, fileName)
-    }
+    }.onFailure { Log.e(TAG, "Event document upload failed petId=$petId eventId=$eventId: ${it.message}", it) }
 
     /**
      * Ruta: pets/{petId}/documents/vaccinations/{vaccinationId}/{uuid}_{filename}
@@ -48,8 +51,9 @@ object FirebaseDocumentUploader {
         val mimeType = context.contentResolver.getType(uri)
             ?: "application/octet-stream"
         val path = "pets/$petId/documents/vaccinations/$vaccinationId/${UUID.randomUUID()}_$fileName"
+        Log.d(TAG, "Vaccination document upload requested petId=$petId vaccinationId=$vaccinationId path=$path")
         upload(uri, path, mimeType, fileName)
-    }
+    }.onFailure { Log.e(TAG, "Vaccination document upload failed petId=$petId vaccinationId=$vaccinationId: ${it.message}", it) }
 
     private suspend fun upload(
         uri: Uri,
@@ -61,8 +65,13 @@ object FirebaseDocumentUploader {
         val metadata = com.google.firebase.storage.StorageMetadata.Builder()
             .setContentType(mimeType)
             .build()
+        Log.d(
+            TAG,
+            "Firebase putFile start path=$path mimeType=$mimeType fileName=$originalFileName thread=${Thread.currentThread().name}"
+        )
         ref.putFile(uri, metadata).await()
         val downloadUrl = ref.downloadUrl.await().toString()
+        Log.d(TAG, "Firebase putFile success path=$path downloadUrlReady=${downloadUrl.isNotBlank()}")
         return UploadedDocument(
             downloadUrl = downloadUrl,
             fileName    = originalFileName,
@@ -103,8 +112,9 @@ object FirebaseDocumentUploader {
         val mimeType = context.contentResolver.getType(uri)
             ?: "application/octet-stream"
         val path = "pets/$petId/documents/events/staging/$stagingId/${UUID.randomUUID()}_$fileName"
+        Log.d(TAG, "Event staging upload requested petId=$petId stagingId=$stagingId path=$path")
         upload(uri, path, mimeType, fileName)
-    }
+    }.onFailure { Log.e(TAG, "Event staging upload failed petId=$petId stagingId=$stagingId: ${it.message}", it) }
 
     /**
      * Sube a una carpeta de staging antes de conocer el vaccinationId real.
@@ -121,6 +131,7 @@ object FirebaseDocumentUploader {
         val mimeType = context.contentResolver.getType(uri)
             ?: "application/octet-stream"
         val path = "pets/$petId/documents/vaccinations/staging/$stagingId/${UUID.randomUUID()}_$fileName"
+        Log.d(TAG, "Vaccination staging upload requested petId=$petId stagingId=$stagingId path=$path")
         upload(uri, path, mimeType, fileName)
-    }
+    }.onFailure { Log.e(TAG, "Vaccination staging upload failed petId=$petId stagingId=$stagingId: ${it.message}", it) }
 }

@@ -2,23 +2,30 @@ package com.example.petcare.ui.screens.petprofile.events
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
+import com.example.petcare.data.model.AttachedDocument
 import com.example.petcare.data.model.Event
+import com.example.petcare.data.network.isOnline
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.util.EventDateUtils
 import com.example.petcare.util.FirebaseDocumentUploader
 import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.PicassoImageCompressor
 import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.trimToNullIfBlank
 import com.example.petcare.util.validateCommittedInput
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class EventDetailsUiState(
     val event: Event? = null,
@@ -48,6 +55,14 @@ class EventDetailsViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             if (petId.isNotBlank()) {
+                RepositoryProvider.eventRepository.syncPendingEventDocuments(petId, eventId)
+                    .onSuccess { synced ->
+                        if (synced > 0) {
+                            Log.d(TAG, "Synced pending event documents before load count=$synced eventId=$eventId")
+                        }
+                    }
+            }
+            if (petId.isNotBlank()) {
                 RepositoryProvider.petRepository.getPet(petId).onSuccess { pet ->
                     _uiState.value = _uiState.value.copy(petBirthDateIso = pet.birthDate)
                 }
@@ -57,8 +72,11 @@ class EventDetailsViewModel : ViewModel() {
             }.fold(
                 onSuccess = { event ->
                     val (appDate, appTime) = EventDateUtils.splitToAppDateTime(event.date)
+                    val displayEvent = event.copy(
+                        attachedDocuments = event.attachedDocuments + pendingAttachedDocuments(event.petId, event.id)
+                    )
                     _uiState.value = _uiState.value.copy(
-                        event           = event,
+                        event           = displayEvent,
                         isLoading       = false,
                         editTitle       = sanitizeForEditing(event.title, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.EVENT_TITLE).value,
                         editDescription = sanitizeForEditing(event.description, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.NOTES).value,
@@ -176,43 +194,135 @@ class EventDetailsViewModel : ViewModel() {
      * 1. Sube el archivo a Firebase Storage bajo pets/{petId}/documents/events/{eventId}/
      * 2. Registra la URL pública en el backend Django
      */
-    fun addDocument(context: Context, petId: String, uri: Uri) {
+    fun addDocument(
+        context: Context,
+        petId: String,
+        uri: Uri,
+        mimeType: String? = null,
+        fileName: String? = null
+    ) {
         val eventId = _uiState.value.event?.id ?: return
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
+        Log.d(TAG, "Detail event document upload requested petId=$petId eventId=$eventId")
+        viewModelScope.launch(Dispatchers.IO) {
+            Log.d(TAG, "Detail event upload coroutine started thread=${Thread.currentThread().name}")
+            withContext(Dispatchers.Main) {
+                _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
+            }
+
+            val resolvedMimeType = mimeType ?: context.contentResolver.getType(uri) ?: "application/octet-stream"
+            val resolvedFileName = fileName ?: FirebaseDocumentUploader.getFileName(context, uri)
+                ?: "document_${System.currentTimeMillis()}"
+
+            if (!isOnline(context)) {
+                queuePendingDocument(uri, petId, eventId, resolvedFileName, resolvedMimeType)
+                return@launch
+            }
+
+            val prepared = try {
+                async(Dispatchers.IO) {
+                    PicassoImageCompressor.prepareImageIfNeeded(context, uri, resolvedMimeType, resolvedFileName)
+                }.await()
+            } catch (e: Exception) {
+                Log.e(TAG, "Detail event document preparation failed fileName=$resolvedFileName: ${e.message}", e)
+                queuePendingDocument(uri, petId, eventId, resolvedFileName, resolvedMimeType)
+                return@launch
+            }
+            Log.d(TAG, "Detail event document prepared original=$resolvedFileName prepared=${prepared.fileName}")
 
             FirebaseDocumentUploader
-                .uploadEventDocument(context, uri, petId, eventId)
+                .uploadEventDocument(context, prepared.uri, petId, eventId)
                 .fold(
                     onSuccess = { uploaded ->
+                        Log.d(TAG, "Detail event Firebase upload success fileName=${uploaded.fileName}")
                         RepositoryProvider.eventRepository.addDocument(
                             eventId  = eventId,
-                            fileName = uploaded.fileName,
+                            fileName = prepared.fileName,
                             fileUri  = uploaded.downloadUrl
                         ).fold(
                             onSuccess = { updatedEvent ->
-                                _uiState.value = _uiState.value.copy(
-                                    event          = updatedEvent,
-                                    isUploadingDoc = false
-                                )
+                                Log.d(TAG, "Detail event backend metadata saved eventId=$eventId")
+                                withContext(Dispatchers.Main) {
+                                    _uiState.value = _uiState.value.copy(
+                                        event = updatedEvent,
+                                        isUploadingDoc = false
+                                    )
+                                }
                             },
                             onFailure = { e ->
-                                _uiState.value = _uiState.value.copy(
-                                    isUploadingDoc = false,
-                                    error = "Uploaded but failed to save: ${e.message}"
-                                )
+                                Log.e(TAG, "Detail event backend metadata failed eventId=$eventId: ${e.message}", e)
+                                withContext(Dispatchers.Main) {
+                                    _uiState.value = _uiState.value.copy(
+                                        isUploadingDoc = false,
+                                        error = "Uploaded but failed to save: ${e.message}"
+                                    )
+                                }
                             }
                         )
                     },
                     onFailure = { e ->
-                        _uiState.value = _uiState.value.copy(
-                            isUploadingDoc = false,
-                            error          = "Upload failed: ${e.message}"
-                        )
+                        Log.e(TAG, "Detail event Firebase upload failed eventId=$eventId: ${e.message}", e)
+                        queuePendingDocument(uri, petId, eventId, resolvedFileName, resolvedMimeType)
                     }
                 )
         }
     }
 
     fun clearError() { _uiState.value = _uiState.value.copy(error = null) }
+
+    private fun pendingAttachedDocuments(
+        petId: String,
+        eventId: String
+    ): List<AttachedDocument> =
+        RepositoryProvider.eventRepository
+            .getPendingEventDocuments(petId, eventId)
+            .map {
+                AttachedDocument(
+                    id = "pending_${it.id}",
+                    fileName = "${it.fileName} (pending sync)",
+                    fileUri = it.localUri
+                )
+            }
+
+    private suspend fun queuePendingDocument(
+        uri: Uri,
+        petId: String,
+        eventId: String,
+        fileName: String,
+        mimeType: String
+    ) {
+        RepositoryProvider.eventRepository
+            .queueEventDocument(uri, petId, eventId, fileName, mimeType)
+            .fold(
+                onSuccess = { pending ->
+                    Log.d(TAG, "Detail event document queued locally id=${pending.id} fileName=${pending.fileName}")
+                    withContext(Dispatchers.Main) {
+                        _uiState.value = _uiState.value.copy(
+                            isUploadingDoc = false,
+                            error = "No internet connection. Document saved locally and will sync when online.",
+                            event = _uiState.value.event?.copy(
+                                attachedDocuments = _uiState.value.event?.attachedDocuments.orEmpty() +
+                                    AttachedDocument(
+                                        id = "pending_${pending.id}",
+                                        fileName = "${pending.fileName} (pending sync)",
+                                        fileUri = pending.localUri
+                                    )
+                            )
+                        )
+                    }
+                },
+                onFailure = { e ->
+                    Log.e(TAG, "Detail event document local queue failed fileName=$fileName: ${e.message}", e)
+                    withContext(Dispatchers.Main) {
+                        _uiState.value = _uiState.value.copy(
+                            isUploadingDoc = false,
+                            error = "Could not save document locally: ${e.message}"
+                        )
+                    }
+                }
+            )
+    }
+
+    private companion object {
+        const val TAG = "EVENT_DOC_UPLOAD"
+    }
 }

@@ -3,8 +3,8 @@ package com.example.petcare.ui.screens.addEventForm
 import android.app.Application
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.local.db.AppDatabase
@@ -12,6 +12,7 @@ import com.example.petcare.data.local.entity.ReminderEntity
 import com.example.petcare.data.local.mapper.toEntity
 import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.EventType
+import com.example.petcare.data.network.isOnline
 import com.example.petcare.data.preferences.NotificationPreferencesDataStore
 import com.example.petcare.data.preferences.dataStore
 import com.example.petcare.data.repository.RepositoryProvider
@@ -20,16 +21,20 @@ import com.example.petcare.util.EventDateUtils
 import com.example.petcare.util.FirebaseDocumentUploader
 import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
+import com.example.petcare.util.PicassoImageCompressor
 import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.trimToNullIfBlank
 import com.example.petcare.util.validateCommittedInput
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.UUID
 
 data class StagedDocument(
@@ -114,25 +119,112 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
         _state.value = _state.value.copy(
             stagedDocuments = _state.value.stagedDocuments + pending
         )
+        Log.d(TAG, "Queued event staging document petId=$petId stagingId=$stagingId fileName=$fileName mimeType=$mimeType")
 
-        viewModelScope.launch {
-            FirebaseDocumentUploader
-                .uploadEventDocumentStaging(context, uri, petId, stagingId)
-                .fold(
-                    onSuccess = { uploaded ->
-                        // Reemplaza el pending con el doc completo
+        viewModelScope.launch(Dispatchers.IO) {
+            Log.d(TAG, "Event staging coroutine started thread=${Thread.currentThread().name}")
+            try {
+                if (!isOnline(context)) {
+                    val local = copyStagedDocumentLocally(context, uri, fileName)
+                    withContext(Dispatchers.Main) {
                         _state.value = _state.value.copy(
                             stagedDocuments = _state.value.stagedDocuments.map {
                                 if (it.uri == uri && it.isUploading) {
                                     it.copy(
-                                        downloadUrl = uploaded.downloadUrl,
+                                        uri = local,
+                                        downloadUrl = local.toString(),
                                         isUploading = false
                                     )
                                 } else it
                             }
                         )
-                    },
-                    onFailure = { e ->
+                    }
+                    Log.d(TAG, "Event staging saved locally offline fileName=$fileName uri=$local")
+                    return@launch
+                }
+
+                val prepared = async(Dispatchers.IO) {
+                    PicassoImageCompressor.prepareImageIfNeeded(context, uri, mimeType, fileName)
+                }.await()
+                Log.d(TAG, "Prepared event staging document original=$fileName prepared=${prepared.fileName} mimeType=${prepared.mimeType}")
+
+                FirebaseDocumentUploader
+                    .uploadEventDocumentStaging(context, prepared.uri, petId, stagingId)
+                    .fold(
+                        onSuccess = { uploaded ->
+                            Log.d(TAG, "Event staging upload success petId=$petId stagingId=$stagingId fileName=${uploaded.fileName}")
+                            withContext(Dispatchers.Main) {
+                                _state.value = _state.value.copy(
+                                    stagedDocuments = _state.value.stagedDocuments.map {
+                                        if (it.uri == uri && it.isUploading) {
+                                            it.copy(
+                                                fileName = prepared.fileName,
+                                                mimeType = prepared.mimeType,
+                                                downloadUrl = uploaded.downloadUrl,
+                                                isUploading = false
+                                            )
+                                        } else it
+                                    }
+                                )
+                            }
+                        },
+                        onFailure = { e ->
+                            Log.e(TAG, "Event staging upload failed petId=$petId stagingId=$stagingId: ${e.message}", e)
+                            runCatching {
+                                val local = copyStagedDocumentLocally(context, prepared.uri, prepared.fileName)
+                                withContext(Dispatchers.Main) {
+                                    _state.value = _state.value.copy(
+                                        stagedDocuments = _state.value.stagedDocuments.map {
+                                            if (it.uri == uri && it.isUploading) {
+                                                it.copy(
+                                                    uri = local,
+                                                    fileName = prepared.fileName,
+                                                    mimeType = prepared.mimeType,
+                                                    downloadUrl = local.toString(),
+                                                    isUploading = false,
+                                                    error = null
+                                                )
+                                            } else it
+                                        }
+                                    )
+                                }
+                                Log.d(TAG, "Event staging upload failed; saved locally for later sync fileName=${prepared.fileName} uri=$local")
+                            }.onFailure { localError ->
+                                Log.e(TAG, "Event staging local fallback failed fileName=$fileName: ${localError.message}", localError)
+                                withContext(Dispatchers.Main) {
+                                    _state.value = _state.value.copy(
+                                        stagedDocuments = _state.value.stagedDocuments.map {
+                                            if (it.uri == uri && it.isUploading) {
+                                                it.copy(isUploading = false, error = e.message)
+                                            } else it
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    )
+            } catch (e: Exception) {
+                Log.e(TAG, "Event staging preparation failed petId=$petId stagingId=$stagingId: ${e.message}", e)
+                runCatching {
+                    val local = copyStagedDocumentLocally(context, uri, fileName)
+                    withContext(Dispatchers.Main) {
+                        _state.value = _state.value.copy(
+                            stagedDocuments = _state.value.stagedDocuments.map {
+                                if (it.uri == uri && it.isUploading) {
+                                    it.copy(
+                                        uri = local,
+                                        downloadUrl = local.toString(),
+                                        isUploading = false,
+                                        error = null
+                                    )
+                                } else it
+                            }
+                        )
+                    }
+                    Log.d(TAG, "Event staging preparation failed; saved original locally for later sync fileName=$fileName uri=$local")
+                }.onFailure { localError ->
+                    Log.e(TAG, "Event staging local fallback failed fileName=$fileName: ${localError.message}", localError)
+                    withContext(Dispatchers.Main) {
                         _state.value = _state.value.copy(
                             stagedDocuments = _state.value.stagedDocuments.map {
                                 if (it.uri == uri && it.isUploading) {
@@ -141,7 +233,8 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
                             }
                         )
                     }
-                )
+                }
+            }
         }
     }
 
@@ -179,16 +272,18 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
         ).firstOrNull()
 
         if (firstError != null) {
+            Log.d(TAG, "submit blocked validationError=$firstError")
             _state.value = s.copy(error = firstError)
             return
         }
-        // Esperar a que terminen los uploads pendientes
         if (s.stagedDocuments.any { it.isUploading }) {
+            Log.d(TAG, "submit blocked waitingForUploads count=${s.stagedDocuments.count { it.isUploading }}")
             _state.value = s.copy(error = "Please wait for documents to finish uploading")
             return
         }
 
         viewModelScope.launch {
+            Log.d(TAG, "submit start petId=${s.petId} stagedDocs=${s.stagedDocuments.size}")
             _state.value = s.copy(isLoading = true, error = null)
 
             val request = CreateEventRequest(
@@ -213,21 +308,49 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
                     // Registrar documentos staged en el backend
                     val successfulDocs = s.stagedDocuments
                         .filter { it.downloadUrl != null && it.error == null }
+                    Log.d(TAG, "submit add event success petId=${s.petId} eventId=${event.id} stagedDocs=${successfulDocs.size}")
 
                     successfulDocs.forEach { doc ->
-                        RepositoryProvider.eventRepository.addDocument(
-                            eventId  = event.id,
-                            fileName = doc.fileName,
-                            fileUri  = doc.downloadUrl
-                        )
+                        val localUri = doc.downloadUrl.orEmpty()
+                        if (localUri.startsWith("file:")) {
+                            RepositoryProvider.eventRepository.queueEventDocument(
+                                sourceUri = doc.uri,
+                                petId = s.petId,
+                                eventId = event.id,
+                                fileName = doc.fileName,
+                                mimeType = doc.mimeType
+                            ).fold(
+                                onSuccess = {
+                                    Log.d(TAG, "submit queued local event staged document fileName=${doc.fileName} eventId=${event.id}")
+                                },
+                                onFailure = {
+                                    Log.e(TAG, "submit queue local event staged document failed fileName=${doc.fileName}: ${it.message}", it)
+                                }
+                            )
+                        } else {
+                            RepositoryProvider.eventRepository.addDocument(
+                                eventId  = event.id,
+                                fileName = doc.fileName,
+                                fileUri  = doc.downloadUrl
+                            ).fold(
+                                onSuccess = {
+                                    Log.d(TAG, "submit event document metadata saved fileName=${doc.fileName}")
+                                },
+                                onFailure = {
+                                    Log.e(TAG, "submit event document metadata failed fileName=${doc.fileName}: ${it.message}", it)
+                                }
+                            )
+                        }
                     }
 
                     saveEventLocallyAndScheduleReminder(event, s.petId)
 
                     _state.value = _state.value.copy(isLoading = false)
+                    Log.d(TAG, "submit completed petId=${s.petId} eventId=${event.id}")
                     onSuccess(event.id)
                 },
                 onFailure = { e ->
+                    Log.e(TAG, "submit failed petId=${s.petId}: ${e.message}", e)
                     _state.value = _state.value.copy(
                         isLoading = false,
                         error     = e.message ?: "Error"
@@ -285,5 +408,24 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
                     )
             }
         }
+    }
+
+    private fun copyStagedDocumentLocally(
+        context: Context,
+        sourceUri: Uri,
+        fileName: String
+    ): Uri {
+        val dir = File(context.filesDir, "pending_event_staging/${_state.value.stagingId}")
+        dir.mkdirs()
+        val safeFileName = fileName.replace(Regex("""[^\w.\-]"""), "_")
+        val file = File(dir, "${UUID.randomUUID()}_$safeFileName")
+        context.contentResolver.openInputStream(sourceUri)?.use { input ->
+            file.outputStream().use { output -> input.copyTo(output) }
+        } ?: error("Could not read selected document")
+        return Uri.fromFile(file)
+    }
+
+    private companion object {
+        const val TAG = "EVENT_DOC_UPLOAD"
     }
 }

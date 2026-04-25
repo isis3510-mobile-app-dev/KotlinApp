@@ -190,8 +190,8 @@ fun VaccineDetailsScreen(
                     AttachedDocumentsCard(
                         documents        = uiState.vaccine?.attachedDocuments ?: emptyList(),
                         isUploading      = uiState.isUploadingDoc,
-                        onDocumentPicked = { uri, _, _ ->
-                            viewModel.addDocument(context, uri)
+                        onDocumentPicked = { uri, mimeType, fileName ->
+                            viewModel.addDocument(context, uri, mimeType, fileName)
                         }
                     )
 
