@@ -8,6 +8,7 @@ import com.example.petcare.data.repository.UserRepository
 import com.example.petcare.data.model.User
 import com.example.petcare.data.network.ApiClient
 import com.example.petcare.data.network.ApiService
+import com.example.petcare.data.repository.RepositoryProvider
 import com.google.firebase.auth.FirebaseUser
 import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
@@ -24,7 +25,7 @@ class AuthViewModel(
 ) : ViewModel() {
 
     private val apiService = ApiClient.create(authRepository).create(ApiService::class.java)
-    private val userRepository = UserRepository(apiService)
+    private val userRepository = RepositoryProvider.userRepository
 
     sealed class AuthState {
         object Idle : AuthState()

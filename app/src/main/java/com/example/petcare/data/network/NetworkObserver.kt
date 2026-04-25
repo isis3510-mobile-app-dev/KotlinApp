@@ -57,6 +57,10 @@ class NetworkObserver(private val context: Context) {
         )
     }
 
+    fun isOnlineNew(): Boolean {
+        return isOnline(context)
+    }
+
 }
 
 fun isOnline(context: Context): Boolean {
