@@ -10,6 +10,7 @@ class NfcRepository(private val api: ApiService) : INfcRepository {
         firebaseToken: String
     ): Result<NfcPetPayload> = runCatching {
         val response = api.getNfcPayload(petId)
+        if (!response.isSuccessful) error("NFC payload failed: ${response.code()}")
         val body = response.body() ?: error("Empty response (${response.code()})")
         NfcPetPayload(
             petId      = body.petId,
@@ -34,6 +35,7 @@ class NfcRepository(private val api: ApiService) : INfcRepository {
         petId: String
     ): Result<NfcPetPayload> = runCatching {
         val response = api.nfcPublicRead(petId)
+        if (!response.isSuccessful) error("Public NFC read failed: ${response.code()}")
         val body = response.body() ?: error("Empty response (${response.code()})")
         NfcPetPayload(
             petId           = body.petId,
