@@ -3,6 +3,7 @@ package com.example.petcare.data.repository
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
@@ -14,13 +15,19 @@ import com.example.petcare.data.local.hive.HiveCacheManager
 import com.example.petcare.data.local.lru.EventLruCache
 import com.example.petcare.data.local.mapper.toEntity
 import com.example.petcare.data.local.mapper.toEvent
+import com.example.petcare.data.model.AddDocumentRequest
 import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.Event
+import com.example.petcare.data.model.PendingEventDocument
 import com.example.petcare.data.network.ApiService
 import com.example.petcare.data.worker.SyncWorker
+import com.example.petcare.util.FirebaseDocumentUploader
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
+import android.util.Log
+import java.io.File
+import java.util.UUID
 
 class EventRepository(
     private val api: ApiService,
@@ -269,6 +276,109 @@ class EventRepository(
         val event = response.body() ?: error("Doc add empty body")
         lru.putEvent(eventId, event)
         event
+    }
+
+    suspend fun queueEventDocument(
+        sourceUri: Uri,
+        petId: String,
+        eventId: String,
+        fileName: String,
+        mimeType: String
+    ): Result<PendingEventDocument> = runCatching {
+        val id = UUID.randomUUID().toString()
+        val safeFileName = fileName.replace(Regex("""[^\w.\-]"""), "_")
+        val dir = File(context.filesDir, "pending_event_documents/$petId/$eventId")
+        dir.mkdirs()
+        val localFile = File(dir, "${id}_$safeFileName")
+
+        context.contentResolver.openInputStream(sourceUri)?.use { input ->
+            localFile.outputStream().use { output -> input.copyTo(output) }
+        } ?: error("Could not read selected document")
+
+        val pending = PendingEventDocument(
+            id = id,
+            petId = petId,
+            eventId = eventId,
+            fileName = fileName,
+            mimeType = mimeType,
+            localUri = Uri.fromFile(localFile).toString()
+        )
+        val updated = getPendingEventDocuments(petId, eventId) + pending
+        hive.putPendingEventDocuments(petId, eventId, gson.toJson(updated))
+        Log.d(
+            "DOC_UPLOAD",
+            "Queued pending event document id=$id petId=$petId eventId=$eventId file=${localFile.absolutePath}"
+        )
+        enqueueSyncWork()
+        pending
+    }
+
+    fun getPendingEventDocuments(
+        petId: String,
+        eventId: String
+    ): List<PendingEventDocument> {
+        val json = hive.getPendingEventDocuments(petId, eventId) ?: return emptyList()
+        return runCatching {
+            gson.fromJson(json, Array<PendingEventDocument>::class.java).toList()
+        }.getOrElse {
+            Log.e("DOC_UPLOAD", "Failed to parse pending event documents: ${it.message}", it)
+            emptyList()
+        }
+    }
+
+    suspend fun syncPendingEventDocuments(
+        petId: String,
+        eventId: String
+    ): Result<Int> = runCatching {
+        if (!isOnline()) {
+            Log.d("DOC_UPLOAD", "Pending document sync skipped offline petId=$petId eventId=$eventId")
+            return@runCatching 0
+        }
+
+        val pendingDocs = getPendingEventDocuments(petId, eventId)
+        if (pendingDocs.isEmpty()) return@runCatching 0
+
+        Log.d(
+            "DOC_UPLOAD",
+            "Pending document sync start petId=$petId eventId=$eventId count=${pendingDocs.size}"
+        )
+        val remaining = pendingDocs.toMutableList()
+        var synced = 0
+
+        pendingDocs.forEach { pending ->
+            runCatching {
+                val uploaded = FirebaseDocumentUploader
+                    .uploadEventDocument(context, Uri.parse(pending.localUri), petId, eventId)
+                    .getOrThrow()
+
+                addDocument(
+                    eventId,
+                    pending.fileName,
+                    uploaded.downloadUrl
+                ).getOrThrow()
+
+                remaining.remove(pending)
+                deleteLocalPendingFile(pending.localUri)
+                synced++
+                Log.d("DOC_UPLOAD", "Pending document synced id=${pending.id} fileName=${pending.fileName}")
+            }.onFailure {
+                Log.e("DOC_UPLOAD", "Pending document sync failed id=${pending.id}: ${it.message}", it)
+            }
+        }
+
+        if (remaining.isEmpty()) {
+            hive.invalidatePendingEventDocuments(petId, eventId)
+        } else {
+            hive.putPendingEventDocuments(petId, eventId, gson.toJson(remaining))
+        }
+        synced
+    }
+
+    private fun deleteLocalPendingFile(localUri: String) {
+        runCatching {
+            val path = Uri.parse(localUri).path ?: return
+            File(path).delete()
+        }
     }
 
     private suspend fun getListFromRoom(petId: String?, ownerId: String?): List<Event> = when {
