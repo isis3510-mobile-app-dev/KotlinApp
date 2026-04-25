@@ -58,15 +58,6 @@ interface EventDao {
     """)
     suspend fun getPendingDeletesForSync(nowMs: Long): List<EventEntity>
 
-    @Query("""
-        SELECT * FROM events_local
-        WHERE pendingOperation = 'UPDATE'
-          AND pendingDelete = 0
-          AND nextRetryAt <= :nowMs
-        ORDER BY date ASC
-    """)
-    suspend fun getPendingUpdatesForSync(nowMs: Long): List<EventEntity>
-
     // ── Escrituras ────────────────────────────────────────────────────────
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -145,10 +136,6 @@ interface EventDao {
             description  = :description,
             followUpDate = :followUpDate,
             synced       = 0,
-            pendingOperation = CASE
-                WHEN pendingOperation = 'CREATE' THEN 'CREATE'
-                ELSE 'UPDATE'
-            END,
             retryCount   = 0,
             nextRetryAt  = 0
         WHERE id = :id

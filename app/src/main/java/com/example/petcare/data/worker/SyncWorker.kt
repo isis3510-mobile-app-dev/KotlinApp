@@ -584,51 +584,6 @@ class SyncWorker(
             }
         }
 
-        val pendingUpdates = db.eventDao().getPendingUpdatesForSync(nowMs)
-        android.util.Log.d("EVENT_SYNC", "Pending event updates eligible=${pendingUpdates.size}")
-        pendingUpdates.forEach { entity ->
-            try {
-                if (entity.petId.startsWith("local_") || entity.id.startsWith("local_ev_")) {
-                    android.util.Log.d(
-                        "EVENT_SYNC",
-                        "PUT event update waits for server ids eventId=${entity.id} petId=${entity.petId}"
-                    )
-                    scheduleEventUpdateRetry(db, entity.id, entity.retryCount)
-                    hadFailures = true
-                    return@forEach
-                }
-
-                android.util.Log.d("EVENT_SYNC", "PUT event update id=${entity.id} petId=${entity.petId}")
-                val response = api.updateEvent(
-                    entity.id,
-                    mapOf(
-                        "title" to entity.title,
-                        "description" to entity.description,
-                        "provider" to entity.provider,
-                        "clinic" to entity.clinic,
-                        "date" to entity.date,
-                        "price" to entity.price
-                    )
-                )
-                android.util.Log.d("EVENT_SYNC", "PUT event update response=${response.code()} id=${entity.id}")
-                val updated = response.body()
-                if (response.isSuccessful && updated != null) {
-                    db.eventDao().upsert(updated.toEntity())
-                    HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
-                    HiveCacheManager(applicationContext).invalidateEvents(updated.petId)
-                    android.util.Log.d("EVENT_SYNC", "Event update synced id=${entity.id}")
-                } else {
-                    android.util.Log.w("EVENT_SYNC", "Event update rejected id=${entity.id} http=${response.code()}")
-                    scheduleEventUpdateRetry(db, entity.id, entity.retryCount)
-                    hadFailures = true
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("EVENT_SYNC", "Event update sync failed id=${entity.id}: ${e.message}", e)
-                scheduleEventUpdateRetry(db, entity.id, entity.retryCount)
-                hadFailures = true
-            }
-        }
-
         val pendingDeletes = db.eventDao().getPendingDeletesForSync(nowMs)
         android.util.Log.d("EVENT_SYNC", "Pending event deletes eligible=${pendingDeletes.size}")
         pendingDeletes.forEach { entity ->
@@ -651,9 +606,15 @@ class SyncWorker(
                     hadFailures = true
                 }
             } catch (e: Exception) {
-                android.util.Log.e("EVENT_SYNC", "Event delete sync failed id=${entity.id}: ${e.message}", e)
-                scheduleEventDeleteRetry(db, entity.id, entity.retryCount)
-                hadFailures = true
+                if (isInvalid204ContentLengthError(e)) {
+                    db.eventDao().deleteById(entity.id)
+                    HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
+                    android.util.Log.d("EVENT_SYNC", "Event delete accepted after malformed 204 id=${entity.id}")
+                } else {
+                    android.util.Log.e("EVENT_SYNC", "Event delete sync failed id=${entity.id}: ${e.message}", e)
+                    scheduleEventDeleteRetry(db, entity.id, entity.retryCount)
+                    hadFailures = true
+                }
             }
         }
 
@@ -809,15 +770,14 @@ class SyncWorker(
         db.eventDao().markDeleteSyncFailed(eventId, nextRetry, nextRetryAt)
     }
 
-    private suspend fun scheduleEventUpdateRetry(db: AppDatabase, eventId: String, currentRetry: Int) {
-        val nextRetry = (currentRetry + 1).coerceAtMost(EVENT_MAX_RETRY)
-        val nextRetryAt = System.currentTimeMillis() + retryDelay(nextRetry)
-        db.eventDao().markCreateSyncFailed(eventId, nextRetry, nextRetryAt)
-    }
-
     private fun retryDelay(retryCount: Int): Long {
         val exponential = EVENT_BASE_RETRY_MS * (1L shl retryCount.coerceIn(0, 12))
         return exponential.coerceAtMost(EVENT_MAX_RETRY_MS)
+    }
+
+    private fun isInvalid204ContentLengthError(error: Throwable): Boolean {
+        val message = error.message.orEmpty()
+        return message.contains("HTTP 204 had non-zero Content-Length", ignoreCase = true)
     }
 
 }
