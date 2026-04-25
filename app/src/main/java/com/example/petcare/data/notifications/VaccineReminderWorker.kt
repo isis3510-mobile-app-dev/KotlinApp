@@ -20,7 +20,7 @@ class VaccineReminderWorker(
     private val evaluator = ReminderEvaluator()
 
     override suspend fun doWork(): Result = try {
-        RepositoryProvider.ensureInitialized()
+        RepositoryProvider.ensureInitialized(applicationContext)
 
         val app = applicationContext as? PetCareApplication ?: return Result.success()
         val preferences = app.userPreferencesRepository
@@ -32,7 +32,7 @@ class VaccineReminderWorker(
         val authUser = RepositoryProvider.authRepository.currentUser ?: return Result.success()
         if (authUser.uid.isBlank()) return Result.success()
 
-        val userId = UserRepository(RepositoryProvider.apiService)
+        val userId = RepositoryProvider.userRepository
             .getMe()
             .getOrNull()
             ?.id

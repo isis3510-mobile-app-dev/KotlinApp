@@ -1,5 +1,7 @@
 package com.example.petcare.ui.screens.profile
 
+import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
@@ -10,8 +12,10 @@ import com.example.petcare.data.model.User
 import com.example.petcare.data.model.VaccineUrgencyLevel
 import com.example.petcare.data.network.ApiClient
 import com.example.petcare.data.network.ApiService
+import com.example.petcare.data.network.isOnline
 import com.example.petcare.data.preferences.AppThemeMode
 import com.example.petcare.data.preferences.UserPreferencesRepository
+import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.util.InputFieldPolicy
 import com.example.petcare.util.InputTextLimits
 import com.example.petcare.util.InputValidators
@@ -50,13 +54,14 @@ class ProfileViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
     private val initialUser: User? = null
 ) : ViewModel() {
-
+    private val userRepository =  RepositoryProvider.userRepository
     private val apiService = ApiClient.create(authRepository).create(ApiService::class.java)
-    private val userRepository = UserRepository(apiService)
 
+    private val networkRepository = RepositoryProvider.networkRepository
     private val _userState = MutableStateFlow(
         Triple(initialUser, initialUser == null, null as String?)
     )
+
 
     val uiState: StateFlow<ProfileUiState> = combine(
         repo.notificationsEnabled,
@@ -129,6 +134,13 @@ class ProfileViewModel(
     fun updateField(field: EditField, value: String) {
         val current = _userState.value.first ?: return
         viewModelScope.launch {
+            if (field is EditField.Address && !networkRepository.isOnlineNew()) {
+                _uiEvents.send(UiEvent.ShowMessage(
+                    "Address can't be updated without an internet connection."
+                ))
+                return@launch
+            }
+
             _userState.value = Triple(current, true, null)
 
             val sanitizedValue = when (field) {
@@ -179,6 +191,22 @@ class ProfileViewModel(
                     _userState.value = Triple(current, false, error.message)
                 }
         }
+    }
+
+    fun onEmailUpdateRequested(newEmail: String, password: String) {
+        val online = networkRepository.isOnlineNew()
+        Log.d("ProfileVM", "Trying to update email. isOnline=$online")
+        if (!networkRepository.isOnlineNew()) {
+            viewModelScope.launch {
+                Log.d("ProfileVM", "Blocked email update: offline")
+                _uiEvents.send(
+                    UiEvent.ShowMessage("The email can't be updated without internet connection. Try again later.")
+                )
+            }
+            return
+        }
+
+        updateEmail(password, newEmail)
     }
 
     fun updateEmail(currentPassword: String, newEmail: String) {

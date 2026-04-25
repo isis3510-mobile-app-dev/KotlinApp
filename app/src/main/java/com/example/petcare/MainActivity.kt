@@ -30,6 +30,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -83,6 +84,7 @@ import com.example.petcare.ui.screens.profile.ProfileScreen
 import com.example.petcare.ui.screens.profile.ProfileViewModel
 import com.example.petcare.ui.screens.records.HealthRecordsScreen
 import com.example.petcare.ui.screens.suggestions.SuggestionScreen
+import com.example.petcare.ui.screens.weight.WeightTrackerScreen
 import com.example.petcare.ui.theme.GreenAccentDark
 import com.example.petcare.ui.theme.GreenDark
 import com.example.petcare.ui.theme.LocalAppThemeMode
@@ -116,7 +118,9 @@ class MainActivity : ComponentActivity() {
 
     lateinit var nfcManager: NfcManager
         private set
-    val nfcViewModel: NfcViewModel by viewModels()
+    val nfcViewModel: NfcViewModel by viewModels {
+        NfcViewModel.NfcViewModelFactory(application)
+    }
 
     val petsViewModel: PetsViewModel by viewModels {
         PetsViewModelFactory(RepositoryProvider.petRepository)
@@ -157,13 +161,13 @@ class MainActivity : ComponentActivity() {
             val sessionExpired by ApiClient.sessionExpiredFlow.collectAsStateWithLifecycle()
 
             fun navigateToBottomTab(route: String, skipIfCurrent: Boolean = true) {
-                if (skipIfCurrent && currentRoute?.substringBefore("/") == route) return
+                if (skipIfCurrent && currentRoute == route) return
                 navController.navigate(route) {
-                    launchSingleTop = true
-                    restoreState = true
-                    popUpTo(navController.graph.startDestinationId) {
-                        saveState = true
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = false
                     }
+                    launchSingleTop = true
+                    restoreState = false
                 }
             }
 
@@ -172,6 +176,8 @@ class MainActivity : ComponentActivity() {
                     .onSuccess { it.savedStateHandle["reload_records"] = true }
                 runCatching { navController.getBackStackEntry(Routes.Home) }
                     .onSuccess { it.savedStateHandle["reload_home"] = true }
+                runCatching { navController.getBackStackEntry(Routes.Calendar) }
+                    .onSuccess { it.savedStateHandle["reload_calendar"] = true }
 
                 if (originRoute.startsWith("petProfile/")) {
                     runCatching { navController.getBackStackEntry(originRoute) }
@@ -371,7 +377,7 @@ class MainActivity : ComponentActivity() {
                                     HomeScreen(
                                         authViewModel           = authViewModel,
                                         homeViewModel           = homeViewModel,
-                                        onNavigateToPets        = { navController.navigate(Routes.Pets) },
+                                        onNavigateToPets        = { navigateToBottomTab(Routes.Pets, skipIfCurrent = false) },
                                         onNavigateToNfc         = { navController.navigate(Routes.NfcScan) },
                                         onNavigateToPetProfile  = { petId -> navController.navigate("petProfile/$petId") },
                                         onNavigateToAddPet      = { navController.navigate(Routes.AddPet1) },
@@ -381,7 +387,7 @@ class MainActivity : ComponentActivity() {
                                         onNavigateToEvent       = { petId, eventId ->
                                             navController.navigate("eventDetails/$petId/$eventId")
                                         },
-                                        onNavigateToRecords     = { navController.navigate(Routes.Records) },
+                                        onNavigateToRecords     = { navigateToBottomTab(Routes.Records, skipIfCurrent = false) },
                                         onNavigateToSuggestions = { navController.navigate(Routes.Suggestions) }
                                     )
                                 }
@@ -440,17 +446,20 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onAddRecordClick  = {
                                             addEventViewModel.reset()
-                                            addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
+                                            val userId = authViewModel.userProfile.value?.id ?: ""
+                                            addEventViewModel.setOwnerId(userId)
                                             addEventViewModel.setOriginRoute(Routes.Records)
                                             navController.navigate(Routes.AddEvent1)
                                         },
                                         onAddVaccineClick = {
                                             addVaccineViewModel.reset()
+                                            addVaccineViewModel.setPetId("") // Clear previous pet if any
                                             navController.navigate(Routes.AddVaccine1)
                                         },
                                         onAddEventClick   = {
                                             addEventViewModel.reset()
-                                            addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
+                                            val userId = authViewModel.userProfile.value?.id ?: ""
+                                            addEventViewModel.setOwnerId(userId)
                                             addEventViewModel.setOriginRoute(Routes.Records)
                                             navController.navigate(Routes.AddEvent1)
                                         }
@@ -458,11 +467,19 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 // ── Calendar ──────────────────────────────────────────────
-                                composable(Routes.Calendar) {
+                                composable(Routes.Calendar) { entry ->
+                                    val reloadCalendar by entry.savedStateHandle
+                                        .getStateFlow("reload_calendar", false)
+                                        .collectAsStateWithLifecycle()
                                     CalendarScreen(
+                                        reloadTrigger = reloadCalendar,
+                                        onReloadConsumed = {
+                                            entry.savedStateHandle["reload_calendar"] = false
+                                        },
                                         onAddEvent = {
                                             addEventViewModel.reset()
-                                            addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
+                                            val userId = authViewModel.userProfile.value?.id ?: ""
+                                            addEventViewModel.setOwnerId(userId)
                                             addEventViewModel.setOriginRoute(Routes.Calendar)
                                             navController.navigate(Routes.AddEvent1)
                                         },
@@ -579,6 +596,7 @@ class MainActivity : ComponentActivity() {
                                             }
                                         },
                                         onAddEvent   = {
+                                            addEventViewModel.reset()
                                             addEventViewModel.setPetId(petId)
                                             addEventViewModel.setOwnerId(
                                                 authViewModel.userProfile.value?.id ?: ""
@@ -588,8 +606,12 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onNFCScan    = { navController.navigate(Routes.NfcScan) },
                                         onAddVaccine = {
+                                            addVaccineViewModel.reset()
                                             addVaccineViewModel.setPetId(petId)
                                             navController.navigate(Routes.AddVaccine1)
+                                        },
+                                        onWeightTracker = {
+                                            navController.navigate("weightTracker/$petId")
                                         },
                                         onNavigateToVaccineDetail = { pId, vaccineId ->
                                             navController.navigate("vaccineDetails/$pId/$vaccineId")
@@ -601,6 +623,23 @@ class MainActivity : ComponentActivity() {
                                             navController.navigate("suggestions/$pid/$petName")
                                         }
 
+                                    )
+                                }
+
+                                // ── Weight Tracker ────────────────────────────────────────
+                                composable(
+                                    route = Routes.WeightTracker,
+                                    arguments = listOf(navArgument("petId") { type = NavType.StringType })
+                                ) { entry ->
+                                    WeightTrackerScreen(
+                                        petId = entry.arguments?.getString("petId").orEmpty(),
+                                        onBack = {
+                                            runCatching { navController.getBackStackEntry(Routes.Home) }
+                                                .onSuccess { it.savedStateHandle["reload_home"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Pets) }
+                                                .onSuccess { it.savedStateHandle["reload_pets"] = true }
+                                            navController.popBackStack()
+                                        }
                                     )
                                 }
 
@@ -620,6 +659,13 @@ class MainActivity : ComponentActivity() {
                                             prev?.set("reload_pet",      true)
                                             prev?.set("reload_records",  true)
                                             prev?.set("reload_home",     true)
+                                            prev?.set("reload_calendar", true)
+                                            runCatching { navController.getBackStackEntry(Routes.Calendar) }
+                                                .onSuccess { it.savedStateHandle["reload_calendar"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Records) }
+                                                .onSuccess { it.savedStateHandle["reload_records"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Home) }
+                                                .onSuccess { it.savedStateHandle["reload_home"] = true }
                                             navController.popBackStack()
                                         }
                                     )
@@ -641,6 +687,13 @@ class MainActivity : ComponentActivity() {
                                             prev?.set("reload_pet",      true)
                                             prev?.set("reload_records",  true)
                                             prev?.set("reload_home",     true)
+                                            prev?.set("reload_calendar", true)
+                                            runCatching { navController.getBackStackEntry(Routes.Calendar) }
+                                                .onSuccess { it.savedStateHandle["reload_calendar"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Records) }
+                                                .onSuccess { it.savedStateHandle["reload_records"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Home) }
+                                                .onSuccess { it.savedStateHandle["reload_home"] = true }
                                             navController.popBackStack()
                                         }
                                     )
@@ -780,6 +833,8 @@ class MainActivity : ComponentActivity() {
                                                 .onSuccess { it.savedStateHandle["reload_records"] = true }
                                             runCatching { navController.getBackStackEntry(Routes.Home) }
                                                 .onSuccess { it.savedStateHandle["reload_home"] = true }
+                                            runCatching { navController.getBackStackEntry(Routes.Calendar) }
+                                                .onSuccess { it.savedStateHandle["reload_calendar"] = true }
                                             runCatching { navController.getBackStackEntry(Routes.PetProfile) }
                                                 .onSuccess { it.savedStateHandle["reload_pet"] = true }
                                             navController.popBackStack(Routes.AddVaccine1, inclusive = true)
@@ -854,7 +909,8 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onAddEvent   = {
                                             addEventViewModel.reset()
-                                            addEventViewModel.setOwnerId(authViewModel.userProfile.value?.id ?: "")
+                                            val userId = authViewModel.userProfile.value?.id ?: ""
+                                            addEventViewModel.setOwnerId(userId)
                                             addEventViewModel.setOriginRoute(
                                                 currentRoute?.substringBefore("/") ?: Routes.Home
                                             )

@@ -5,8 +5,6 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
 
-    // Mismo valor que ApiClient.BASE_URL — cámbialo junto con ese cuando
-    // pases a dispositivo físico.
     private val BASE_URL = com.example.petcare.BuildConfig.BASE_URL
 
     val apiService: ApiService by lazy {

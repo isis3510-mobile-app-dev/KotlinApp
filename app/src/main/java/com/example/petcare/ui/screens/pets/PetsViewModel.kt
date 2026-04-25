@@ -44,20 +44,18 @@ class PetsViewModel(
 
     fun loadPets() {
         viewModelScope.launch {
+            android.util.Log.d("PETS_VM", "isOnline check happening in repository")
             _uiState.update { it.copy(isLoading = true, error = null) }
-            FeatureExecutionTracker.track("Load My Pets") {
-                petRepository.getPets()
-            }.fold(
+            petRepository.getPets().fold(
                 onSuccess = { pets ->
+                    android.util.Log.d("PETS_VM", "Got ${pets.size} pets")
                     allPets = pets.distinctBy { it.id }
                     applyFilters()
                 },
                 onFailure = { e ->
+                    android.util.Log.e("PETS_VM", "Failed: ${e.message}")
                     _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error     = e.message ?: "Error loading pets"
-                        )
+                        it.copy(isLoading = false, error = e.message ?: "Error loading pets")
                     }
                 }
             )

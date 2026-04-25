@@ -1,12 +1,19 @@
 package com.example.petcare.ui.screens.addEventForm
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
+import com.example.petcare.data.local.db.AppDatabase
+import com.example.petcare.data.local.entity.ReminderEntity
+import com.example.petcare.data.local.mapper.toEntity
 import com.example.petcare.data.model.CreateEventRequest
 import com.example.petcare.data.model.EventType
+import com.example.petcare.data.preferences.NotificationPreferencesDataStore
+import com.example.petcare.data.preferences.dataStore
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.navigation.Routes
 import com.example.petcare.util.EventDateUtils
@@ -17,9 +24,11 @@ import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.trimToNullIfBlank
 import com.example.petcare.util.validateCommittedInput
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -37,6 +46,7 @@ data class AddEventFormState(
     val petId: String   = "",
     val ownerId: String = "",
     val originRoute: String = Routes.Records,
+    val petBirthDateIso: String? = null,
     // Step 1
     val title: String        = "",
     val date: String         = "",
@@ -57,12 +67,25 @@ data class AddEventFormState(
     val error: String?     = null
 )
 
-class AddEventViewModel : ViewModel() {
+class AddEventViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(AddEventFormState())
     val state: StateFlow<AddEventFormState> = _state.asStateFlow()
 
-    fun setPetId(v: String)            { _state.value = _state.value.copy(petId = normalizeForCommit(v, InputFieldPolicy.GENERAL_TEXT)) }
+    fun setPetId(v: String) {
+        _state.value = _state.value.copy(petId = normalizeForCommit(v, InputFieldPolicy.GENERAL_TEXT))
+        fetchPetBirthDate(v)
+    }
+
+    private fun fetchPetBirthDate(petId: String) {
+        if (petId.isBlank()) return
+        viewModelScope.launch {
+            RepositoryProvider.petRepository.getPet(petId).onSuccess { pet ->
+                _state.value = _state.value.copy(petBirthDateIso = pet.birthDate)
+            }
+        }
+    }
+
     fun setOwnerId(v: String)          { _state.value = _state.value.copy(ownerId = normalizeForCommit(v, InputFieldPolicy.GENERAL_TEXT)) }
     fun setOriginRoute(v: String)      { _state.value = _state.value.copy(originRoute = v) }
     fun setTitle(v: String)            { _state.value = _state.value.copy(title = sanitizeForEditing(v, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.EVENT_TITLE).value) }
@@ -139,9 +162,16 @@ class AddEventViewModel : ViewModel() {
         val clinicError = validateCommittedInput(s.clinic, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC)
         val priceError = validateCommittedInput(s.price, InputFieldPolicy.DECIMAL, maxLength = InputTextLimits.PRICE, fieldName = "Price")
 
+        val eventDate = EventDateUtils.parseEventDate(toIso(s.date, s.time))
+        val birthDate = EventDateUtils.parseEventDate(s.petBirthDateIso)
+        val birthDateError = if (eventDate != null && birthDate != null && eventDate.isBefore(birthDate)) {
+            "Event date cannot be before pet's birth date (${s.petBirthDateIso?.take(10)})."
+        } else null
+
         val firstError = listOfNotNull(
-            if (s.petId.isBlank() || s.ownerId.isBlank()) "Pet and user profile are required." else null,
+            if (s.petId.isBlank()) "Pet is required." else null,
             if (s.date.isBlank()) "Date is required." else null,
+            birthDateError,
             titleError,
             descriptionError,
             providerError,
@@ -193,6 +223,8 @@ class AddEventViewModel : ViewModel() {
                         )
                     }
 
+                    saveEventLocallyAndScheduleReminder(event, s.petId)
+
                     _state.value = _state.value.copy(isLoading = false)
                     onSuccess(event.id)
                 },
@@ -214,4 +246,45 @@ class AddEventViewModel : ViewModel() {
             appDate = date,
             appTime = time
         ) ?: date
+
+    private fun saveEventLocallyAndScheduleReminder(
+        event: com.example.petcare.data.model.Event,
+        petId: String
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+
+            // 1. Guardar el evento en Room
+            val eventEntity = event.toEntity()
+            AppDatabase.getInstance(getApplication())
+                .eventDao()
+                .upsertAll(listOf(eventEntity))
+
+
+            // 2. Leer la preferencia de ventana del usuario para esta mascota
+            val notifPrefs = NotificationPreferencesDataStore(
+                getApplication<Application>().dataStore
+            )
+            val window = notifPrefs.getReminderWindow(petId).first()
+
+            // 3. Calcular cuándo disparar el reminder
+            val eventTimeMs = EventDateUtils.parseEventInstant(event.date)
+                ?.toEpochMilli() ?: return@launch
+
+            val triggerMs = notifPrefs.calculateTriggerMs(eventTimeMs, window)
+
+            // 4. Solo programar si el trigger es en el futuro
+            if (triggerMs > System.currentTimeMillis()) {
+                AppDatabase.getInstance(getApplication())
+                    .reminderDao()
+                    .insert(
+                        ReminderEntity(
+                            eventId = event.id,
+                            triggerMs = triggerMs,
+                            windowType = window.name,
+                            fired = false
+                        )
+                    )
+            }
+        }
+    }
 }

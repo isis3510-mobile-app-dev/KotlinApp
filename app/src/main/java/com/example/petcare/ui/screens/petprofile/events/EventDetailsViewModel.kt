@@ -29,6 +29,7 @@ data class EventDetailsUiState(
     val error: String? = null,
     val isDeleted: Boolean = false,
     val isEditing: Boolean = false,
+    val petBirthDateIso: String? = null,
     val editTitle: String       = "",
     val editDescription: String = "",
     val editProvider: String    = "",
@@ -43,9 +44,14 @@ class EventDetailsViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(EventDetailsUiState(isLoading = true))
     val uiState: StateFlow<EventDetailsUiState> = _uiState.asStateFlow()
 
-    fun load(eventId: String) {
+    fun load(eventId: String, petId: String = "") {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            if (petId.isNotBlank()) {
+                RepositoryProvider.petRepository.getPet(petId).onSuccess { pet ->
+                    _uiState.value = _uiState.value.copy(petBirthDateIso = pet.birthDate)
+                }
+            }
             FeatureExecutionTracker.track("Load Event Details") {
                 RepositoryProvider.eventRepository.getEvent(eventId)
             }.fold(
@@ -114,6 +120,15 @@ class EventDetailsViewModel : ViewModel() {
             _uiState.value = s.copy(
                 isSaving = false,
                 error = "Invalid event date/time. Please choose a valid date."
+            )
+            return
+        }
+        val selectedDate = EventDateUtils.parseEventDate(isoDate)
+        val birthDate = EventDateUtils.parseEventDate(s.petBirthDateIso)
+        if (selectedDate != null && birthDate != null && selectedDate.isBefore(birthDate)) {
+            _uiState.value = s.copy(
+                isSaving = false,
+                error = "Event date cannot be before pet's birth date (${s.petBirthDateIso?.take(10)})."
             )
             return
         }

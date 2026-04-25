@@ -22,6 +22,9 @@ import com.example.petcare.ui.theme.GrayText
 import com.example.petcare.ui.theme.GrayBorder
 import java.util.*
 import androidx.compose.material.icons.filled.AccessTime
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,7 +35,8 @@ fun DateTextField(
     onDateSelected: (String) -> Unit,
     allowFutureDates: Boolean = true,    // NEW: true = allow any date by default
     allowPastDates: Boolean = true,      // NEW: false = restrict to today or future
-    minDateAfter: String? = null         // NEW: if set, minimum selectable date (dd/MM/yyyy)
+    minDateAfter: String? = null,        // NEW: if set, minimum selectable date (strictly after)
+    minDateInclusive: String? = null     // NEW: if set, minimum selectable date (inclusive)
 ) {
     val context = LocalContext.current
     var selectedDate by remember { mutableStateOf(value) }
@@ -64,16 +68,14 @@ fun DateTextField(
         }
         // Minimum date constraint (for next due date > date given)
         if (minDateAfter != null) {
-            try {
-                val parts = minDateAfter.split("/")
-                if (parts.size == 3) {
-                    val minCal = Calendar.getInstance()
-                    minCal.set(parts[2].toInt(), parts[1].toInt() - 1, parts[0].toInt())
-                    // Add 1 day so next due date must be strictly after date given
-                    minCal.add(Calendar.DAY_OF_MONTH, 1)
-                    dialog.datePicker.minDate = minCal.timeInMillis
-                }
-            } catch (_: Exception) { /* ignore parse errors */ }
+            parseDatePickerInput(minDateAfter)?.let { minDate ->
+                dialog.datePicker.minDate = minDate.plusDays(1).toPickerMillis()
+            }
+        }
+        if (minDateInclusive != null) {
+            parseDatePickerInput(minDateInclusive)?.let { minDate ->
+                dialog.datePicker.minDate = maxOf(dialog.datePicker.minDate, minDate.toPickerMillis())
+            }
         }
     }
 
@@ -122,6 +124,23 @@ fun DateTextField(
         )
     }
 }
+
+private fun parseDatePickerInput(raw: String): LocalDate? {
+    val value = raw.trim()
+    if (value.isBlank()) return null
+    return runCatching {
+        when {
+            value.matches(Regex("""\d{2}/\d{2}/\d{4}""")) ->
+                LocalDate.parse(value, DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+            value.matches(Regex("""\d{4}-\d{2}-\d{2}.*""")) ->
+                LocalDate.parse(value.take(10))
+            else -> null
+        }
+    }.getOrNull()
+}
+
+private fun LocalDate.toPickerMillis(): Long =
+    atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

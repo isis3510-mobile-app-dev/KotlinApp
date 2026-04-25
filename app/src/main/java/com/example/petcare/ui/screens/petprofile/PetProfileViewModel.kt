@@ -100,7 +100,7 @@ class PetProfileViewModel : ViewModel() {
                 }
                 VaccineRecord(
                     id          = v.id,
-                    name        = catalogMap[v.vaccineId]?.name ?: v.vaccineId.take(8),
+                    name        = catalogMap[v.vaccineId]?.name ?: "Unknown vaccine",
                     provider    = v.administeredBy,
                     dateGiven   = v.dateGiven.take(10),
                     nextDueDate = v.nextDueDate?.take(10),
@@ -123,7 +123,7 @@ class PetProfileViewModel : ViewModel() {
             onFailure = { /* non-fatal */ }
         )
         val events = fetchedEvents.map { it.toMedicalEvent() }
-        val upcomingCount = fetchedEvents.count { EventDateUtils.isTodayOrFuture(it.date) }
+        val upcomingCount = fetchedEvents.count { EventDateUtils.isFuture(it.date) }
 
         val suggestions = mutableListOf<SuggestionDto>()
         RepositoryProvider.petRepository.getPetSmart(petId).fold(

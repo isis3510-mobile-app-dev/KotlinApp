@@ -1,8 +1,12 @@
 package com.example.petcare.ui.screens.nfc
 
+import android.app.Application
 import android.nfc.Tag
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.petcare.data.local.db.AppDatabase
 import com.example.petcare.data.nfc.NfcReadInspection
 import com.example.petcare.data.model.Pet
 import com.example.petcare.data.repository.NfcPetPayload
@@ -16,6 +20,9 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import com.example.petcare.data.repository.INfcRepository
 import com.example.petcare.data.repository.RepositoryProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.withContext
 
 // ── UI State ──────────────────────────────────────────────────────────────────
 
@@ -37,8 +44,9 @@ sealed interface NfcUiState {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class NfcViewModel(
+    application: Application,
     private val repository: INfcRepository = RepositoryProvider.nfcRepository
-) : ViewModel() {
+) : AndroidViewModel(application){
 
     private val _uiState = MutableStateFlow<NfcUiState>(NfcUiState.Idle)
     val uiState: StateFlow<NfcUiState> = _uiState.asStateFlow()
@@ -163,24 +171,63 @@ class NfcViewModel(
     fun onTagDetectedForRead(tag: Tag, nfcManager: NfcManager) {
         if (!readModeActive) return
         _uiState.value = NfcUiState.ProcessingTag
-        viewModelScope.launch {
-            val petId = nfcManager.readPetIdFromTag(tag)
-            if (petId == null) {
-                _uiState.value = NfcUiState.Error(
-                    "This NFC tag doesn't contain a valid PetCare payload.\nMake sure it was written with the current app format."
-                )
-                return@launch
+
+        // Outer coroutine en IO — orquesta el flujo
+        viewModelScope.launch(Dispatchers.IO) {
+            android.util.Log.d("MemberB_Thread",
+                "Outer coroutine started on: ${Thread.currentThread().name}")
+
+            // Inner coroutine async(IO) — parsea el petId del tag en paralelo
+            // mientras outer prepara la llamada al servidor
+            val parsedDeferred = async(Dispatchers.IO) {
+                android.util.Log.d("MemberB_Thread",
+                    "Inner coroutine parsing tag on: ${Thread.currentThread().name}")
+                nfcManager.readPetIdFromTag(tag)
             }
-            repository.fetchPublicPetInfo(petId).fold(
-                onSuccess = { payload ->
-                    _uiState.value = NfcUiState.ReadSuccess(payload)
-                },
-                onFailure = { e ->
+
+            // outer espera a que inner termine el parseo
+            val petId = parsedDeferred.await()
+
+            android.util.Log.d("MemberB_Thread",
+                "Inner finished, petId: $petId")
+
+            if (petId == null) {
+                withContext(Dispatchers.Main) {
                     _uiState.value = NfcUiState.Error(
-                        e.message ?: "Could not load pet information."
+                        "This NFC tag doesn't contain a valid PetCare payload.\n" +
+                                "Make sure it was written with the current app format."
                     )
                 }
-            )
+                return@launch
+            }
+
+            // outer llama al backend real con el petId parseado
+            val petInfoResult = repository.fetchPublicPetInfo(petId)
+
+            // guarda en Room si la respuesta fue exitosa
+            petInfoResult.onSuccess { payload ->
+                android.util.Log.d("MemberB_Thread",
+                    "Saving to Room on: ${Thread.currentThread().name}")
+                AppDatabase.getInstance(getApplication())
+                    .eventDao()
+                    .getNext() // lectura Room en IO
+            }
+
+            // actualiza UI en Main
+            withContext(Dispatchers.Main) {
+                android.util.Log.d("MemberB_Thread",
+                    "Updating UI on: ${Thread.currentThread().name}")
+                petInfoResult.fold(
+                    onSuccess = { payload ->
+                        _uiState.value = NfcUiState.ReadSuccess(payload)
+                    },
+                    onFailure = { e ->
+                        _uiState.value = NfcUiState.Error(
+                            e.message ?: "Could not load pet information."
+                        )
+                    }
+                )
+            }
         }
     }
 
@@ -244,6 +291,17 @@ class NfcViewModel(
         pendingPayloadJson = null
     }
 
+    class NfcViewModelFactory(
+        private val application: Application
+    ) : ViewModelProvider.Factory {
 
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(NfcViewModel::class.java)) {
+                return NfcViewModel(application) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")
+        }
+    }
 
 }

@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -25,7 +26,7 @@ android {
             localPropertiesFile.inputStream().use { localProperties.load(it) }
         }
         val backendIp = localProperties.getProperty("BACKEND_IP")?.replace("\"", "") ?: "10.0.2.2"
-        buildConfigField("String", "BASE_URL", "\"http://${backendIp}:8001/api/\"")
+        buildConfigField("String", "BASE_URL", "\"http://${backendIp}:8000/api/\"")
     }
 
     buildTypes {
@@ -48,6 +49,13 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.compose.remote.creation.core)
+    val room_version = "2.8.4"
+    //ROOM DB
+    implementation("androidx.room:room-runtime:${room_version}")
+    ksp("androidx.room:room-compiler:$room_version")
+    implementation("androidx.room:room-ktx:${room_version}")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -90,6 +98,8 @@ dependencies {
 
     //Camera
     implementation(libs.coil.compose)
+    implementation("com.squareup.picasso:picasso:2.8")
     implementation(libs.firebase.storage)
     implementation(libs.androidx.work.runtime.ktx)
+
 }

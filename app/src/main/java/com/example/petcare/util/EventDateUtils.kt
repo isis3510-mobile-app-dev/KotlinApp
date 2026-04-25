@@ -50,6 +50,11 @@ object EventDateUtils {
         return !localDate.isBefore(today)
     }
 
+    fun isFuture(raw: String?, today: LocalDate = LocalDate.now()): Boolean {
+        val localDate = parseEventDate(raw) ?: return false
+        return localDate.isAfter(today)
+    }
+
     fun splitToAppDateTime(raw: String?): Pair<String, String> {
         if (isUtcMidnightTimestamp(raw)) {
             val utcDate = runCatching {

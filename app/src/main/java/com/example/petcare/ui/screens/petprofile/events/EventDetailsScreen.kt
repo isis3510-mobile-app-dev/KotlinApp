@@ -47,7 +47,7 @@ fun EventDetailsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    LaunchedEffect(eventId) { viewModel.load(eventId) }
+    LaunchedEffect(eventId, petId) { viewModel.load(eventId, petId) }
 
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) onNavigateBack()
@@ -318,7 +318,8 @@ fun EventDetailsScreen(
                             DateTextField(
                                 name           = "Event Date *",
                                 value          = uiState.editDate,
-                                onDateSelected = viewModel::setDate
+                                onDateSelected = viewModel::setDate,
+                                minDateInclusive = uiState.petBirthDateIso
                             )
 
                             TimeTextField(
