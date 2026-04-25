@@ -25,6 +25,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
+import androidx.core.net.toUri
 
 class SyncWorker(
     context: Context,
@@ -133,7 +134,7 @@ class SyncWorker(
                         weight         = entity.weight,
                         color          = entity.color,
                         birthDate      = entity.birthDate,
-                        photoUrl       = entity.photoUrl,
+                        photoUrl       = resolvedPhotoUrl,
                         knownAllergies = entity.knownAllergies,
                         defaultVet     = entity.defaultVet,
                         defaultClinic  = entity.defaultClinic
@@ -172,10 +173,10 @@ class SyncWorker(
 
     private suspend fun uploadLocalPhotoIfNeeded(url: String?): String? {
         if (url == null) return null
-        if (!url.startsWith("file://")) return url   // already a remote URL, nothing to do
+        if (!url.startsWith("file")) return url   // already a remote URL, nothing to do
 
         return try {
-            val uri = android.net.Uri.parse(url)
+            val uri = url.toUri()
             val filename = "pets/${java.util.UUID.randomUUID()}.jpg"
             val ref = Firebase.storage.reference.child(filename)
             ref.putFile(uri).await()
