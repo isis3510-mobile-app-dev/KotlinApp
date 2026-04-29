@@ -39,7 +39,7 @@ class SuggestionViewModel : ViewModel() {
                     RepositoryProvider.petRepository
                         .getPetSmart(pet.id)
                         .getOrElse { emptyList() }
-                        .map { PetSuggestion(pet.id, pet.name, it) }
+                        .map { PetSuggestion(pet.id, pet.name, pet.photoUrl, it) }
                 }
             }.awaitAll().flatten()
 
