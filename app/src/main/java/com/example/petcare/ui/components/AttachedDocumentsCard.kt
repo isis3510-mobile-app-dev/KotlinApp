@@ -36,8 +36,8 @@ import java.io.File
 @Composable
 fun AttachedDocumentsCard(
     documents: List<AttachedDocument>,
-    // El caller maneja qué hacer con la Uri seleccionada
     onDocumentPicked: (uri: Uri, mimeType: String, fileName: String) -> Unit,
+    onDeleteDocument: ((documentId: String) -> Unit)? = null,
     isUploading: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -115,8 +115,9 @@ fun AttachedDocumentsCard(
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     documents.forEach { doc ->
                         DocumentRow(
-                            doc     = doc,
-                            onClick = {
+                            doc             = doc,
+                            onDeleteDocument = onDeleteDocument,
+                            onClick         = {
                                 doc.fileUri?.let { url ->
                                     try { uriHandler.openUri(url) } catch (_: Exception) {}
                                 }
@@ -211,7 +212,11 @@ private fun SourceButton(
 }
 
 @Composable
-private fun DocumentRow(doc: AttachedDocument, onClick: () -> Unit) {
+private fun DocumentRow(
+    doc: AttachedDocument,
+    onClick: () -> Unit,
+    onDeleteDocument: ((documentId: String) -> Unit)? = null
+) {
     val context = LocalContext.current
     val uri     = doc.fileUri
     val isImage = uri != null && (
@@ -219,6 +224,25 @@ private fun DocumentRow(doc: AttachedDocument, onClick: () -> Unit) {
                     uri.endsWith(".jpeg") || uri.endsWith(".png") || uri.endsWith(".webp")
             )
     val isPdf = doc.fileName.endsWith(".pdf", ignoreCase = true)
+
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirm && doc.id != null && onDeleteDocument != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title            = { Text("Delete document") },
+            text             = { Text("Remove \"${doc.fileName}\"? This cannot be undone.") },
+            confirmButton    = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    onDeleteDocument(doc.id)
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
 
     Row(
         modifier = Modifier
@@ -292,13 +316,28 @@ private fun DocumentRow(doc: AttachedDocument, onClick: () -> Unit) {
             }
         }
 
-        if (uri != null) {
-            Icon(
-                Icons.Default.OpenInNew,
-                contentDescription = "Open",
-                tint     = MaterialTheme.colorScheme.onSecondary,
-                modifier = Modifier.size(16.dp)
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (uri != null) {
+                Icon(
+                    Icons.Default.OpenInNew,
+                    contentDescription = "Open",
+                    tint     = MaterialTheme.colorScheme.onSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            if (doc.id != null && onDeleteDocument != null) {
+                IconButton(
+                    onClick  = { showDeleteConfirm = true },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete document",
+                        tint     = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
         }
     }
 }

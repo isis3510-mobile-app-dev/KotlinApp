@@ -416,6 +416,8 @@ class SyncWorker(
 
                     remaining.remove(pending)
                     deleteLocalPendingDocument(pending.localUri)
+                    com.example.petcare.data.repository.RepositoryProvider.petRepository
+                        .invalidatePetLru(pending.petId)
                     android.util.Log.d("DOC_UPLOAD", "Worker synced pending document id=${pending.id}")
                 } catch (e: Exception) {
                     android.util.Log.e("DOC_UPLOAD", "Worker pending document sync failed id=${pending.id}: ${e.message}", e)
@@ -571,6 +573,11 @@ class SyncWorker(
                     db.eventDao().upsert(created.toEntity())
                     HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
                     HiveCacheManager(applicationContext).invalidateEvents(created.petId)
+                    com.example.petcare.data.repository.RepositoryProvider.eventRepository
+                        .invalidateLruForPet(entity.petId)
+                    if (created.petId != entity.petId)
+                        com.example.petcare.data.repository.RepositoryProvider.eventRepository
+                            .invalidateLruForPet(created.petId)
                     android.util.Log.d("EVENT_SYNC", "Event create synced localId=${entity.id} serverId=${created.id}")
                 } else {
                     android.util.Log.w("EVENT_SYNC", "Event create rejected localId=${entity.id} http=${response.code()}")
@@ -600,6 +607,8 @@ class SyncWorker(
                 if (response.isSuccessful || response.code() == 204 || response.code() == 404) {
                     db.eventDao().deleteById(entity.id)
                     HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
+                    com.example.petcare.data.repository.RepositoryProvider.eventRepository
+                        .invalidateLruForPet(entity.petId)
                     android.util.Log.d("EVENT_SYNC", "Event delete synced id=${entity.id}")
                 } else {
                     scheduleEventDeleteRetry(db, entity.id, entity.retryCount)
@@ -609,6 +618,8 @@ class SyncWorker(
                 if (isInvalid204ContentLengthError(e)) {
                     db.eventDao().deleteById(entity.id)
                     HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
+                    com.example.petcare.data.repository.RepositoryProvider.eventRepository
+                        .invalidateLruForPet(entity.petId)
                     android.util.Log.d("EVENT_SYNC", "Event delete accepted after malformed 204 id=${entity.id}")
                 } else {
                     android.util.Log.e("EVENT_SYNC", "Event delete sync failed id=${entity.id}: ${e.message}", e)
@@ -680,6 +691,8 @@ class SyncWorker(
                     remaining.remove(pending)
                     deleteLocalPendingDocument(pending.localUri)
                     HiveCacheManager(applicationContext).invalidateEvents(pending.petId)
+                    com.example.petcare.data.repository.RepositoryProvider.eventRepository
+                        .invalidateLruForPet(pending.petId)
                     android.util.Log.d("EVENT_DOC_UPLOAD", "Worker synced pending event document id=${pending.id}")
                 } catch (e: Exception) {
                     hadFailures = true

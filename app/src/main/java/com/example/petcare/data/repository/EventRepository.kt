@@ -278,6 +278,14 @@ class EventRepository(
         event
     }
 
+    suspend fun deleteEventDocument(eventId: String, documentId: String): Result<Event> = runCatching {
+        val response = api.deleteEventDocument(eventId, documentId)
+        if (!response.isSuccessful) error("Delete document failed: ${response.code()}")
+        val event = response.body() ?: error("Empty response after document delete")
+        lru.putEvent(eventId, event)
+        event
+    }
+
     suspend fun queueEventDocument(
         sourceUri: Uri,
         petId: String,
@@ -391,6 +399,11 @@ class EventRepository(
         hive.invalidateEvents(petId)
         lru.invalidateList(listCacheKey(petId, null))
         lru.invalidateEvent(eventId)
+    }
+
+    fun invalidateLruForPet(petId: String) {
+        hive.invalidateEvents(petId)
+        lru.invalidateList(listCacheKey(petId, null))
     }
 
     private fun isInvalid204ContentLengthError(error: Throwable): Boolean {

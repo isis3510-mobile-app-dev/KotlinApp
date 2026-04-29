@@ -267,6 +267,18 @@ class EventDetailsViewModel : ViewModel() {
         }
     }
 
+    fun deleteDocument(eventId: String, documentId: String) {
+        viewModelScope.launch {
+            RepositoryProvider.eventRepository.deleteEventDocument(eventId, documentId)
+                .onSuccess { updatedEvent ->
+                    _uiState.value = _uiState.value.copy(event = updatedEvent)
+                }
+                .onFailure { e ->
+                    _uiState.value = _uiState.value.copy(error = e.message)
+                }
+        }
+    }
+
     fun clearError() { _uiState.value = _uiState.value.copy(error = null) }
 
     private fun pendingAttachedDocuments(

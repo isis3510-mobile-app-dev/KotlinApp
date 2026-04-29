@@ -97,6 +97,11 @@ class PetRepository(
         Log.d("VAX_ROOM", "L1 INVALIDATE vaccinations petId=$petId removedKeys=${keys.size}")
     }
 
+    fun invalidatePetLru(petId: String) {
+        invalidateVaccinationCache(petId)
+        hive.invalidatePets(currentUserId())
+    }
+
     suspend fun getPets(): Result<List<Pet>> {
         val uid = currentUserId()
         Log.d("PET_REPO", "isOnline=${isOnline(context)}, uid=$uid")
@@ -358,6 +363,20 @@ class PetRepository(
             "DOC_UPLOAD",
             "Backend document metadata saved petId=$petId vaccinationId=$vaccinationId totalVaccinations=${pet.vaccinations.size}"
         )
+        pet
+    }
+
+    suspend fun deleteVaccinationDocument(
+        petId: String,
+        vaccinationId: String,
+        documentId: String
+    ): Result<Pet> = runCatching {
+        val uid = currentUserId()
+        val response = api.deleteVaccinationDocument(petId, vaccinationId, documentId)
+        if (!response.isSuccessful) error("Delete document failed: ${response.code()}")
+        val pet = response.body() ?: error("Empty response after document delete")
+        invalidateVaccinationCache(petId)
+        hive.invalidatePets(uid)
         pet
     }
 

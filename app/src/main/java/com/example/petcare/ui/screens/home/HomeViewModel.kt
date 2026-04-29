@@ -19,6 +19,7 @@ import com.example.petcare.data.model.EventType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import java.time.LocalDate
 import java.time.Period
 
@@ -95,7 +96,9 @@ class HomeViewModel : ViewModel() {
                 android.util.Log.d("MemberB_Thread",
                     "withContext(IO) — fetching data on: ${Thread.currentThread().name}")
 
-                runCatching { fetchHomeData() }
+                runCatching {
+                    withTimeout(30_000L) { fetchHomeData() }
+                }
             }
 
             // Back on Main — update UI state with the result
@@ -140,9 +143,11 @@ class HomeViewModel : ViewModel() {
         val eventResults = coroutineScope {
             uniquePets.map { pet ->
                 async {
-                    RepositoryProvider.eventRepository
-                        .getEvents(petId = pet.id)
-                        .getOrElse { emptyList() }
+                    runCatching {
+                        RepositoryProvider.eventRepository
+                            .getEvents(petId = pet.id)
+                            .getOrElse { emptyList() }
+                    }.getOrElse { emptyList() }
                 }
             }.awaitAll()
         }.flatten()
@@ -172,10 +177,12 @@ class HomeViewModel : ViewModel() {
         val allSuggestions: List<PetSuggestion> = coroutineScope {
             uniquePets.map { pet ->
                 async {
-                    RepositoryProvider.petRepository
-                        .getPetSmart(pet.id)
-                        .getOrElse { emptyList() }
-                        .map { PetSuggestion(pet.id, pet.name, it) }
+                    runCatching {
+                        RepositoryProvider.petRepository
+                            .getPetSmart(pet.id)
+                            .getOrElse { emptyList() }
+                            .map { PetSuggestion(pet.id, pet.name, pet.photoUrl, it) }
+                    }.getOrElse { emptyList() }
                 }
             }.awaitAll()
         }.flatten()
@@ -212,14 +219,15 @@ class HomeViewModel : ViewModel() {
             .groupBy { it.suggestion.title }
             .map { (title, items) ->
                 GroupedSuggestion(
-                    vaccineTitle = title,
+                    vaccineTitle  = title,
                     type = when {
                         items.any { it.suggestion.type == "danger" }  -> "danger"
                         items.any { it.suggestion.type == "warning" } -> "warning"
                         else -> "info"
                     },
-                    pets    = items.map { it.petName }.distinct(),
-                    message = items.first().suggestion.message
+                    pets          = items.map { it.petName }.distinct(),
+                    message       = items.first().suggestion.message,
+                    petPhotoUrls  = items.mapNotNull { it.petPhotoUrl }.filter { it.isNotBlank() }.distinct()
                 )
             }
             .sortedBy { when (it.type) { "danger" -> 0; "warning" -> 1; else -> 2 } }

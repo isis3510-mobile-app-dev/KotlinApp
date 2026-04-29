@@ -42,6 +42,7 @@ fun ProfileScreen(
     viewModel: ProfileViewModel,
     petCount: Int? = null,
     onNavigateToLogin: () -> Unit = {},
+    onSaveSuccess: () -> Unit = {},
     paddingValues: PaddingValues = PaddingValues(0.dp)
 
 ) {
@@ -53,7 +54,10 @@ fun ProfileScreen(
         viewModel.uiEvents.collect { event ->
             when (event) {
                 is UiEvent.NavigateToLogin -> onNavigateToLogin()
-                is UiEvent.SaveSuccess -> snackbarHostState.showSnackbar("Saved successfully")
+                is UiEvent.SaveSuccess -> {
+                    onSaveSuccess()
+                    snackbarHostState.showSnackbar("Saved successfully")
+                }
                 is UiEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
             }
         }

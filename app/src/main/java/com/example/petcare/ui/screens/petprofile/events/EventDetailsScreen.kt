@@ -274,6 +274,9 @@ fun EventDetailsScreen(
                                 isUploading      = uiState.isUploadingDoc,
                                 onDocumentPicked = { uri, mimeType, fileName ->
                                     viewModel.addDocument(context, petId, uri, mimeType, fileName)
+                                },
+                                onDeleteDocument = { docId ->
+                                    viewModel.deleteDocument(event.id, docId)
                                 }
                             )
 
@@ -342,6 +345,9 @@ fun EventDetailsScreen(
                                 isUploading      = uiState.isUploadingDoc,
                                 onDocumentPicked = { uri, mimeType, fileName ->
                                     viewModel.addDocument(context, petId, uri, mimeType, fileName)
+                                },
+                                onDeleteDocument = { docId ->
+                                    viewModel.deleteDocument(event.id, docId)
                                 }
                             )
                         }

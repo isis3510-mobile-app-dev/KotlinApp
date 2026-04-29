@@ -300,6 +300,25 @@ class VaccineDetailsViewModel : ViewModel() {
         }
     }
 
+    fun deleteDocument(petId: String, vaccinationId: String, documentId: String) {
+        viewModelScope.launch {
+            RepositoryProvider.petRepository.deleteVaccinationDocument(petId, vaccinationId, documentId)
+                .onSuccess { updatedPet ->
+                    val updatedVacc = updatedPet.vaccinations.find { it.id == vaccinationId }
+                    _uiState.value = _uiState.value.copy(
+                        vaccine = _uiState.value.vaccine?.copy(
+                            attachedDocuments = updatedVacc?.attachedDocuments?.map { doc ->
+                                AttachedDocument(id = doc.id, fileName = doc.fileName, fileUri = doc.fileUri)
+                            } ?: emptyList()
+                        )
+                    )
+                }
+                .onFailure { e ->
+                    _uiState.value = _uiState.value.copy(error = e.message)
+                }
+        }
+    }
+
     fun clearError() { _uiState.value = _uiState.value.copy(error = null) }
 
     private fun resolveVaccineName(

@@ -533,6 +533,7 @@ class MainActivity : ComponentActivity() {
                                     ProfileScreen(
                                         viewModel = profileViewModel,
                                         petCount = petsUiState.pets.size,
+                                        onSaveSuccess = { authViewModel.fetchUserProfile() },
                                         onNavigateToLogin = {
                                             authViewModel.logout()
                                             if (navController.currentDestination?.route != Routes.SignIn) {

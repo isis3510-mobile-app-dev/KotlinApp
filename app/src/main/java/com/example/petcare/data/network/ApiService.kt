@@ -105,6 +105,13 @@ interface ApiService {
         @Body body: AddDocumentRequest
     ): Response<Pet>
 
+    @DELETE("pets/{petId}/vaccinations/{vaccinationId}/documents/{documentId}/")
+    suspend fun deleteVaccinationDocument(
+        @Path("petId") petId: String,
+        @Path("vaccinationId") vaccinationId: String,
+        @Path("documentId") documentId: String
+    ): Response<Pet>
+
     // ── Weight Logs ──────────────────────────────────────────────────────
 
     @GET("pets/{petId}/weight-logs/")
@@ -158,6 +165,12 @@ interface ApiService {
     suspend fun addEventDocument(
         @Path("eventId") eventId: String,
         @Body body: Map<String, @JvmSuppressWildcards Any?>
+    ): Response<Event>
+
+    @DELETE("events/{eventId}/documents/{documentId}/")
+    suspend fun deleteEventDocument(
+        @Path("eventId") eventId: String,
+        @Path("documentId") documentId: String
     ): Response<Event>
 
     // ── Notifications ────────────────────────────────────────────────────────

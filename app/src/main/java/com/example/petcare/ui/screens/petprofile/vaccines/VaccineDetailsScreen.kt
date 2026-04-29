@@ -192,6 +192,9 @@ fun VaccineDetailsScreen(
                         isUploading      = uiState.isUploadingDoc,
                         onDocumentPicked = { uri, mimeType, fileName ->
                             viewModel.addDocument(context, uri, mimeType, fileName)
+                        },
+                        onDeleteDocument = { docId ->
+                            viewModel.deleteDocument(uiState.petId, uiState.vaccine?.id ?: "", docId)
                         }
                     )
 
