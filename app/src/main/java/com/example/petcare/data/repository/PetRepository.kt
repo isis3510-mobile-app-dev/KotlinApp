@@ -100,6 +100,7 @@ class PetRepository(
     fun invalidatePetLru(petId: String) {
         invalidateVaccinationCache(petId)
         hive.invalidatePets(currentUserId())
+        android.util.Log.d("LRU_CACHE", "invalidateLruForPet done petId=$petId")
     }
 
     suspend fun getPets(): Result<List<Pet>> {

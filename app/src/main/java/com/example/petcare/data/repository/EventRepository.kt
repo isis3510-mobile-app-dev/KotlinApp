@@ -57,7 +57,7 @@ class EventRepository(
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(
             SyncWorker.UNIQUE_WORK_NAME,
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
             request
         )
     }
@@ -102,8 +102,18 @@ class EventRepository(
                 val response = api.getEvents(petId = petId, ownerId = ownerId)
                 if (!response.isSuccessful) error("API fail: ${response.code()}")
                 val remoteEvents = response.body().orEmpty()
-                eventDao.upsertAll(remoteEvents.map { it.toEntity() })
+
+                val pendingCreateIds = eventDao.getPendingCreatesForMerge().map { it.id }.toSet()
+                val pendingDeleteIds = eventDao.getPendingDeletesForMerge().map { it.id }.toSet() // ← agregar
+
+                remoteEvents
+                    .map { it.toEntity() }
+                    .filter { it.id !in pendingCreateIds }
+                    .filter { it.id !in pendingDeleteIds }  // ← nunca pisar pendientes de borrado
+                    .let { eventDao.upsertAll(it) }
+
                 if (petId != null) hive.putEvents(petId, gson.toJson(remoteEvents))
+                lru.putList(key, remoteEvents)
                 mergeEventsWithLocal(remoteEvents, petId, ownerId)
             }.recoverCatching {
                 mergeEventsWithLocal(getListFromRoom(petId, ownerId), petId, ownerId)
@@ -215,7 +225,7 @@ class EventRepository(
         } else {
             runCatching {
                 val existing = eventDao.getById(eventId) ?: error("Not found")
-                eventDao.updateEvent(
+                eventDao.updateEventPending(
                     id = eventId,
                     title = title,
                     eventType = existing.eventType,

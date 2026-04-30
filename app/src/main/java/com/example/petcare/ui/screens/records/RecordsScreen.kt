@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -36,9 +37,13 @@ fun HealthRecordsScreen(
 ) {
     val viewModel: HealthRecordsViewModel = viewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     // Carga inicial
-    LaunchedEffect(Unit) { viewModel.loadData() }
+    LaunchedEffect(Unit) {
+        viewModel.observeSyncAndReload(context)
+        viewModel.loadData()
+    }
 
     // Recarga reactiva cuando el padre señala "reload_records"
     LaunchedEffect(reloadTrigger) {

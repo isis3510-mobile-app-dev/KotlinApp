@@ -151,4 +151,30 @@ interface EventDao {
         description: String,
         followUpDate: String?
     )
+
+    @Query("""UPDATE events_local SET title        = :title, 
+        eventType    = :eventType,
+        date         = :date,
+        price        = :price,
+        provider     = :provider,
+        clinic       = :clinic,
+        description  = :description,
+        followUpDate = :followUpDate,
+        synced       = 0,
+        pendingOperation = 'UPDATE',
+        retryCount   = 0,
+        nextRetryAt  = 0
+    WHERE id = :id
+""")
+    suspend fun updateEventPending(
+        id: String,
+        title: String,
+        eventType: String,
+        date: String,
+        price: Double?,
+        provider: String,
+        clinic: String,
+        description: String,
+        followUpDate: String?
+    )
 }
