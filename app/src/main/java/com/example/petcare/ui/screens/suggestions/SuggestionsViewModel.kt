@@ -85,7 +85,8 @@ class SuggestionViewModel : ViewModel() {
                     else if (items.any { it.suggestion.type == "warning" }) "warning"
                     else "info",
                     pets         = items.map { it.petName }.distinct(),
-                    message      = items.first().suggestion.message
+                    message      = items.first().suggestion.message,
+                    petPhotoUrls = items.mapNotNull { it.petPhotoUrl }.filter { it.isNotBlank() }.distinct()
                 )
             }
             .sortedBy { when (it.type) { "danger" -> 0; "warning" -> 1; else -> 2 } }

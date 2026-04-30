@@ -219,7 +219,7 @@ class EventRepository(
                 if (!response.isSuccessful) error("Update fail: ${response.code()}")
                 val event = response.body() ?: error("Empty update response")
                 eventDao.upsert(event.toEntity())
-                lru.invalidateEvent(eventId)
+                invalidateBothCaches(event.petId, eventId)
                 event
             }
         } else {
@@ -236,6 +236,9 @@ class EventRepository(
                     description = description,
                     followUpDate = existing.followUpDate
                 )
+                // Evict list LRU immediately so the card reflects the local change
+                lru.invalidateList(listCacheKey(existing.petId, null))
+                lru.invalidateEvent(eventId)
                 enqueueSyncWork()
                 eventDao.getById(eventId)?.toEvent() ?: error("Error after update")
             }
