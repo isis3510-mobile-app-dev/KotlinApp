@@ -375,26 +375,17 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
     ) {
         viewModelScope.launch(Dispatchers.IO) {
 
-            // 1. Guardar el evento en Room
-            val eventEntity = event.toEntity()
-            AppDatabase.getInstance(getApplication())
-                .eventDao()
-                .upsertAll(listOf(eventEntity))
-
-
-            // 2. Leer la preferencia de ventana del usuario para esta mascota
+            // Solo programar el reminder
             val notifPrefs = NotificationPreferencesDataStore(
                 getApplication<Application>().dataStore
             )
             val window = notifPrefs.getReminderWindow(petId).first()
 
-            // 3. Calcular cuándo disparar el reminder
             val eventTimeMs = EventDateUtils.parseEventInstant(event.date)
                 ?.toEpochMilli() ?: return@launch
 
             val triggerMs = notifPrefs.calculateTriggerMs(eventTimeMs, window)
 
-            // 4. Solo programar si el trigger es en el futuro
             if (triggerMs > System.currentTimeMillis()) {
                 AppDatabase.getInstance(getApplication())
                     .reminderDao()

@@ -1,7 +1,10 @@
 package com.example.petcare.ui.screens.records
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.ui.components.MedicalEventData
 import com.example.petcare.ui.components.VaccineListItemData
@@ -13,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.example.petcare.R
+import com.example.petcare.data.worker.SyncWorker
 
 data class VaccineListItemWithIds(
     val data: VaccineListItemData,
@@ -38,6 +42,24 @@ class HealthRecordsViewModel : ViewModel() {
 
     private val _state = MutableStateFlow(HealthRecordsState())
     val state: StateFlow<HealthRecordsState> = _state.asStateFlow()
+
+    private var syncObserverJob: kotlinx.coroutines.Job? = null
+
+    fun observeSyncAndReload(context: Context) {
+        syncObserverJob?.cancel()
+        syncObserverJob = viewModelScope.launch {
+            WorkManager.getInstance(context)
+                .getWorkInfosForUniqueWorkFlow(SyncWorker.UNIQUE_WORK_NAME)
+                .collect { workInfos ->
+                    val justSucceeded = workInfos.any {
+                        it.state == WorkInfo.State.SUCCEEDED
+                    }
+                    if (justSucceeded) {
+                        loadData()
+                    }
+                }
+        }
+    }
 
     fun onFilterSelected(filter: String) {
         _state.value = _state.value.copy(selectedFilter = filter)
@@ -93,7 +115,7 @@ class HealthRecordsViewModel : ViewModel() {
                                             .lowercase()
                                             .replaceFirstChar { it.uppercase() }
                                     },
-                                    eventType  = event.eventType.name,
+                                    eventType  = event.eventType?.name ?: "OTHER",
                                     petName    = pet.name,
                                     clinicName = event.clinic.ifBlank { event.provider }.ifBlank { "—" },
                                     date       = parseDate(event.date),
