@@ -2,7 +2,6 @@ package com.example.petcare.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.Event
 import com.example.petcare.data.model.GroupedSuggestion
 import com.example.petcare.data.model.Pet
@@ -125,9 +124,7 @@ class HomeViewModel : ViewModel() {
 
     // All IO work isolated here — runs inside withContext(IO), returns pure data
     private suspend fun fetchHomeData(): HomeUiState {
-        val petsResult = FeatureExecutionTracker.track("Load Home Data") {
-            RepositoryProvider.petRepository.getPets()
-        }
+        val petsResult = RepositoryProvider.petRepository.getPets()
 
         val pets = petsResult.getOrThrow()
         val uniquePets = pets.distinctBy { it.id }

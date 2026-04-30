@@ -57,7 +57,7 @@ object FeatureExecutionTracker {
         val result = block()
 
         val endTime = Instant.now()
-        val totalSeconds = java.time.Duration.between(startTime, endTime).seconds.toInt()
+        val totalMillis = java.time.Duration.between(startTime, endTime).toMillis().toInt()
 
         // Fire-and-forget the analytics log
         logScope.launch {
@@ -67,13 +67,13 @@ object FeatureExecutionTracker {
                     featureId = featureName,
                     startTime = formatter.format(startTime),
                     endTime = formatter.format(endTime),
-                    totalTime = totalSeconds,
+                    totalTime = totalMillis,
                     downloadSpeed = speed.downloadKbps,
                     uploadSpeed = speed.uploadKbps
                 )
                 val logResp = RepositoryProvider.apiService.createFeatureExecutionLog(request)
                 if (logResp.isSuccessful) {
-                    Log.d(TAG, "Logged '$featureName' in ${totalSeconds}s (↓${speed.downloadKbps} ↑${speed.uploadKbps} kbps)")
+                    Log.d(TAG, "Logged '$featureName' in ${totalMillis}ms (↓${speed.downloadKbps} ↑${speed.uploadKbps} kbps)")
                 } else {
                     Log.w(TAG, "Failed to log '$featureName': ${logResp.code()}")
                 }

@@ -145,9 +145,9 @@ class AddVaccineViewModel : ViewModel() {
                     "Prepared staging document original=$fileName prepared=${prepared.fileName} mimeType=${prepared.mimeType}"
                 )
 
-                FirebaseDocumentUploader
-                    .uploadVaccinationDocumentStaging(context, prepared.uri, petId, stagingId)
-                    .fold(
+                FeatureExecutionTracker.track("Upload Vaccine Attachment") {
+                    FirebaseDocumentUploader.uploadVaccinationDocumentStaging(context, prepared.uri, petId, stagingId)
+                }.fold(
                         onSuccess = { uploaded ->
                             Log.d(
                                 TAG,
