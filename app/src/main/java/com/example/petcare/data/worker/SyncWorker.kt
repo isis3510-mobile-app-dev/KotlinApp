@@ -615,8 +615,8 @@ class SyncWorker(
 
                 // Invalida ambos cachés para forzar recarga desde servidor
                 HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
-                com.example.petcare.data.repository.RepositoryProvider.petRepository
-                    .invalidatePetLru(entity.petId)
+                com.example.petcare.data.repository.RepositoryProvider.eventRepository
+                    .invalidateLruForPet(entity.petId)
 
             } catch (e: java.net.ConnectException) {
                 // Error de red — relanzar para que el worker haga Result.retry()
@@ -680,6 +680,9 @@ class SyncWorker(
                 )
 
                 db.eventDao().markSynced(entity.id)
+                HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
+                com.example.petcare.data.repository.RepositoryProvider.eventRepository
+                    .invalidateLruForPet(entity.petId)
 
             } catch (e: Exception) {
                 android.util.Log.e("EVENT_SYNC", "Update failed ${entity.id}: ${e.message}")
@@ -694,6 +697,9 @@ class SyncWorker(
                     val response = api.deleteEvent(entity.id)
                     if (response.isSuccessful || response.code() == 204) {
                         db.eventDao().deleteById(entity.id)
+                        HiveCacheManager(applicationContext).invalidateEvents(entity.petId)
+                        com.example.petcare.data.repository.RepositoryProvider.eventRepository
+                            .invalidateLruForPet(entity.petId)
                     }
                 } catch (e: Exception) { }
             }
