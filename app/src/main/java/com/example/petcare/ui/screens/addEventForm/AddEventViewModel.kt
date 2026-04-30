@@ -148,9 +148,9 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
                 }.await()
                 Log.d(TAG, "Prepared event staging document original=$fileName prepared=${prepared.fileName} mimeType=${prepared.mimeType}")
 
-                FirebaseDocumentUploader
-                    .uploadEventDocumentStaging(context, prepared.uri, petId, stagingId)
-                    .fold(
+                FeatureExecutionTracker.track("Upload Event Attachment") {
+                    FirebaseDocumentUploader.uploadEventDocumentStaging(context, prepared.uri, petId, stagingId)
+                }.fold(
                         onSuccess = { uploaded ->
                             Log.d(TAG, "Event staging upload success petId=$petId stagingId=$stagingId fileName=${uploaded.fileName}")
                             withContext(Dispatchers.Main) {

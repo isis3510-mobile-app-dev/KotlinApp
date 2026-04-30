@@ -19,6 +19,7 @@ import com.example.petcare.data.local.mapper.toVaccination
 import com.example.petcare.data.local.mapper.toVaccine
 import com.example.petcare.data.model.*
 import com.example.petcare.data.network.ApiService
+import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.network.isOnline
 import com.example.petcare.data.worker.SyncWorker
 import com.example.petcare.util.FirebaseDocumentUploader
@@ -111,38 +112,42 @@ class PetRepository(
             Log.d("Entró", "Deberia guardar Cache")
             val cached = hive.getPets(uid)
             if (cached != null) {
-                return try {
-                    Log.d("HIVE_CACHE", "HIT - getPets desde Hive")
-                    val remotePets = Gson().fromJson(cached, Array<Pet>::class.java).toList()
-                    val merged = mergePetsWithLocal(uid, remotePets)
-                    Result.success(merged)
-                } catch (e: Exception) {
-                    Result.failure(e)
+                return FeatureExecutionTracker.track("Load Home Data (Cached)") {
+                    try {
+                        Log.d("HIVE_CACHE", "HIT - getPets desde Hive")
+                        val remotePets = Gson().fromJson(cached, Array<Pet>::class.java).toList()
+                        val merged = mergePetsWithLocal(uid, remotePets)
+                        Result.success(merged)
+                    } catch (e: Exception) {
+                        Result.failure(e)
+                    }
                 }
             }
         }
         Log.d("HIVE_CACHE", "MISS - getPets va a la API")
         return if (isOnline(context)) {
-            try {
-                val response = api.getPets()
-                if (!response.isSuccessful)
-                    error("Failed to load pets — HTTP ${response.code()}")
-                val remotePets = response.body().orEmpty()
-                Log.d("HIVE_CACHE", "Guardando ${remotePets.size} pets en Hive")
-                hive.putPets(uid, Gson().toJson(remotePets))
-                cacheServerSnapshotPreservingPending(uid, remotePets)
-                val merged = mergePetsWithLocal(uid, remotePets)
-                Result.success(merged)
-            } catch (e: Exception) {
-                android.util.Log.d("PET_REPO", "Network failed, falling back to Room")
-                runCatching {
-                    petDao.getAllPets(uid).first().map { pet ->
-                        pet.toPet().copy(vaccinations = getCachedVaccinations(pet.id))
-                    }
-                }.fold(
-                    onSuccess = { Result.success(it) },
-                    onFailure = { Result.failure(it) }
-                )
+            FeatureExecutionTracker.track("Load Home Data") {
+                try {
+                    val response = api.getPets()
+                    if (!response.isSuccessful)
+                        error("Failed to load pets — HTTP ${response.code()}")
+                    val remotePets = response.body().orEmpty()
+                    Log.d("HIVE_CACHE", "Guardando ${remotePets.size} pets en Hive")
+                    hive.putPets(uid, Gson().toJson(remotePets))
+                    cacheServerSnapshotPreservingPending(uid, remotePets)
+                    val merged = mergePetsWithLocal(uid, remotePets)
+                    Result.success(merged)
+                } catch (e: Exception) {
+                    android.util.Log.d("PET_REPO", "Network failed, falling back to Room")
+                    runCatching {
+                        petDao.getAllPets(uid).first().map { pet ->
+                            pet.toPet().copy(vaccinations = getCachedVaccinations(pet.id))
+                        }
+                    }.fold(
+                        onSuccess = { Result.success(it) },
+                        onFailure = { Result.failure(it) }
+                    )
+                }
             }
         } else {
             runCatching {
