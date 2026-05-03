@@ -268,14 +268,27 @@ class EventDetailsViewModel : ViewModel() {
     }
 
     fun deleteDocument(eventId: String, documentId: String) {
-        viewModelScope.launch {
-            RepositoryProvider.eventRepository.deleteEventDocument(eventId, documentId)
-                .onSuccess { updatedEvent ->
-                    _uiState.value = _uiState.value.copy(event = updatedEvent)
-                }
-                .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(error = e.message)
-                }
+        val petId = _uiState.value.event?.petId ?: return
+        if (documentId.startsWith("pending_")) {
+            val actualId = documentId.removePrefix("pending_")
+            RepositoryProvider.eventRepository.removePendingEventDocument(petId, eventId, actualId)
+            _uiState.value = _uiState.value.copy(
+                event = _uiState.value.event?.copy(
+                    attachedDocuments = _uiState.value.event?.attachedDocuments
+                        .orEmpty()
+                        .filter { it.id != documentId }
+                )
+            )
+        } else {
+            viewModelScope.launch {
+                RepositoryProvider.eventRepository.deleteEventDocument(eventId, documentId)
+                    .onSuccess { updatedEvent ->
+                        _uiState.value = _uiState.value.copy(event = updatedEvent)
+                    }
+                    .onFailure { e ->
+                        _uiState.value = _uiState.value.copy(error = e.message)
+                    }
+            }
         }
     }
 

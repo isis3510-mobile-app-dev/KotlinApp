@@ -283,7 +283,7 @@ class EventRepository(
     }
 
     suspend fun addDocument(eventId: String, fileName: String, fileUri: String?): Result<Event> = runCatching {
-        val body = mapOf("fileName" to fileName, "fileUri" to fileUri)
+        val body = AddDocumentRequest(fileName = fileName, fileUri = fileUri)
         val response = api.addEventDocument(eventId, body)
         if (!response.isSuccessful) error("Doc add fail: ${response.code()}")
         val event = response.body() ?: error("Doc add empty body")
@@ -291,12 +291,23 @@ class EventRepository(
         event
     }
 
-    suspend fun deleteEventDocument(eventId: String, documentId: String): Result<Event> = runCatching {
-        val response = api.deleteEventDocument(eventId, documentId)
-        if (!response.isSuccessful) error("Delete document failed: ${response.code()}")
-        val event = response.body() ?: error("Empty response after document delete")
-        lru.putEvent(eventId, event)
-        event
+    suspend fun deleteEventDocument(eventId: String, documentId: String): Result<Event> {
+        if (!isOnline()) return Result.failure(
+            Exception("No internet connection. Document delete will be available when you're back online.")
+        )
+        return runCatching {
+            val response = api.deleteEventDocument(eventId, documentId)
+            if (!response.isSuccessful) error("Delete document failed: ${response.code()}")
+            val event = response.body() ?: error("Empty response after document delete")
+            lru.putEvent(eventId, event)
+            event
+        }
+    }
+
+    fun removePendingEventDocument(petId: String, eventId: String, pendingDocId: String) {
+        val remaining = getPendingEventDocuments(petId, eventId).filter { it.id != pendingDocId }
+        if (remaining.isEmpty()) hive.invalidatePendingEventDocuments(petId, eventId)
+        else hive.putPendingEventDocuments(petId, eventId, gson.toJson(remaining))
     }
 
     suspend fun queueEventDocument(

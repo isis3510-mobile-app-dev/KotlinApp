@@ -164,7 +164,7 @@ interface ApiService {
     @POST("events/{eventId}/documents/")
     suspend fun addEventDocument(
         @Path("eventId") eventId: String,
-        @Body body: Map<String, @JvmSuppressWildcards Any?>
+        @Body body: AddDocumentRequest
     ): Response<Event>
 
     @DELETE("events/{eventId}/documents/{documentId}/")
