@@ -246,7 +246,7 @@ private fun DocumentRow(
             confirmButton    = {
                 TextButton(onClick = {
                     showDeleteConfirm = false
-                    onDeleteDocument(doc.id.orEmpty())
+                    onDeleteDocument(doc.documentId ?: doc.id.orEmpty())
                 }) { Text("Delete") }
             },
             dismissButton = {
