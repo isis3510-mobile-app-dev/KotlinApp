@@ -202,6 +202,12 @@ class EventDetailsViewModel : ViewModel() {
         fileName: String? = null
     ) {
         val eventId = _uiState.value.event?.id ?: return
+        if (_uiState.value.event?.attachedDocuments.orEmpty().isNotEmpty()) {
+            _uiState.value = _uiState.value.copy(
+                error = "Only one document is allowed for events. Delete the current document to upload another."
+            )
+            return
+        }
         Log.d(TAG, "Detail event document upload requested petId=$petId eventId=$eventId")
         viewModelScope.launch(Dispatchers.IO) {
             Log.d(TAG, "Detail event upload coroutine started thread=${Thread.currentThread().name}")
@@ -269,12 +275,6 @@ class EventDetailsViewModel : ViewModel() {
 
     fun deleteDocument(eventId: String, documentId: String) {
         val petId = _uiState.value.event?.petId ?: return
-        if (documentId.isBlank()) {
-            _uiState.value = _uiState.value.copy(
-                error = "This document cannot be deleted yet because it has no server id."
-            )
-            return
-        }
         if (documentId.startsWith("pending_")) {
             val actualId = documentId.removePrefix("pending_")
             RepositoryProvider.eventRepository.removePendingEventDocument(petId, eventId, actualId)
@@ -289,6 +289,13 @@ class EventDetailsViewModel : ViewModel() {
                 error = "Document deleted in offline queue."
             )
         } else {
+            if (documentId.isBlank()) {
+                _uiState.value = _uiState.value.copy(
+                    event = _uiState.value.event?.copy(attachedDocuments = emptyList()),
+                    error = "Document removed locally."
+                )
+                return
+            }
             viewModelScope.launch {
                 RepositoryProvider.eventRepository.deleteEventDocument(eventId, documentId)
                     .onSuccess { updatedEvent ->

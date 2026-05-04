@@ -106,6 +106,12 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
     // ── Document staging ──────────────────────────────────────────────────
 
     fun addDocument(context: Context, uri: Uri, mimeType: String, fileName: String) {
+        if (_state.value.stagedDocuments.isNotEmpty()) {
+            _state.value = _state.value.copy(
+                error = "Only one document is allowed for events. Delete the current document to upload another."
+            )
+            return
+        }
         val petId     = _state.value.petId
         val stagingId = _state.value.stagingId
 
@@ -240,7 +246,8 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
 
     fun removeDocument(doc: StagedDocument) {
         _state.value = _state.value.copy(
-            stagedDocuments = _state.value.stagedDocuments.filter { it != doc }
+            stagedDocuments = _state.value.stagedDocuments.filter { it != doc },
+            error = null
         )
     }
 
