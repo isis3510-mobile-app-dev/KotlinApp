@@ -276,9 +276,6 @@ fun EventDetailsScreen(
                                 addDisabledMessage = "Only one document is allowed for events. Delete the current document to upload another.",
                                 onDocumentPicked = { uri, mimeType, fileName ->
                                     viewModel.addDocument(context, petId, uri, mimeType, fileName)
-                                },
-                                onDeleteDocument = { docId ->
-                                    viewModel.deleteDocument(event.id, docId)
                                 }
                             )
 
@@ -349,9 +346,6 @@ fun EventDetailsScreen(
                                 addDisabledMessage = "Only one document is allowed for events. Delete the current document to upload another.",
                                 onDocumentPicked = { uri, mimeType, fileName ->
                                     viewModel.addDocument(context, petId, uri, mimeType, fileName)
-                                },
-                                onDeleteDocument = { docId ->
-                                    viewModel.deleteDocument(event.id, docId)
                                 }
                             )
                         }

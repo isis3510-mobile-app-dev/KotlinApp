@@ -22,10 +22,13 @@ import com.example.petcare.data.model.PendingEventDocument
 import com.example.petcare.data.network.ApiService
 import com.example.petcare.data.worker.SyncWorker
 import com.example.petcare.util.FirebaseDocumentUploader
+import com.google.firebase.Firebase
+import com.google.firebase.storage.storage
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import android.util.Log
+import kotlinx.coroutines.tasks.await
 import java.io.File
 import java.util.UUID
 
@@ -304,8 +307,51 @@ class EventRepository(
             if (!response.isSuccessful) error("Delete document failed: ${response.code()}")
             val event = response.body() ?: error("Empty response after document delete")
             eventDao.upsert(event.toEntity())
+            clearHiddenEventDocuments(event.petId, eventId)
             lru.putEvent(eventId, event)
             event
+        }
+    }
+
+    suspend fun deleteEventDocumentByContent(
+        eventId: String,
+        fileName: String,
+        fileUri: String?
+    ): Result<Event> {
+        if (!isOnline()) return Result.failure(
+            Exception("No internet connection. Document delete will be available when you're back online.")
+        )
+        return runCatching {
+            invalidateEventLru(eventId)
+            val current = getEvent(eventId).getOrThrow()
+            val remaining = current.attachedDocuments.filterNot { doc ->
+                val sameUri = !fileUri.isNullOrBlank() && doc.fileUri == fileUri
+                val sameName = doc.fileName == fileName
+                sameUri || sameName
+            }
+            if (remaining.size == current.attachedDocuments.size) {
+                error("Document not found on server for delete fallback.")
+            }
+
+            fileUri?.takeIf { it.startsWith("http", ignoreCase = true) }?.let { url ->
+                runCatching { Firebase.storage.getReferenceFromUrl(url).delete().await() }
+            }
+
+            val docsPayload = remaining.map { doc ->
+                mapOf(
+                    "documentId" to (doc.documentId ?: doc.id),
+                    "fileName" to doc.fileName,
+                    "fileUri" to doc.fileUri
+                )
+            }
+            val body = mapOf("attachedDocuments" to docsPayload)
+            val response = api.updateEvent(eventId, body)
+            if (!response.isSuccessful) error("Delete document fallback failed: ${response.code()}")
+            val updated = response.body() ?: error("Empty response after document fallback delete")
+            eventDao.upsert(updated.toEntity())
+            clearHiddenEventDocuments(updated.petId, eventId)
+            lru.putEvent(eventId, updated)
+            updated
         }
     }
 
