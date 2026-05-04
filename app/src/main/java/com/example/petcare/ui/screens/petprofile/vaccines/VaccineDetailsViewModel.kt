@@ -301,6 +301,12 @@ class VaccineDetailsViewModel : ViewModel() {
     }
 
     fun deleteDocument(petId: String, vaccinationId: String, documentId: String) {
+        if (documentId.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                error = "This document cannot be deleted yet because it has no server id."
+            )
+            return
+        }
         viewModelScope.launch {
             RepositoryProvider.petRepository.deleteVaccinationDocument(petId, vaccinationId, documentId)
                 .onSuccess { updatedPet ->

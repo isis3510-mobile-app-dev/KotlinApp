@@ -202,14 +202,6 @@ class EventDetailsViewModel : ViewModel() {
         fileName: String? = null
     ) {
         val eventId = _uiState.value.event?.id ?: return
-        val currentDocs = _uiState.value.event?.attachedDocuments.orEmpty()
-        if (currentDocs.size >= MAX_EVENT_DOCUMENTS) {
-            val mode = if (isOnline(context)) "online" else "offline"
-            _uiState.value = _uiState.value.copy(
-                error = "Only one document is allowed for events ($mode mode). Delete the current document to upload a new one."
-            )
-            return
-        }
         Log.d(TAG, "Detail event document upload requested petId=$petId eventId=$eventId")
         viewModelScope.launch(Dispatchers.IO) {
             Log.d(TAG, "Detail event upload coroutine started thread=${Thread.currentThread().name}")
@@ -277,6 +269,12 @@ class EventDetailsViewModel : ViewModel() {
 
     fun deleteDocument(eventId: String, documentId: String) {
         val petId = _uiState.value.event?.petId ?: return
+        if (documentId.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                error = "This document cannot be deleted yet because it has no server id."
+            )
+            return
+        }
         if (documentId.startsWith("pending_")) {
             val actualId = documentId.removePrefix("pending_")
             RepositoryProvider.eventRepository.removePendingEventDocument(petId, eventId, actualId)
@@ -363,6 +361,5 @@ class EventDetailsViewModel : ViewModel() {
 
     private companion object {
         const val TAG = "EVENT_DOC_UPLOAD"
-        const val MAX_EVENT_DOCUMENTS = 1
     }
 }

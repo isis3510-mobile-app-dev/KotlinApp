@@ -238,7 +238,7 @@ private fun DocumentRow(
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    if (showDeleteConfirm && doc.id != null && onDeleteDocument != null) {
+    if (showDeleteConfirm && onDeleteDocument != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title            = { Text("Delete document") },
@@ -246,7 +246,7 @@ private fun DocumentRow(
             confirmButton    = {
                 TextButton(onClick = {
                     showDeleteConfirm = false
-                    onDeleteDocument(doc.id)
+                    onDeleteDocument(doc.id.orEmpty())
                 }) { Text("Delete") }
             },
             dismissButton = {
@@ -336,7 +336,7 @@ private fun DocumentRow(
                     modifier = Modifier.size(16.dp)
                 )
             }
-            if (doc.id != null && onDeleteDocument != null) {
+            if (onDeleteDocument != null) {
                 IconButton(
                     onClick  = { showDeleteConfirm = true },
                     modifier = Modifier.size(32.dp)
