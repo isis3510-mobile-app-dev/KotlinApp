@@ -435,6 +435,10 @@ class EventRepository(
         lru.invalidateList(listCacheKey(petId, null))
     }
 
+    fun invalidateEventLru(eventId: String) {
+        lru.invalidateEvent(eventId)
+    }
+
     private fun isInvalid204ContentLengthError(error: Throwable): Boolean {
         val message = error.message.orEmpty()
         return message.contains("HTTP 204 had non-zero Content-Length", ignoreCase = true)

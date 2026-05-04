@@ -256,6 +256,28 @@ class EventDetailsViewModel : ViewModel() {
                             },
                             onFailure = { e ->
                                 Log.e(TAG, "Detail event backend metadata failed eventId=$eventId: ${e.message}", e)
+                                if ((e.message ?: "").contains("Doc add fail: 400")) {
+                                    RepositoryProvider.eventRepository.invalidateEventLru(eventId)
+                                    RepositoryProvider.eventRepository.getEvent(eventId).onSuccess { fresh ->
+                                        withContext(Dispatchers.Main) {
+                                            _uiState.value = _uiState.value.copy(
+                                                event = fresh.copy(
+                                                    attachedDocuments = fresh.attachedDocuments + pendingAttachedDocuments(fresh.petId, fresh.id)
+                                                ),
+                                                isUploadingDoc = false,
+                                                error = "Server still has one document for this event. Delete that document first."
+                                            )
+                                        }
+                                    }.onFailure {
+                                        withContext(Dispatchers.Main) {
+                                            _uiState.value = _uiState.value.copy(
+                                                isUploadingDoc = false,
+                                                error = "Could not refresh event after upload conflict. Please reopen this event."
+                                            )
+                                        }
+                                    }
+                                    return@fold
+                                }
                                 withContext(Dispatchers.Main) {
                                     _uiState.value = _uiState.value.copy(
                                         isUploadingDoc = false,
@@ -292,7 +314,7 @@ class EventDetailsViewModel : ViewModel() {
             if (documentId.isBlank()) {
                 _uiState.value = _uiState.value.copy(
                     event = _uiState.value.event?.copy(attachedDocuments = emptyList()),
-                    error = "Document removed locally."
+                    error = "Document removed locally. If upload fails, reopen event to refresh server state."
                 )
                 return
             }
