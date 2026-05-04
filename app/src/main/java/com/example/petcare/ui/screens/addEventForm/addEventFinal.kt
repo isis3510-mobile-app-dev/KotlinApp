@@ -159,6 +159,11 @@ fun AddEventFinalForm(
                 isUploading = state.stagedDocuments.any { it.isUploading },
                 onDocumentPicked = { uri, mimeType, fileName ->
                     viewModel.addDocument(context, uri, mimeType, fileName)
+                },
+                onDeleteDocument = { docId ->
+                    state.stagedDocuments
+                        .firstOrNull { it.uri.toString() == docId }
+                        ?.let { viewModel.removeDocument(it) }
                 }
             )
 

@@ -20,7 +20,7 @@ import com.example.petcare.data.local.entity.*
         WeightLogEntity::class,
         UserEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -44,7 +44,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                     .addMigrations(MIGRATION_3_4)
                     .addMigrations(MIGRATION_5_6)
-                    .addMigrations(MIGRATION_3_4, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                    .addMigrations(MIGRATION_3_4, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     .build().also { INSTANCE = it }
             }
 
@@ -109,6 +109,16 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL(
                     """
             ALTER TABLE user ADD COLUMN pendingSync INTEGER NOT NULL DEFAULT 0
+            """.trimIndent()
+                )
+            }
+        }
+
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+            ALTER TABLE events_local ADD COLUMN attachedDocumentsJson TEXT NOT NULL DEFAULT '[]'
             """.trimIndent()
                 )
             }

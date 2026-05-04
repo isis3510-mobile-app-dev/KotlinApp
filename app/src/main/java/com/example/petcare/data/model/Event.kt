@@ -22,8 +22,8 @@ data class Event(
     val provider: String = "",
     val clinic: String = "",
     val description: String = "",
-    @SerializedName("followUpDate")      val followUpDate: String? = null,
-    @SerializedName("attachedDocuments") val attachedDocuments: List<AttachedDocument> = emptyList()
+    @SerializedName(value = "followUpDate", alternate = ["follow_up_date"])      val followUpDate: String? = null,
+    @SerializedName(value = "attachedDocuments", alternate = ["attached_documents"]) val attachedDocuments: List<AttachedDocument> = emptyList()
 )
 
 data class CreateEventRequest(

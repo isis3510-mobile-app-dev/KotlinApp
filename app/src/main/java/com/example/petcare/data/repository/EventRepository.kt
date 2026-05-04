@@ -168,6 +168,7 @@ class EventRepository(
                     clinic = request.clinic,
                     description = request.description,
                     followUpDate = request.followUpDate,
+                    attachedDocumentsJson = "[]",
                     synced = false,
                     pendingDelete = false,
                     pendingOperation = "CREATE",
@@ -187,7 +188,9 @@ class EventRepository(
             val event = if (isOnline()) {
                 val response = api.getEvent(eventId)
                 if (!response.isSuccessful) error("Not found: ${response.code()}")
-                response.body() ?: error("Empty event body")
+                val remote = response.body() ?: error("Empty event body")
+                eventDao.upsert(remote.toEntity())
+                remote
             } else {
                 eventDao.getById(eventId)?.toEvent() ?: error("Not found offline")
             }
@@ -287,6 +290,7 @@ class EventRepository(
         val response = api.addEventDocument(eventId, body)
         if (!response.isSuccessful) error("Doc add fail: ${response.code()}")
         val event = response.body() ?: error("Doc add empty body")
+        eventDao.upsert(event.toEntity())
         lru.putEvent(eventId, event)
         event
     }
@@ -299,6 +303,7 @@ class EventRepository(
             val response = api.deleteEventDocument(eventId, documentId)
             if (!response.isSuccessful) error("Delete document failed: ${response.code()}")
             val event = response.body() ?: error("Empty response after document delete")
+            eventDao.upsert(event.toEntity())
             lru.putEvent(eventId, event)
             event
         }
