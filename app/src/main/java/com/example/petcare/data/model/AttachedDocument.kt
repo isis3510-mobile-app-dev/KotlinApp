@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName
 data class AttachedDocument(
     @SerializedName(value = "id", alternate = ["_id"])
     val id: String? = null,
-    @SerializedName("documentId")
+    @SerializedName(value = "documentId", alternate = ["document_id", "docId", "doc_id"])
     val documentId: String? = null,
     @SerializedName(value = "fileName", alternate = ["file_name"])
     val fileName: String,
