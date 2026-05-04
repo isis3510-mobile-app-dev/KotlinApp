@@ -272,6 +272,8 @@ fun EventDetailsScreen(
                             AttachedDocumentsCard(
                                 documents        = event.attachedDocuments,
                                 isUploading      = uiState.isUploadingDoc,
+                                allowAddDocument = event.attachedDocuments.isEmpty(),
+                                addDisabledMessage = "Only one document is allowed for events. Delete the current one to upload another.",
                                 onDocumentPicked = { uri, mimeType, fileName ->
                                     viewModel.addDocument(context, petId, uri, mimeType, fileName)
                                 },
@@ -343,6 +345,8 @@ fun EventDetailsScreen(
                             AttachedDocumentsCard(
                                 documents        = event.attachedDocuments,
                                 isUploading      = uiState.isUploadingDoc,
+                                allowAddDocument = event.attachedDocuments.isEmpty(),
+                                addDisabledMessage = "Only one document is allowed for events. Delete the current one to upload another.",
                                 onDocumentPicked = { uri, mimeType, fileName ->
                                     viewModel.addDocument(context, petId, uri, mimeType, fileName)
                                 },

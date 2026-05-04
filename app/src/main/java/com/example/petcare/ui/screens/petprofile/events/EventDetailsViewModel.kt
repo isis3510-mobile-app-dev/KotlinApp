@@ -202,6 +202,14 @@ class EventDetailsViewModel : ViewModel() {
         fileName: String? = null
     ) {
         val eventId = _uiState.value.event?.id ?: return
+        val currentDocs = _uiState.value.event?.attachedDocuments.orEmpty()
+        if (currentDocs.size >= MAX_EVENT_DOCUMENTS) {
+            val mode = if (isOnline(context)) "online" else "offline"
+            _uiState.value = _uiState.value.copy(
+                error = "Only one document is allowed for events ($mode mode). Delete the current document to upload a new one."
+            )
+            return
+        }
         Log.d(TAG, "Detail event document upload requested petId=$petId eventId=$eventId")
         viewModelScope.launch(Dispatchers.IO) {
             Log.d(TAG, "Detail event upload coroutine started thread=${Thread.currentThread().name}")
@@ -279,11 +287,17 @@ class EventDetailsViewModel : ViewModel() {
                         .filter { it.id != documentId }
                 )
             )
+            _uiState.value = _uiState.value.copy(
+                error = "Document deleted in offline queue."
+            )
         } else {
             viewModelScope.launch {
                 RepositoryProvider.eventRepository.deleteEventDocument(eventId, documentId)
                     .onSuccess { updatedEvent ->
-                        _uiState.value = _uiState.value.copy(event = updatedEvent)
+                        _uiState.value = _uiState.value.copy(
+                            event = updatedEvent,
+                            error = "Document deleted successfully."
+                        )
                     }
                     .onFailure { e ->
                         _uiState.value = _uiState.value.copy(error = e.message)
@@ -349,5 +363,6 @@ class EventDetailsViewModel : ViewModel() {
 
     private companion object {
         const val TAG = "EVENT_DOC_UPLOAD"
+        const val MAX_EVENT_DOCUMENTS = 1
     }
 }

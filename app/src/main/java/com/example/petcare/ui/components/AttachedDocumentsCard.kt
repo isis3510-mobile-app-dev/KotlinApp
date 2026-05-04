@@ -39,6 +39,8 @@ fun AttachedDocumentsCard(
     onDocumentPicked: (uri: Uri, mimeType: String, fileName: String) -> Unit,
     onDeleteDocument: ((documentId: String) -> Unit)? = null,
     isUploading: Boolean = false,
+    allowAddDocument: Boolean = true,
+    addDisabledMessage: String? = null,
     modifier: Modifier = Modifier
 ) {
     val context   = LocalContext.current
@@ -131,7 +133,7 @@ fun AttachedDocumentsCard(
             // Botón principal de adjuntar
             OutlinedButton(
                 onClick  = { showSourceOptions = !showSourceOptions },
-                enabled  = !isUploading,
+                enabled  = !isUploading && allowAddDocument,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape    = RoundedCornerShape(28.dp),
                 border   = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary)
@@ -154,6 +156,15 @@ fun AttachedDocumentsCard(
                     Spacer(Modifier.width(8.dp))
                     Text("Attach Document", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
                 }
+            }
+
+            if (!allowAddDocument && !addDisabledMessage.isNullOrBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = addDisabledMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             // Opciones de fuente (cámara / galería / archivo)
