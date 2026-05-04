@@ -435,6 +435,31 @@ class EventRepository(
         lru.invalidateList(listCacheKey(petId, null))
     }
 
+    fun getHiddenEventDocumentKeys(
+        petId: String,
+        eventId: String
+    ): Set<String> {
+        val json = hive.getHiddenEventDocuments(petId, eventId) ?: return emptySet()
+        return runCatching {
+            gson.fromJson(json, Array<String>::class.java).toSet()
+        }.getOrElse { emptySet() }
+    }
+
+    fun hideEventDocumentLocally(
+        petId: String,
+        eventId: String,
+        fileName: String,
+        fileUri: String?
+    ) {
+        val key = "${fileName.trim()}|${fileUri.orEmpty().trim()}"
+        val updated = getHiddenEventDocumentKeys(petId, eventId).toMutableSet().apply { add(key) }
+        hive.putHiddenEventDocuments(petId, eventId, gson.toJson(updated.toList()))
+    }
+
+    fun clearHiddenEventDocuments(petId: String, eventId: String) {
+        hive.invalidateHiddenEventDocuments(petId, eventId)
+    }
+
     fun invalidateEventLru(eventId: String) {
         lru.invalidateEvent(eventId)
     }

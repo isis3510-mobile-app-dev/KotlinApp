@@ -72,8 +72,9 @@ class EventDetailsViewModel : ViewModel() {
             }.fold(
                 onSuccess = { event ->
                     val (appDate, appTime) = EventDateUtils.splitToAppDateTime(event.date)
+                    val visibleServerDocs = filterHiddenDocuments(event)
                     val displayEvent = event.copy(
-                        attachedDocuments = event.attachedDocuments + pendingAttachedDocuments(event.petId, event.id)
+                        attachedDocuments = visibleServerDocs + pendingAttachedDocuments(event.petId, event.id)
                     )
                     _uiState.value = _uiState.value.copy(
                         event           = displayEvent,
@@ -202,6 +203,12 @@ class EventDetailsViewModel : ViewModel() {
         fileName: String? = null
     ) {
         val eventId = _uiState.value.event?.id ?: return
+        if (RepositoryProvider.eventRepository.getHiddenEventDocumentKeys(petId, eventId).isNotEmpty()) {
+            _uiState.value = _uiState.value.copy(
+                error = "This event has a locally hidden server document. Reopen when backend ids are available before uploading a new one."
+            )
+            return
+        }
         if (_uiState.value.event?.attachedDocuments.orEmpty().isNotEmpty()) {
             _uiState.value = _uiState.value.copy(
                 error = "Only one document is allowed for events. Delete the current document to upload another."
@@ -312,9 +319,18 @@ class EventDetailsViewModel : ViewModel() {
             )
         } else {
             if (documentId.isBlank()) {
+                val docToHide = _uiState.value.event?.attachedDocuments?.firstOrNull()
+                if (docToHide != null) {
+                    RepositoryProvider.eventRepository.hideEventDocumentLocally(
+                        petId = petId,
+                        eventId = eventId,
+                        fileName = docToHide.fileName,
+                        fileUri = docToHide.fileUri
+                    )
+                }
                 _uiState.value = _uiState.value.copy(
                     event = _uiState.value.event?.copy(attachedDocuments = emptyList()),
-                    error = "Document removed locally. If upload fails, reopen event to refresh server state."
+                    error = "This document cannot be deleted because server id is missing. Please reopen event and try again."
                 )
                 return
             }
@@ -386,6 +402,14 @@ class EventDetailsViewModel : ViewModel() {
                     }
                 }
             )
+    }
+
+    private fun filterHiddenDocuments(event: Event): List<AttachedDocument> {
+        val hidden = RepositoryProvider.eventRepository.getHiddenEventDocumentKeys(event.petId, event.id)
+        if (hidden.isEmpty()) return event.attachedDocuments
+        return event.attachedDocuments.filterNot { doc ->
+            hidden.contains("${doc.fileName.trim()}|${doc.fileUri.orEmpty().trim()}")
+        }
     }
 
     private companion object {

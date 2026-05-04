@@ -191,6 +191,23 @@ class HiveCacheManager(context: Context) {
         delete(oldKey)
     }
 
+    // ── Hidden event documents (no TTL: local-only suppression) ───────────
+    fun putHiddenEventDocuments(
+        petId: String,
+        eventId: String,
+        json: String
+    ) = put("hidden_event_docs_${petId}_$eventId", json)
+
+    fun getHiddenEventDocuments(
+        petId: String,
+        eventId: String
+    ): String? = get("hidden_event_docs_${petId}_$eventId")
+
+    fun invalidateHiddenEventDocuments(
+        petId: String,
+        eventId: String
+    ) = delete("hidden_event_docs_${petId}_$eventId")
+
     // ── Vacunas catálogo (TTL: 12 horas) ─────────────────────────────────
 
     fun putVaccineCatalog(json: String) =
