@@ -577,8 +577,6 @@ class SyncWorker(
                     deleteLocalPendingDocument(pending.localUri)
                     com.example.petcare.data.repository.RepositoryProvider.eventRepository
                         .invalidateLruForPet(pending.petId)
-                    com.example.petcare.data.repository.RepositoryProvider.eventRepository
-                        .invalidateEventLru(pending.eventId)
                     android.util.Log.d("EVENT_DOC_UPLOAD", "Worker synced pending event document id=${pending.id}")
                 } catch (e: Exception) {
                     android.util.Log.e("EVENT_DOC_UPLOAD", "Worker pending event document sync failed id=${pending.id}: ${e.message}", e)
