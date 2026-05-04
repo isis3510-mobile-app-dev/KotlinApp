@@ -213,14 +213,14 @@ class EventRepository(
     ): Result<Event> {
         return if (isOnline()) {
             runCatching {
-                val body = mapOf(
+                val body = mutableMapOf<String, Any?>(
                     "title" to title,
                     "description" to description,
                     "provider" to provider,
                     "clinic" to clinic,
-                    "date" to date,
-                    "price" to price
+                    "date" to date
                 )
+                if (price != null) body["price"] = price
                 val response = api.updateEvent(eventId, body)
                 if (!response.isSuccessful) error("Update fail: ${response.code()}")
                 val event = response.body() ?: error("Empty update response")
