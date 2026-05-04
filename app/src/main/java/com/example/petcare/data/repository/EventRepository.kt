@@ -213,12 +213,21 @@ class EventRepository(
     ): Result<Event> {
         return if (isOnline()) {
             runCatching {
+                val currentEvent = getEvent(eventId).getOrThrow()
+                val normalizedDocuments = currentEvent.attachedDocuments.map { doc ->
+                    mapOf(
+                        "documentId" to ensureObjectId(doc.documentId ?: doc.id),
+                        "fileName" to doc.fileName,
+                        "fileUri" to doc.fileUri
+                    )
+                }
                 val body = mutableMapOf<String, Any?>(
                     "title" to title,
                     "description" to description,
                     "provider" to provider,
                     "clinic" to clinic,
-                    "date" to date
+                    "date" to date,
+                    "attachedDocuments" to normalizedDocuments
                 )
                 if (price != null) body["price"] = price
                 val response = api.updateEvent(eventId, body)
@@ -513,5 +522,12 @@ class EventRepository(
     private fun isInvalid204ContentLengthError(error: Throwable): Boolean {
         val message = error.message.orEmpty()
         return message.contains("HTTP 204 had non-zero Content-Length", ignoreCase = true)
+    }
+
+    private fun ensureObjectId(raw: String?): String {
+        val cleaned = raw.orEmpty().trim()
+        val isObjectId = cleaned.matches(Regex("^[a-fA-F0-9]{24}$"))
+        if (isObjectId) return cleaned.lowercase()
+        return UUID.randomUUID().toString().replace("-", "").take(24).lowercase()
     }
 }
