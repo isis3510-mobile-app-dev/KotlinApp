@@ -199,6 +199,11 @@ class EventRepository(
             }
             lru.putEvent(eventId, event)
             event
+        }.recoverCatching {
+            // Fallback to local cache for offline-created events or transient network/API failures.
+            val local = eventDao.getById(eventId)?.toEvent() ?: error("Not found offline")
+            lru.putEvent(eventId, local)
+            local
         }
     }
 
@@ -462,6 +467,9 @@ class EventRepository(
             hive.invalidatePendingEventDocuments(petId, eventId)
         } else {
             hive.putPendingEventDocuments(petId, eventId, gson.toJson(remaining))
+        }
+        if (synced > 0) {
+            invalidateBothCaches(petId, eventId)
         }
         synced
     }
