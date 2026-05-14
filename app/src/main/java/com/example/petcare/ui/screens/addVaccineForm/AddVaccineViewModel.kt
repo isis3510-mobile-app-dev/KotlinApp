@@ -20,12 +20,15 @@ import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.validateCommittedInput
 import android.widget.Toast
+import com.google.firebase.Firebase
+import com.google.firebase.storage.storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.LocalDate
@@ -252,6 +255,18 @@ class AddVaccineViewModel : ViewModel() {
         _state.value = _state.value.copy(
             stagedDocuments = _state.value.stagedDocuments.filter { it != doc }
         )
+        val url = doc.downloadUrl ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            when {
+                url.startsWith("https") -> runCatching {
+                    Firebase.storage.getReferenceFromUrl(url).delete().await()
+                }
+                url.startsWith("file:") -> runCatching {
+                    val path = Uri.parse(url).path ?: return@runCatching
+                    File(path).delete()
+                }
+            }
+        }
     }
 
     // ── Submit ────────────────────────────────────────────────────────────

@@ -186,22 +186,31 @@ class EventRepository(
     }
 
     suspend fun getEvent(eventId: String): Result<Event> {
-        lru.getEvent(eventId)?.let { return Result.success(it) }
+        // Follow any local→server ID redirect written by SyncWorker when a local_ev_ event
+        // was created on the server. This handles the race where the list still shows the
+        // old local ID but the Room entity has already been replaced with the server ID.
+        val resolvedId = if (eventId.startsWith("local_ev_")) {
+            hive.getLocalEventIdRedirect(eventId) ?: eventId
+        } else {
+            eventId
+        }
+
+        lru.getEvent(resolvedId)?.let { return Result.success(it) }
         return runCatching {
             val event = if (isOnline()) {
-                val response = api.getEvent(eventId)
+                val response = api.getEvent(resolvedId)
                 if (response.isSuccessful) {
                     val remote = response.body() ?: error("Empty event body")
                     eventDao.upsert(remote.toEntity())
                     remote
                 } else {
                     // Server failed — fall back to Room (handles local_ev_ IDs and sync race conditions)
-                    eventDao.getById(eventId)?.toEvent() ?: error("Not found: ${response.code()}")
+                    eventDao.getById(resolvedId)?.toEvent() ?: error("Not found: ${response.code()}")
                 }
             } else {
-                eventDao.getById(eventId)?.toEvent() ?: error("Not found offline")
+                eventDao.getById(resolvedId)?.toEvent() ?: error("Not found offline")
             }
-            lru.putEvent(eventId, event)
+            lru.putEvent(resolvedId, event)
             event
         }
     }
@@ -311,11 +320,8 @@ class EventRepository(
         event
     }
 
-    suspend fun deleteEventDocument(eventId: String, documentId: String): Result<Event> {
-        if (!isOnline()) return Result.failure(
-            Exception("No internet connection. Document delete will be available when you're back online.")
-        )
-        return runCatching {
+    suspend fun deleteEventDocument(eventId: String, documentId: String): Result<Event> =
+        runCatching {
             val response = api.deleteEventDocument(eventId, documentId)
             if (!response.isSuccessful) error("Delete document failed: ${response.code()}")
             val event = response.body() ?: error("Empty response after document delete")
@@ -324,6 +330,57 @@ class EventRepository(
             lru.putEvent(eventId, event)
             event
         }
+
+    fun queueEventDocumentDelete(petId: String, eventId: String, documentId: String) {
+        val existing = getPendingEventDocumentDeletesList()
+        val entry = "$petId|$eventId|$documentId"
+        if (entry !in existing) {
+            hive.putPendingEventDocumentDeletes(gson.toJson(existing + entry))
+            enqueueSyncWork()
+        }
+    }
+
+    private fun getPendingEventDocumentDeletesList(): List<String> {
+        val json = hive.getPendingEventDocumentDeletes() ?: return emptyList()
+        return runCatching {
+            gson.fromJson(json, Array<String>::class.java).toList()
+        }.getOrElse { emptyList() }
+    }
+
+    suspend fun syncPendingEventDocumentDeletes(petId: String, eventId: String) {
+        if (!isOnline()) return
+        val allPending = getPendingEventDocumentDeletesList().toMutableList()
+        val prefix = "$petId|$eventId|"
+        val toProcess = allPending.filter { it.startsWith(prefix) }
+        if (toProcess.isEmpty()) return
+        var synced = 0
+        toProcess.forEach { entry ->
+            val docId = entry.removePrefix(prefix)
+            runCatching {
+                val response = api.deleteEventDocument(eventId, docId)
+                if (response.isSuccessful || response.code() == 204 || response.code() == 404) {
+                    allPending.remove(entry)
+                    synced++
+                    Log.d("DOC_DELETE", "Synced pending event doc delete eventId=$eventId docId=$docId")
+                }
+            }.onFailure { Log.e("DOC_DELETE", "Pending event doc delete sync failed: ${it.message}", it) }
+        }
+        if (allPending.isEmpty()) hive.invalidatePendingEventDocumentDeletes()
+        else hive.putPendingEventDocumentDeletes(gson.toJson(allPending))
+        if (synced > 0) invalidateBothCaches(petId, eventId)
+    }
+
+    suspend fun syncHiddenEventDocumentDeletes(petId: String, eventId: String) {
+        if (!isOnline()) return
+        val hiddenKeys = getHiddenEventDocumentKeys(petId, eventId)
+        if (hiddenKeys.isEmpty()) return
+        hiddenKeys.forEach { key ->
+            val parts = key.split("|", limit = 2)
+            val fileName = parts.getOrNull(0) ?: return@forEach
+            val fileUri  = parts.getOrNull(1)?.takeIf { it.isNotBlank() }
+            deleteEventDocumentByContent(eventId, fileName, fileUri)
+        }
+        clearHiddenEventDocuments(petId, eventId)
     }
 
     suspend fun deleteEventDocumentByContent(
@@ -521,6 +578,38 @@ class EventRepository(
 
     fun clearHiddenEventDocuments(petId: String, eventId: String) {
         hive.invalidateHiddenEventDocuments(petId, eventId)
+    }
+
+    /**
+     * Filters out docs that were deleted offline (queued for server sync or hidden locally).
+     * Call this whenever building the attachment list from cached/Room data so deleted docs
+     * don't reappear when the user navigates back and the LRU/Room cache still has them.
+     */
+    fun filterLocallyDeletedEventDocs(
+        petId: String,
+        eventId: String,
+        docs: List<com.example.petcare.data.model.AttachedDocument>
+    ): List<com.example.petcare.data.model.AttachedDocument> {
+        val pendingDeleteIds = getPendingEventDocumentDeletesList()
+            .filter { it.startsWith("$petId|$eventId|") }
+            .map { it.removePrefix("$petId|$eventId|") }
+            .toSet()
+
+        val hiddenKeys = getHiddenEventDocumentKeys(petId, eventId)
+
+        return docs
+            .filter { doc ->
+                val docId = (doc.documentId ?: doc.id).orEmpty()
+                docId.isBlank() || docId !in pendingDeleteIds
+            }
+            .filter { doc ->
+                hiddenKeys.none { key ->
+                    val parts = key.split("|", limit = 2)
+                    val hiddenName = parts.getOrNull(0) ?: return@none false
+                    val hiddenUri  = parts.getOrNull(1)?.takeIf { it.isNotBlank() }
+                    doc.fileName == hiddenName || (hiddenUri != null && doc.fileUri == hiddenUri)
+                }
+            }
     }
 
     fun invalidateEventLru(eventId: String) {

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
+import android.widget.Toast
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +56,13 @@ fun VaccineDetailsScreen(
 
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) onNavigateBack()
+    }
+
+    LaunchedEffect(uiState.toastMessage) {
+        uiState.toastMessage?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            viewModel.clearToast()
+        }
     }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -192,6 +200,9 @@ fun VaccineDetailsScreen(
                         isUploading      = uiState.isUploadingDoc,
                         onDocumentPicked = { uri, mimeType, fileName ->
                             viewModel.addDocument(context, uri, mimeType, fileName)
+                        },
+                        onDeleteDocument = { docId ->
+                            viewModel.deleteDocument(context, petId, vaccineId, docId)
                         }
                     )
 

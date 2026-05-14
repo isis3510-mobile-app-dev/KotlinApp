@@ -76,6 +76,22 @@ class WeightLogRepository(
                 val log = response.body() ?: error("Failed to save weight log")
                 weightLogDao.insert(log.toEntity())
                 log
+            }.recoverCatching {
+                val mutationId = request.clientMutationId ?: "weight_${System.currentTimeMillis()}"
+                val tempId = "local_weight_$mutationId"
+                val entity = WeightLogEntity(
+                    id = tempId,
+                    petId = petId,
+                    ownerId = uid,
+                    weight = request.weight,
+                    loggedAt = request.loggedAt,
+                    clientMutationId = mutationId,
+                    pendingSync = true,
+                    pendingDelete = false
+                )
+                weightLogDao.insert(entity)
+                enqueueSyncWork()
+                entity.toWeightLog()
             }
         } else {
             runCatching {
