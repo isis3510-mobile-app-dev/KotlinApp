@@ -19,6 +19,7 @@ import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.trimToNullIfBlank
 import com.example.petcare.util.validateCommittedInput
+import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -202,18 +203,17 @@ class EventDetailsViewModel : ViewModel() {
         fileName: String? = null
     ) {
         val eventId = _uiState.value.event?.id ?: return
+        if (_uiState.value.isUploadingDoc) return
         if (_uiState.value.event?.attachedDocuments.orEmpty().isNotEmpty()) {
             _uiState.value = _uiState.value.copy(
                 error = "Only one document is allowed for events. Delete the current document to upload another."
             )
             return
         }
+        _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
         Log.d(TAG, "Detail event document upload requested petId=$petId eventId=$eventId")
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             Log.d(TAG, "Detail event upload coroutine started thread=${Thread.currentThread().name}")
-            withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
-            }
 
             val resolvedMimeType = mimeType ?: context.contentResolver.getType(uri) ?: "application/octet-stream"
             val resolvedFileName = fileName ?: FirebaseDocumentUploader.getFileName(context, uri)
@@ -225,7 +225,7 @@ class EventDetailsViewModel : ViewModel() {
             }
 
             val prepared = try {
-                async(Dispatchers.IO) {
+                async(Dispatchers.Default) {
                     PicassoImageCompressor.prepareImageIfNeeded(context, uri, resolvedMimeType, resolvedFileName)
                 }.await()
             } catch (e: Exception) {
@@ -252,6 +252,7 @@ class EventDetailsViewModel : ViewModel() {
                                         event = updatedEvent,
                                         isUploadingDoc = false
                                     )
+                                    Toast.makeText(context.applicationContext, "Attachment uploaded successfully", Toast.LENGTH_SHORT).show()
                                 }
                             },
                             onFailure = { e ->

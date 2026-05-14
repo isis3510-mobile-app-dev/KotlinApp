@@ -190,10 +190,14 @@ class EventRepository(
         return runCatching {
             val event = if (isOnline()) {
                 val response = api.getEvent(eventId)
-                if (!response.isSuccessful) error("Not found: ${response.code()}")
-                val remote = response.body() ?: error("Empty event body")
-                eventDao.upsert(remote.toEntity())
-                remote
+                if (response.isSuccessful) {
+                    val remote = response.body() ?: error("Empty event body")
+                    eventDao.upsert(remote.toEntity())
+                    remote
+                } else {
+                    // Server failed — fall back to Room (handles local_ev_ IDs and sync race conditions)
+                    eventDao.getById(eventId)?.toEvent() ?: error("Not found: ${response.code()}")
+                }
             } else {
                 eventDao.getById(eventId)?.toEvent() ?: error("Not found offline")
             }
@@ -462,6 +466,10 @@ class EventRepository(
             hive.invalidatePendingEventDocuments(petId, eventId)
         } else {
             hive.putPendingEventDocuments(petId, eventId, gson.toJson(remaining))
+        }
+        if (synced > 0) {
+            invalidateBothCaches(petId, eventId)
+            Log.d("DOC_UPLOAD", "Invalidated event caches after pending document sync petId=$petId synced=$synced")
         }
         synced
     }

@@ -19,6 +19,7 @@ import com.example.petcare.util.PicassoImageCompressor
 import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.validateCommittedInput
+import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -115,7 +116,7 @@ class AddVaccineViewModel : ViewModel() {
             "Queued vaccination staging document petId=$petId stagingId=$stagingId fileName=$fileName mimeType=$mimeType"
         )
 
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             Log.d(TAG, "Staging coroutine started thread=${Thread.currentThread().name}")
             try {
                 if (!isOnline(context)) {
@@ -137,7 +138,7 @@ class AddVaccineViewModel : ViewModel() {
                     return@launch
                 }
 
-                val prepared = async(Dispatchers.IO) {
+                val prepared = async(Dispatchers.Default) {
                     PicassoImageCompressor.prepareImageIfNeeded(context, uri, mimeType, fileName)
                 }.await()
                 Log.d(
@@ -167,6 +168,7 @@ class AddVaccineViewModel : ViewModel() {
                                     }
                                 )
                                 Log.d(TAG, "Staging document UI state updated on ${Thread.currentThread().name}")
+                                Toast.makeText(context.applicationContext, "Attachment uploaded successfully", Toast.LENGTH_SHORT).show()
                             }
                         },
                         onFailure = { e ->
@@ -273,11 +275,6 @@ class AddVaccineViewModel : ViewModel() {
             _state.value = s.copy(error = firstError)
             return
         }
-        if (s.stagedDocuments.any { it.isUploading }) {
-            Log.d(TAG, "submit blocked waitingForUploads count=${s.stagedDocuments.count { it.isUploading }}")
-            _state.value = s.copy(error = "Please wait for documents to finish uploading")
-            return
-        }
         val vaccine = selectedVaccine ?: return
 
         viewModelScope.launch {
@@ -310,7 +307,8 @@ class AddVaccineViewModel : ViewModel() {
                     if (newVaccinationId != null) {
                         val successfulDocs = s.stagedDocuments
                             .filter { it.downloadUrl != null && it.error == null }
-                        Log.d(TAG, "submit attaching stagedDocs=${successfulDocs.size} to vaccinationId=$newVaccinationId")
+                        val stillUploadingDocs = s.stagedDocuments.filter { it.isUploading }
+                        Log.d(TAG, "submit attaching stagedDocs=${successfulDocs.size} stillUploading=${stillUploadingDocs.size} to vaccinationId=$newVaccinationId")
 
                         successfulDocs.forEach { doc ->
                             val localUri = doc.downloadUrl.orEmpty()
@@ -346,6 +344,20 @@ class AddVaccineViewModel : ViewModel() {
                                     }
                                 )
                             }
+                        }
+
+                        // Queue still-uploading docs as pending so they sync when the vaccine is opened
+                        stillUploadingDocs.forEach { doc ->
+                            RepositoryProvider.petRepository.queueVaccinationDocument(
+                                sourceUri = doc.uri,
+                                petId = s.petId,
+                                vaccinationId = newVaccinationId,
+                                fileName = doc.fileName,
+                                mimeType = doc.mimeType
+                            ).fold(
+                                onSuccess = { Log.d(TAG, "submit queued in-flight staged document fileName=${doc.fileName} vaccinationId=$newVaccinationId") },
+                                onFailure = { Log.e(TAG, "submit queue in-flight staged document failed fileName=${doc.fileName}: ${it.message}", it) }
+                            )
                         }
                     }
 

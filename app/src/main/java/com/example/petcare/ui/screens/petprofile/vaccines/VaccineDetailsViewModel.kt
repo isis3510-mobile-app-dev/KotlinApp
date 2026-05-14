@@ -20,6 +20,7 @@ import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.trimToNullIfBlank
 import com.example.petcare.util.validateCommittedInput
+import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -219,13 +220,11 @@ class VaccineDetailsViewModel : ViewModel() {
     ) {
         val petId         = _uiState.value.petId
         val vaccinationId = _uiState.value.vaccine?.id ?: return
+        if (_uiState.value.isUploadingDoc) return
+        _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
         Log.d(TAG, "Detail document upload requested petId=$petId vaccinationId=$vaccinationId")
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             Log.d(TAG, "Detail upload coroutine started thread=${Thread.currentThread().name}")
-            withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
-                Log.d(TAG, "Detail upload UI loading state set on ${Thread.currentThread().name}")
-            }
             val resolvedMimeType = mimeType ?: context.contentResolver.getType(uri) ?: "application/octet-stream"
             val resolvedFileName = fileName ?: FirebaseDocumentUploader.getFileName(context, uri)
                 ?: "document_${System.currentTimeMillis()}"
@@ -236,7 +235,7 @@ class VaccineDetailsViewModel : ViewModel() {
             }
 
             val prepared = try {
-                async(Dispatchers.IO) {
+                async(Dispatchers.Default) {
                     PicassoImageCompressor.prepareImageIfNeeded(context, uri, resolvedMimeType, resolvedFileName)
                 }.await()
             } catch (e: Exception) {
@@ -279,6 +278,7 @@ class VaccineDetailsViewModel : ViewModel() {
                                         )
                                     )
                                     Log.d(TAG, "Detail document UI state updated on ${Thread.currentThread().name}")
+                                    Toast.makeText(context.applicationContext, "Attachment uploaded successfully", Toast.LENGTH_SHORT).show()
                                 }
                             },
                             onFailure = { e ->

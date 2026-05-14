@@ -26,6 +26,7 @@ import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.trimToNullIfBlank
 import com.example.petcare.util.validateCommittedInput
+import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -127,7 +128,7 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
         )
         Log.d(TAG, "Queued event staging document petId=$petId stagingId=$stagingId fileName=$fileName mimeType=$mimeType")
 
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             Log.d(TAG, "Event staging coroutine started thread=${Thread.currentThread().name}")
             try {
                 if (!isOnline(context)) {
@@ -149,7 +150,7 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
                     return@launch
                 }
 
-                val prepared = async(Dispatchers.IO) {
+                val prepared = async(Dispatchers.Default) {
                     PicassoImageCompressor.prepareImageIfNeeded(context, uri, mimeType, fileName)
                 }.await()
                 Log.d(TAG, "Prepared event staging document original=$fileName prepared=${prepared.fileName} mimeType=${prepared.mimeType}")
@@ -172,6 +173,7 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
                                         } else it
                                     }
                                 )
+                                Toast.makeText(getApplication(), "Attachment uploaded successfully", Toast.LENGTH_SHORT).show()
                             }
                         },
                         onFailure = { e ->
@@ -283,12 +285,6 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
             _state.value = s.copy(error = firstError)
             return
         }
-        if (s.stagedDocuments.any { it.isUploading }) {
-            Log.d(TAG, "submit blocked waitingForUploads count=${s.stagedDocuments.count { it.isUploading }}")
-            _state.value = s.copy(error = "Please wait for documents to finish uploading")
-            return
-        }
-
         viewModelScope.launch {
             Log.d(TAG, "submit start petId=${s.petId} stagedDocs=${s.stagedDocuments.size}")
             _state.value = s.copy(isLoading = true, error = null)
@@ -315,7 +311,8 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
                     // Registrar documentos staged en el backend
                     val successfulDocs = s.stagedDocuments
                         .filter { it.downloadUrl != null && it.error == null }
-                    Log.d(TAG, "submit add event success petId=${s.petId} eventId=${event.id} stagedDocs=${successfulDocs.size}")
+                    val stillUploadingDocs = s.stagedDocuments.filter { it.isUploading }
+                    Log.d(TAG, "submit add event success petId=${s.petId} eventId=${event.id} stagedDocs=${successfulDocs.size} stillUploading=${stillUploadingDocs.size}")
 
                     successfulDocs.forEach { doc ->
                         val localUri = doc.downloadUrl.orEmpty()
@@ -348,6 +345,20 @@ class AddEventViewModel(application: Application) : AndroidViewModel(application
                                 }
                             )
                         }
+                    }
+
+                    // Queue still-uploading docs as pending so they sync when the event is opened
+                    stillUploadingDocs.forEach { doc ->
+                        RepositoryProvider.eventRepository.queueEventDocument(
+                            sourceUri = doc.uri,
+                            petId = s.petId,
+                            eventId = event.id,
+                            fileName = doc.fileName,
+                            mimeType = doc.mimeType
+                        ).fold(
+                            onSuccess = { Log.d(TAG, "submit queued in-flight event document fileName=${doc.fileName} eventId=${event.id}") },
+                            onFailure = { Log.e(TAG, "submit queue in-flight event document failed fileName=${doc.fileName}: ${it.message}", it) }
+                        )
                     }
 
                     saveEventLocallyAndScheduleReminder(event, s.petId)
