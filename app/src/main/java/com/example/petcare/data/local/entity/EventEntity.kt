@@ -17,6 +17,7 @@ data class EventEntity(
     val clinic: String = "",
     val description: String = "",
     val followUpDate: String? = null,
+    val attachedDocumentsJson: String = "[]",
     val synced: Boolean = false,
     val pendingDelete: Boolean = false,  // para borrados offline
     val pendingOperation: String? = null, // CREATE | DELETE

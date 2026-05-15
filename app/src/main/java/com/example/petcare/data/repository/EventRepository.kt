@@ -22,10 +22,13 @@ import com.example.petcare.data.model.PendingEventDocument
 import com.example.petcare.data.network.ApiService
 import com.example.petcare.data.worker.SyncWorker
 import com.example.petcare.util.FirebaseDocumentUploader
+import com.google.firebase.Firebase
+import com.google.firebase.storage.storage
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import android.util.Log
+import kotlinx.coroutines.tasks.await
 import java.io.File
 import java.util.UUID
 
@@ -168,6 +171,7 @@ class EventRepository(
                     clinic = request.clinic,
                     description = request.description,
                     followUpDate = request.followUpDate,
+                    attachedDocumentsJson = "[]",
                     synced = false,
                     pendingDelete = false,
                     pendingOperation = "CREATE",
@@ -187,7 +191,9 @@ class EventRepository(
             val event = if (isOnline()) {
                 val response = api.getEvent(eventId)
                 if (!response.isSuccessful) error("Not found: ${response.code()}")
-                response.body() ?: error("Empty event body")
+                val remote = response.body() ?: error("Empty event body")
+                eventDao.upsert(remote.toEntity())
+                remote
             } else {
                 eventDao.getById(eventId)?.toEvent() ?: error("Not found offline")
             }
@@ -207,14 +213,23 @@ class EventRepository(
     ): Result<Event> {
         return if (isOnline()) {
             runCatching {
-                val body = mapOf(
+                val currentEvent = getEvent(eventId).getOrThrow()
+                val normalizedDocuments = currentEvent.attachedDocuments.map { doc ->
+                    mapOf(
+                        "documentId" to ensureObjectId(doc.documentId ?: doc.id),
+                        "fileName" to doc.fileName,
+                        "fileUri" to doc.fileUri
+                    )
+                }
+                val body = mutableMapOf<String, Any?>(
                     "title" to title,
                     "description" to description,
                     "provider" to provider,
                     "clinic" to clinic,
                     "date" to date,
-                    "price" to price
+                    "attachedDocuments" to normalizedDocuments
                 )
+                if (price != null) body["price"] = price
                 val response = api.updateEvent(eventId, body)
                 if (!response.isSuccessful) error("Update fail: ${response.code()}")
                 val event = response.body() ?: error("Empty update response")
@@ -283,20 +298,76 @@ class EventRepository(
     }
 
     suspend fun addDocument(eventId: String, fileName: String, fileUri: String?): Result<Event> = runCatching {
-        val body = mapOf("fileName" to fileName, "fileUri" to fileUri)
+        val body = AddDocumentRequest(fileName = fileName, fileUri = fileUri)
         val response = api.addEventDocument(eventId, body)
         if (!response.isSuccessful) error("Doc add fail: ${response.code()}")
         val event = response.body() ?: error("Doc add empty body")
+        eventDao.upsert(event.toEntity())
         lru.putEvent(eventId, event)
         event
     }
 
-    suspend fun deleteEventDocument(eventId: String, documentId: String): Result<Event> = runCatching {
-        val response = api.deleteEventDocument(eventId, documentId)
-        if (!response.isSuccessful) error("Delete document failed: ${response.code()}")
-        val event = response.body() ?: error("Empty response after document delete")
-        lru.putEvent(eventId, event)
-        event
+    suspend fun deleteEventDocument(eventId: String, documentId: String): Result<Event> {
+        if (!isOnline()) return Result.failure(
+            Exception("No internet connection. Document delete will be available when you're back online.")
+        )
+        return runCatching {
+            val response = api.deleteEventDocument(eventId, documentId)
+            if (!response.isSuccessful) error("Delete document failed: ${response.code()}")
+            val event = response.body() ?: error("Empty response after document delete")
+            eventDao.upsert(event.toEntity())
+            clearHiddenEventDocuments(event.petId, eventId)
+            lru.putEvent(eventId, event)
+            event
+        }
+    }
+
+    suspend fun deleteEventDocumentByContent(
+        eventId: String,
+        fileName: String,
+        fileUri: String?
+    ): Result<Event> {
+        if (!isOnline()) return Result.failure(
+            Exception("No internet connection. Document delete will be available when you're back online.")
+        )
+        return runCatching {
+            invalidateEventLru(eventId)
+            val current = getEvent(eventId).getOrThrow()
+            val remaining = current.attachedDocuments.filterNot { doc ->
+                val sameUri = !fileUri.isNullOrBlank() && doc.fileUri == fileUri
+                val sameName = doc.fileName == fileName
+                sameUri || sameName
+            }
+            if (remaining.size == current.attachedDocuments.size) {
+                error("Document not found on server for delete fallback.")
+            }
+
+            fileUri?.takeIf { it.startsWith("http", ignoreCase = true) }?.let { url ->
+                runCatching { Firebase.storage.getReferenceFromUrl(url).delete().await() }
+            }
+
+            val docsPayload = remaining.map { doc ->
+                mapOf(
+                    "documentId" to (doc.documentId ?: doc.id),
+                    "fileName" to doc.fileName,
+                    "fileUri" to doc.fileUri
+                )
+            }
+            val body = mapOf("attachedDocuments" to docsPayload)
+            val response = api.updateEvent(eventId, body)
+            if (!response.isSuccessful) error("Delete document fallback failed: ${response.code()}")
+            val updated = response.body() ?: error("Empty response after document fallback delete")
+            eventDao.upsert(updated.toEntity())
+            clearHiddenEventDocuments(updated.petId, eventId)
+            lru.putEvent(eventId, updated)
+            updated
+        }
+    }
+
+    fun removePendingEventDocument(petId: String, eventId: String, pendingDocId: String) {
+        val remaining = getPendingEventDocuments(petId, eventId).filter { it.id != pendingDocId }
+        if (remaining.isEmpty()) hive.invalidatePendingEventDocuments(petId, eventId)
+        else hive.putPendingEventDocuments(petId, eventId, gson.toJson(remaining))
     }
 
     suspend fun queueEventDocument(
@@ -419,8 +490,44 @@ class EventRepository(
         lru.invalidateList(listCacheKey(petId, null))
     }
 
+    fun getHiddenEventDocumentKeys(
+        petId: String,
+        eventId: String
+    ): Set<String> {
+        val json = hive.getHiddenEventDocuments(petId, eventId) ?: return emptySet()
+        return runCatching {
+            gson.fromJson(json, Array<String>::class.java).toSet()
+        }.getOrElse { emptySet() }
+    }
+
+    fun hideEventDocumentLocally(
+        petId: String,
+        eventId: String,
+        fileName: String,
+        fileUri: String?
+    ) {
+        val key = "${fileName.trim()}|${fileUri.orEmpty().trim()}"
+        val updated = getHiddenEventDocumentKeys(petId, eventId).toMutableSet().apply { add(key) }
+        hive.putHiddenEventDocuments(petId, eventId, gson.toJson(updated.toList()))
+    }
+
+    fun clearHiddenEventDocuments(petId: String, eventId: String) {
+        hive.invalidateHiddenEventDocuments(petId, eventId)
+    }
+
+    fun invalidateEventLru(eventId: String) {
+        lru.invalidateEvent(eventId)
+    }
+
     private fun isInvalid204ContentLengthError(error: Throwable): Boolean {
         val message = error.message.orEmpty()
         return message.contains("HTTP 204 had non-zero Content-Length", ignoreCase = true)
+    }
+
+    private fun ensureObjectId(raw: String?): String {
+        val cleaned = raw.orEmpty().trim()
+        val isObjectId = cleaned.matches(Regex("^[a-fA-F0-9]{24}$"))
+        if (isObjectId) return cleaned.lowercase()
+        return UUID.randomUUID().toString().replace("-", "").take(24).lowercase()
     }
 }

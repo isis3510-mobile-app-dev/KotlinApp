@@ -39,6 +39,8 @@ fun AttachedDocumentsCard(
     onDocumentPicked: (uri: Uri, mimeType: String, fileName: String) -> Unit,
     onDeleteDocument: ((documentId: String) -> Unit)? = null,
     isUploading: Boolean = false,
+    allowAddDocument: Boolean = true,
+    addDisabledMessage: String? = null,
     modifier: Modifier = Modifier
 ) {
     val context   = LocalContext.current
@@ -131,7 +133,7 @@ fun AttachedDocumentsCard(
             // Botón principal de adjuntar
             OutlinedButton(
                 onClick  = { showSourceOptions = !showSourceOptions },
-                enabled  = !isUploading,
+                enabled  = !isUploading && allowAddDocument,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape    = RoundedCornerShape(28.dp),
                 border   = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary)
@@ -154,6 +156,15 @@ fun AttachedDocumentsCard(
                     Spacer(Modifier.width(8.dp))
                     Text("Attach Document", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
                 }
+            }
+
+            if (!allowAddDocument && !addDisabledMessage.isNullOrBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = addDisabledMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             // Opciones de fuente (cámara / galería / archivo)
@@ -227,7 +238,7 @@ private fun DocumentRow(
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    if (showDeleteConfirm && doc.id != null && onDeleteDocument != null) {
+    if (showDeleteConfirm && onDeleteDocument != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title            = { Text("Delete document") },
@@ -235,7 +246,7 @@ private fun DocumentRow(
             confirmButton    = {
                 TextButton(onClick = {
                     showDeleteConfirm = false
-                    onDeleteDocument(doc.id)
+                    onDeleteDocument(doc.documentId ?: doc.id.orEmpty())
                 }) { Text("Delete") }
             },
             dismissButton = {
@@ -325,7 +336,7 @@ private fun DocumentRow(
                     modifier = Modifier.size(16.dp)
                 )
             }
-            if (doc.id != null && onDeleteDocument != null) {
+            if (onDeleteDocument != null) {
                 IconButton(
                     onClick  = { showDeleteConfirm = true },
                     modifier = Modifier.size(32.dp)

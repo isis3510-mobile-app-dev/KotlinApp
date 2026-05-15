@@ -202,6 +202,12 @@ class EventDetailsViewModel : ViewModel() {
         fileName: String? = null
     ) {
         val eventId = _uiState.value.event?.id ?: return
+        if (_uiState.value.event?.attachedDocuments.orEmpty().isNotEmpty()) {
+            _uiState.value = _uiState.value.copy(
+                error = "Only one document is allowed for events. Delete the current document to upload another."
+            )
+            return
+        }
         Log.d(TAG, "Detail event document upload requested petId=$petId eventId=$eventId")
         viewModelScope.launch(Dispatchers.IO) {
             Log.d(TAG, "Detail event upload coroutine started thread=${Thread.currentThread().name}")
@@ -250,6 +256,28 @@ class EventDetailsViewModel : ViewModel() {
                             },
                             onFailure = { e ->
                                 Log.e(TAG, "Detail event backend metadata failed eventId=$eventId: ${e.message}", e)
+                                if ((e.message ?: "").contains("Doc add fail: 400")) {
+                                    RepositoryProvider.eventRepository.invalidateEventLru(eventId)
+                                    RepositoryProvider.eventRepository.getEvent(eventId).onSuccess { fresh ->
+                                        withContext(Dispatchers.Main) {
+                                            _uiState.value = _uiState.value.copy(
+                                                event = fresh.copy(
+                                                    attachedDocuments = fresh.attachedDocuments + pendingAttachedDocuments(fresh.petId, fresh.id)
+                                                ),
+                                                isUploadingDoc = false,
+                                                error = "Server still has one document for this event. Delete that document first."
+                                            )
+                                        }
+                                    }.onFailure {
+                                        withContext(Dispatchers.Main) {
+                                            _uiState.value = _uiState.value.copy(
+                                                isUploadingDoc = false,
+                                                error = "Could not refresh event after upload conflict. Please reopen this event."
+                                            )
+                                        }
+                                    }
+                                    return@fold
+                                }
                                 withContext(Dispatchers.Main) {
                                     _uiState.value = _uiState.value.copy(
                                         isUploadingDoc = false,
@@ -268,14 +296,53 @@ class EventDetailsViewModel : ViewModel() {
     }
 
     fun deleteDocument(eventId: String, documentId: String) {
-        viewModelScope.launch {
-            RepositoryProvider.eventRepository.deleteEventDocument(eventId, documentId)
-                .onSuccess { updatedEvent ->
-                    _uiState.value = _uiState.value.copy(event = updatedEvent)
+        val petId = _uiState.value.event?.petId ?: return
+        if (documentId.startsWith("pending_")) {
+            val actualId = documentId.removePrefix("pending_")
+            RepositoryProvider.eventRepository.removePendingEventDocument(petId, eventId, actualId)
+            _uiState.value = _uiState.value.copy(
+                event = _uiState.value.event?.copy(
+                    attachedDocuments = _uiState.value.event?.attachedDocuments
+                        .orEmpty()
+                        .filter { it.id != documentId }
+                )
+            )
+            _uiState.value = _uiState.value.copy(
+                error = "Document deleted in offline queue."
+            )
+        } else {
+            if (documentId.isBlank()) {
+                val docToDelete = _uiState.value.event?.attachedDocuments?.firstOrNull() ?: return
+                viewModelScope.launch {
+                    RepositoryProvider.eventRepository.deleteEventDocumentByContent(
+                        eventId = eventId,
+                        fileName = docToDelete.fileName,
+                        fileUri = docToDelete.fileUri
+                    ).onSuccess { updatedEvent ->
+                        _uiState.value = _uiState.value.copy(
+                            event = updatedEvent,
+                            error = "Document deleted successfully."
+                        )
+                    }.onFailure { e ->
+                        _uiState.value = _uiState.value.copy(
+                            error = e.message ?: "Could not delete document."
+                        )
+                    }
                 }
-                .onFailure { e ->
-                    _uiState.value = _uiState.value.copy(error = e.message)
-                }
+                return
+            }
+            viewModelScope.launch {
+                RepositoryProvider.eventRepository.deleteEventDocument(eventId, documentId)
+                    .onSuccess { updatedEvent ->
+                        _uiState.value = _uiState.value.copy(
+                            event = updatedEvent,
+                            error = "Document deleted successfully."
+                        )
+                    }
+                    .onFailure { e ->
+                        _uiState.value = _uiState.value.copy(error = e.message)
+                    }
+            }
         }
     }
 
