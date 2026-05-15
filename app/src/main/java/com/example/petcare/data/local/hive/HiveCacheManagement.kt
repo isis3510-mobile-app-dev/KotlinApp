@@ -208,6 +208,26 @@ class HiveCacheManager(context: Context) {
         eventId: String
     ) = delete("hidden_event_docs_${petId}_$eventId")
 
+    // ── Local-to-server event ID redirect (no TTL: survives until next install) ──
+    // Written by SyncWorker when a local_ev_ event is created on the server.
+    // Read by EventRepository.getEvent() so stale nav args still resolve correctly.
+    fun putLocalEventIdRedirect(localId: String, serverId: String) =
+        put("local_ev_redirect_$localId", serverId)
+    fun getLocalEventIdRedirect(localId: String): String? =
+        get("local_ev_redirect_$localId")
+
+    // ── Pending event document deletes (no TTL: offline queue) ──────────
+    // Stored as JSON array of "petId|eventId|documentId" strings
+    fun putPendingEventDocumentDeletes(json: String) = put("pending_event_doc_deletes", json)
+    fun getPendingEventDocumentDeletes(): String? = get("pending_event_doc_deletes")
+    fun invalidatePendingEventDocumentDeletes() = delete("pending_event_doc_deletes")
+
+    // ── Pending vaccination document deletes (no TTL: offline queue) ─────
+    // Stored as JSON array of "petId|vaccinationId|documentId" strings
+    fun putPendingVaxDocumentDeletes(json: String) = put("pending_vax_doc_deletes", json)
+    fun getPendingVaxDocumentDeletes(): String? = get("pending_vax_doc_deletes")
+    fun invalidatePendingVaxDocumentDeletes() = delete("pending_vax_doc_deletes")
+
     // ── Vacunas catálogo (TTL: 12 horas) ─────────────────────────────────
 
     fun putVaccineCatalog(json: String) =

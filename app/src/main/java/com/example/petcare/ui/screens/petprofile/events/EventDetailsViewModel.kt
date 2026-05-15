@@ -19,6 +19,7 @@ import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.trimToNullIfBlank
 import com.example.petcare.util.validateCommittedInput
+import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ data class EventDetailsUiState(
     val isSaving: Boolean = false,
     val isUploadingDoc: Boolean = false,
     val error: String? = null,
+    val toastMessage: String? = null,
     val isDeleted: Boolean = false,
     val isEditing: Boolean = false,
     val petBirthDateIso: String? = null,
@@ -55,14 +57,6 @@ class EventDetailsViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             if (petId.isNotBlank()) {
-                RepositoryProvider.eventRepository.syncPendingEventDocuments(petId, eventId)
-                    .onSuccess { synced ->
-                        if (synced > 0) {
-                            Log.d(TAG, "Synced pending event documents before load count=$synced eventId=$eventId")
-                        }
-                    }
-            }
-            if (petId.isNotBlank()) {
                 RepositoryProvider.petRepository.getPet(petId).onSuccess { pet ->
                     _uiState.value = _uiState.value.copy(petBirthDateIso = pet.birthDate)
                 }
@@ -73,7 +67,9 @@ class EventDetailsViewModel : ViewModel() {
                 onSuccess = { event ->
                     val (appDate, appTime) = EventDateUtils.splitToAppDateTime(event.date)
                     val displayEvent = event.copy(
-                        attachedDocuments = event.attachedDocuments + pendingAttachedDocuments(event.petId, event.id)
+                        attachedDocuments = RepositoryProvider.eventRepository
+                            .filterLocallyDeletedEventDocs(event.petId, event.id, event.attachedDocuments) +
+                            pendingAttachedDocuments(event.petId, event.id)
                     )
                     _uiState.value = _uiState.value.copy(
                         event           = displayEvent,
@@ -86,6 +82,32 @@ class EventDetailsViewModel : ViewModel() {
                         editDate        = appDate,
                         editTime        = appTime
                     )
+                    // Background sync: doesn't block the UI; refreshes doc list when done.
+                    // Use event.id (the resolved server ID) rather than the nav-arg eventId,
+                    // because if the event was created offline the nav arg may still carry the
+                    // old local_ev_ ID while the Hive pending-doc keys already use the server ID.
+                    if (petId.isNotBlank()) {
+                        val resolvedEventId = event.id
+                        launch {
+                            RepositoryProvider.eventRepository.syncPendingEventDocuments(petId, resolvedEventId)
+                                .onSuccess { synced ->
+                                    if (synced > 0) Log.d(TAG, "Background synced pending event docs count=$synced eventId=$resolvedEventId")
+                                }
+                            RepositoryProvider.eventRepository.syncPendingEventDocumentDeletes(petId, resolvedEventId)
+                            RepositoryProvider.eventRepository.syncHiddenEventDocumentDeletes(petId, resolvedEventId)
+                            RepositoryProvider.eventRepository.getEvent(resolvedEventId).onSuccess { fresh ->
+                                withContext(Dispatchers.Main) {
+                                    _uiState.value = _uiState.value.copy(
+                                        event = fresh.copy(
+                                            attachedDocuments = RepositoryProvider.eventRepository
+                                                .filterLocallyDeletedEventDocs(fresh.petId, fresh.id, fresh.attachedDocuments) +
+                                                pendingAttachedDocuments(fresh.petId, fresh.id)
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
                 },
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
@@ -202,18 +224,20 @@ class EventDetailsViewModel : ViewModel() {
         fileName: String? = null
     ) {
         val eventId = _uiState.value.event?.id ?: return
+        if (_uiState.value.isUploadingDoc) return
         if (_uiState.value.event?.attachedDocuments.orEmpty().isNotEmpty()) {
             _uiState.value = _uiState.value.copy(
                 error = "Only one document is allowed for events. Delete the current document to upload another."
             )
             return
         }
+        _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
         Log.d(TAG, "Detail event document upload requested petId=$petId eventId=$eventId")
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             Log.d(TAG, "Detail event upload coroutine started thread=${Thread.currentThread().name}")
-            withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
-            }
+
+            // Flush any pending offline deletes before uploading so the server is in the correct state
+            RepositoryProvider.eventRepository.syncPendingEventDocumentDeletes(petId, eventId)
 
             val resolvedMimeType = mimeType ?: context.contentResolver.getType(uri) ?: "application/octet-stream"
             val resolvedFileName = fileName ?: FirebaseDocumentUploader.getFileName(context, uri)
@@ -225,7 +249,7 @@ class EventDetailsViewModel : ViewModel() {
             }
 
             val prepared = try {
-                async(Dispatchers.IO) {
+                async(Dispatchers.Default) {
                     PicassoImageCompressor.prepareImageIfNeeded(context, uri, resolvedMimeType, resolvedFileName)
                 }.await()
             } catch (e: Exception) {
@@ -252,6 +276,7 @@ class EventDetailsViewModel : ViewModel() {
                                         event = updatedEvent,
                                         isUploadingDoc = false
                                     )
+                                    Toast.makeText(context.applicationContext, "Attachment uploaded successfully", Toast.LENGTH_SHORT).show()
                                 }
                             },
                             onFailure = { e ->
@@ -262,7 +287,9 @@ class EventDetailsViewModel : ViewModel() {
                                         withContext(Dispatchers.Main) {
                                             _uiState.value = _uiState.value.copy(
                                                 event = fresh.copy(
-                                                    attachedDocuments = fresh.attachedDocuments + pendingAttachedDocuments(fresh.petId, fresh.id)
+                                                    attachedDocuments = RepositoryProvider.eventRepository
+                                                        .filterLocallyDeletedEventDocs(fresh.petId, fresh.id, fresh.attachedDocuments) +
+                                                        pendingAttachedDocuments(fresh.petId, fresh.id)
                                                 ),
                                                 isUploadingDoc = false,
                                                 error = "Server still has one document for this event. Delete that document first."
@@ -295,7 +322,7 @@ class EventDetailsViewModel : ViewModel() {
         }
     }
 
-    fun deleteDocument(eventId: String, documentId: String) {
+    fun deleteDocument(context: Context, eventId: String, documentId: String) {
         val petId = _uiState.value.event?.petId ?: return
         if (documentId.startsWith("pending_")) {
             val actualId = documentId.removePrefix("pending_")
@@ -305,48 +332,72 @@ class EventDetailsViewModel : ViewModel() {
                     attachedDocuments = _uiState.value.event?.attachedDocuments
                         .orEmpty()
                         .filter { it.id != documentId }
-                )
+                ),
+                toastMessage = "Document deleted successfully"
             )
-            _uiState.value = _uiState.value.copy(
-                error = "Document deleted in offline queue."
-            )
-        } else {
+            return
+        }
+        if (!isOnline(context)) {
             if (documentId.isBlank()) {
-                val docToDelete = _uiState.value.event?.attachedDocuments?.firstOrNull() ?: return
-                viewModelScope.launch {
-                    RepositoryProvider.eventRepository.deleteEventDocumentByContent(
-                        eventId = eventId,
-                        fileName = docToDelete.fileName,
-                        fileUri = docToDelete.fileUri
-                    ).onSuccess { updatedEvent ->
-                        _uiState.value = _uiState.value.copy(
-                            event = updatedEvent,
-                            error = "Document deleted successfully."
-                        )
-                    }.onFailure { e ->
-                        _uiState.value = _uiState.value.copy(
-                            error = e.message ?: "Could not delete document."
-                        )
-                    }
-                }
-                return
+                // Blank-id doc: optimistically remove + queue via hidden-doc mechanism for content-based sync
+                val docToHide = _uiState.value.event?.attachedDocuments?.firstOrNull() ?: return
+                RepositoryProvider.eventRepository.hideEventDocumentLocally(petId, eventId, docToHide.fileName, docToHide.fileUri)
+                _uiState.value = _uiState.value.copy(
+                    event = _uiState.value.event?.copy(
+                        attachedDocuments = _uiState.value.event?.attachedDocuments.orEmpty().drop(1)
+                    ),
+                    toastMessage = "Document deleted successfully"
+                )
+            } else {
+                val filtered = _uiState.value.event?.copy(
+                    attachedDocuments = _uiState.value.event?.attachedDocuments
+                        .orEmpty()
+                        .filter { (it.documentId ?: it.id).orEmpty() != documentId }
+                )
+                _uiState.value = _uiState.value.copy(
+                    event = filtered,
+                    toastMessage = "Document deleted successfully"
+                )
+                RepositoryProvider.eventRepository.queueEventDocumentDelete(petId, eventId, documentId)
             }
+            return
+        }
+        if (documentId.isBlank()) {
+            val docToDelete = _uiState.value.event?.attachedDocuments?.firstOrNull() ?: return
             viewModelScope.launch {
-                RepositoryProvider.eventRepository.deleteEventDocument(eventId, documentId)
-                    .onSuccess { updatedEvent ->
-                        _uiState.value = _uiState.value.copy(
-                            event = updatedEvent,
-                            error = "Document deleted successfully."
-                        )
-                    }
-                    .onFailure { e ->
-                        _uiState.value = _uiState.value.copy(error = e.message)
-                    }
+                RepositoryProvider.eventRepository.deleteEventDocumentByContent(
+                    eventId = eventId,
+                    fileName = docToDelete.fileName,
+                    fileUri = docToDelete.fileUri
+                ).onSuccess { updatedEvent ->
+                    _uiState.value = _uiState.value.copy(
+                        event = updatedEvent,
+                        toastMessage = "Document deleted successfully"
+                    )
+                }.onFailure { e ->
+                    _uiState.value = _uiState.value.copy(
+                        error = e.message ?: "Could not delete document."
+                    )
+                }
             }
+            return
+        }
+        viewModelScope.launch {
+            RepositoryProvider.eventRepository.deleteEventDocument(eventId, documentId)
+                .onSuccess { updatedEvent ->
+                    _uiState.value = _uiState.value.copy(
+                        event = updatedEvent,
+                        toastMessage = "Document deleted successfully"
+                    )
+                }
+                .onFailure { e ->
+                    _uiState.value = _uiState.value.copy(error = e.message)
+                }
         }
     }
 
     fun clearError() { _uiState.value = _uiState.value.copy(error = null) }
+    fun clearToast() { _uiState.value = _uiState.value.copy(toastMessage = null) }
 
     private fun pendingAttachedDocuments(
         petId: String,

@@ -386,6 +386,65 @@ class PetRepository(
         pet
     }
 
+    fun queueVaccinationDocumentDelete(petId: String, vaccinationId: String, documentId: String) {
+        val existing = getPendingVaxDocumentDeletesList()
+        val entry = "$petId|$vaccinationId|$documentId"
+        if (entry !in existing) {
+            hive.putPendingVaxDocumentDeletes(Gson().toJson(existing + entry))
+            enqueueSyncWork()
+        }
+    }
+
+    private fun getPendingVaxDocumentDeletesList(): List<String> {
+        val json = hive.getPendingVaxDocumentDeletes() ?: return emptyList()
+        return runCatching {
+            Gson().fromJson(json, Array<String>::class.java).toList()
+        }.getOrElse { emptyList() }
+    }
+
+    /**
+     * Filters out vax docs that were deleted offline (queued for server sync).
+     * Prevents deleted docs from reappearing when LRU/Room cache still holds the old pet data.
+     */
+    fun filterLocallyDeletedVaxDocs(
+        petId: String,
+        vaccinationId: String,
+        docs: List<com.example.petcare.data.model.AttachedDocument>
+    ): List<com.example.petcare.data.model.AttachedDocument> {
+        val pendingDeleteIds = getPendingVaxDocumentDeletesList()
+            .filter { it.startsWith("$petId|$vaccinationId|") }
+            .map { it.removePrefix("$petId|$vaccinationId|") }
+            .toSet()
+
+        return docs.filter { doc ->
+            val docId = (doc.documentId ?: doc.id).orEmpty()
+            docId.isBlank() || docId !in pendingDeleteIds
+        }
+    }
+
+    suspend fun syncPendingVaxDocumentDeletes(petId: String, vaccinationId: String) {
+        if (!isOnline(context)) return
+        val allPending = getPendingVaxDocumentDeletesList().toMutableList()
+        val prefix = "$petId|$vaccinationId|"
+        val toProcess = allPending.filter { it.startsWith(prefix) }
+        if (toProcess.isEmpty()) return
+        var synced = 0
+        toProcess.forEach { entry ->
+            val docId = entry.removePrefix(prefix)
+            runCatching {
+                val response = api.deleteVaccinationDocument(petId, vaccinationId, docId)
+                if (response.isSuccessful || response.code() == 404) {
+                    allPending.remove(entry)
+                    synced++
+                    Log.d("DOC_DELETE", "Synced pending vax doc delete vaccinationId=$vaccinationId docId=$docId")
+                }
+            }.onFailure { Log.e("DOC_DELETE", "Pending vax doc delete sync failed: ${it.message}", it) }
+        }
+        if (allPending.isEmpty()) hive.invalidatePendingVaxDocumentDeletes()
+        else hive.putPendingVaxDocumentDeletes(Gson().toJson(allPending))
+        if (synced > 0) invalidateVaccinationCache(petId)
+    }
+
     suspend fun queueVaccinationDocument(
         sourceUri: Uri,
         petId: String,
@@ -432,6 +491,17 @@ class PetRepository(
             Log.e("DOC_UPLOAD", "Failed to parse pending vaccination documents: ${it.message}", it)
             emptyList()
         }
+    }
+
+    fun removePendingVaccinationDocument(petId: String, vaccinationId: String, pendingDocId: String) {
+        val all = getPendingVaccinationDocuments(petId, vaccinationId)
+        val toRemove = all.find { it.id == pendingDocId }
+        val remaining = all.filter { it.id != pendingDocId }
+        toRemove?.localUri?.let { uri ->
+            runCatching { File(Uri.parse(uri).path ?: return@runCatching).delete() }
+        }
+        if (remaining.isEmpty()) hive.invalidatePendingVaccinationDocuments(petId, vaccinationId)
+        else hive.putPendingVaccinationDocuments(petId, vaccinationId, Gson().toJson(remaining))
     }
 
     suspend fun syncPendingVaccinationDocuments(

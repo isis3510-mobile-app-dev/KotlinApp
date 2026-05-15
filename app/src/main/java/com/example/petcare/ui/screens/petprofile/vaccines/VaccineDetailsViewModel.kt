@@ -20,6 +20,7 @@ import com.example.petcare.util.normalizeForCommit
 import com.example.petcare.util.sanitizeForEditing
 import com.example.petcare.util.trimToNullIfBlank
 import com.example.petcare.util.validateCommittedInput
+import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,8 +35,9 @@ data class VaccineDetailsUiState(
     val isLoading: Boolean = false,
     val isDeleting: Boolean = false,
     val isSaving: Boolean = false,
-    val isUploadingDoc: Boolean = false,      // ← NUEVO
+    val isUploadingDoc: Boolean = false,
     val error: String? = null,
+    val toastMessage: String? = null,
     val isDeleted: Boolean = false,
     val isEditing: Boolean = false,
     val editAdministeredBy: String = "",
@@ -53,12 +55,6 @@ class VaccineDetailsViewModel : ViewModel() {
     fun load(petId: String, vaccineId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, petId = petId, error = null)
-            RepositoryProvider.petRepository.syncPendingVaccinationDocuments(petId, vaccineId)
-                .onSuccess { synced ->
-                    if (synced > 0) {
-                        Log.d(TAG, "Synced pending documents before load count=$synced vaccinationId=$vaccineId")
-                    }
-                }
 
             val catalogMap = RepositoryProvider.petRepository
                 .getVaccineCatalog()
@@ -90,13 +86,15 @@ class VaccineDetailsViewModel : ViewModel() {
                         nextDueDate       = vacc.nextDueDate?.take(10),
                         lotNumber         = vacc.lotNumber.ifBlank { null },
                         status            = status,
-                        attachedDocuments = vacc.attachedDocuments.map { doc ->
-                            AttachedDocument(
-                                id       = doc.id,
-                                fileName = doc.fileName,
-                                fileUri  = doc.fileUri
-                            )
-                        } + pendingAttachedDocuments(pet.id, vacc.id)
+                        attachedDocuments = RepositoryProvider.petRepository
+                            .filterLocallyDeletedVaxDocs(pet.id, vacc.id, vacc.attachedDocuments.map { doc ->
+                                AttachedDocument(
+                                    id         = doc.id,
+                                    documentId = doc.documentId,
+                                    fileName   = doc.fileName,
+                                    fileUri    = doc.fileUri
+                                )
+                            }) + pendingAttachedDocuments(pet.id, vacc.id)
                     )
 
                     _uiState.value = _uiState.value.copy(
@@ -106,6 +104,35 @@ class VaccineDetailsViewModel : ViewModel() {
                         editNextDueDate    = vacc.nextDueDate?.take(10) ?: "",
                         editLotNumber      = sanitizeForEditing(vacc.lotNumber, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.LOT_NUMBER).value
                     )
+
+                    // Background sync: doesn't block the UI; refreshes doc list when done
+                    launch {
+                        RepositoryProvider.petRepository.syncPendingVaccinationDocuments(petId, vaccineId)
+                            .onSuccess { synced ->
+                                if (synced > 0) Log.d(TAG, "Background synced pending vax docs count=$synced vaccinationId=$vaccineId")
+                            }
+                        RepositoryProvider.petRepository.syncPendingVaxDocumentDeletes(petId, vaccineId)
+                        RepositoryProvider.petRepository.getPet(petId).onSuccess { fresh ->
+                            val freshVacc = fresh.vaccinations.find { it.id == vaccineId }
+                            if (freshVacc != null) {
+                                withContext(Dispatchers.Main) {
+                                    _uiState.value = _uiState.value.copy(
+                                        vaccine = _uiState.value.vaccine?.copy(
+                                            attachedDocuments = RepositoryProvider.petRepository
+                                                .filterLocallyDeletedVaxDocs(fresh.id, freshVacc.id, freshVacc.attachedDocuments.map { doc ->
+                                                    AttachedDocument(
+                                                        id         = doc.id,
+                                                        documentId = doc.documentId,
+                                                        fileName   = doc.fileName,
+                                                        fileUri    = doc.fileUri
+                                                    )
+                                                }) + pendingAttachedDocuments(fresh.id, freshVacc.id)
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
                 },
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
@@ -219,13 +246,15 @@ class VaccineDetailsViewModel : ViewModel() {
     ) {
         val petId         = _uiState.value.petId
         val vaccinationId = _uiState.value.vaccine?.id ?: return
+        if (_uiState.value.isUploadingDoc) return
+        _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
         Log.d(TAG, "Detail document upload requested petId=$petId vaccinationId=$vaccinationId")
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Default) {
             Log.d(TAG, "Detail upload coroutine started thread=${Thread.currentThread().name}")
-            withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(isUploadingDoc = true, error = null)
-                Log.d(TAG, "Detail upload UI loading state set on ${Thread.currentThread().name}")
-            }
+
+            // Flush any pending offline deletes before uploading so the server is in the correct state
+            RepositoryProvider.petRepository.syncPendingVaxDocumentDeletes(petId, vaccinationId)
+
             val resolvedMimeType = mimeType ?: context.contentResolver.getType(uri) ?: "application/octet-stream"
             val resolvedFileName = fileName ?: FirebaseDocumentUploader.getFileName(context, uri)
                 ?: "document_${System.currentTimeMillis()}"
@@ -236,7 +265,7 @@ class VaccineDetailsViewModel : ViewModel() {
             }
 
             val prepared = try {
-                async(Dispatchers.IO) {
+                async(Dispatchers.Default) {
                     PicassoImageCompressor.prepareImageIfNeeded(context, uri, resolvedMimeType, resolvedFileName)
                 }.await()
             } catch (e: Exception) {
@@ -271,14 +300,16 @@ class VaccineDetailsViewModel : ViewModel() {
                                                 ?.attachedDocuments
                                                 ?.map { doc ->
                                                     AttachedDocument(
-                                                        id       = doc.id,
-                                                        fileName = doc.fileName,
-                                                        fileUri  = doc.fileUri
+                                                        id         = doc.id,
+                                                        documentId = doc.documentId,
+                                                        fileName   = doc.fileName,
+                                                        fileUri    = doc.fileUri
                                                     )
                                                 } ?: emptyList()
                                         )
                                     )
                                     Log.d(TAG, "Detail document UI state updated on ${Thread.currentThread().name}")
+                                    Toast.makeText(context.applicationContext, "Attachment uploaded successfully", Toast.LENGTH_SHORT).show()
                                 }
                             },
                             onFailure = { e ->
@@ -300,11 +331,36 @@ class VaccineDetailsViewModel : ViewModel() {
         }
     }
 
-    fun deleteDocument(petId: String, vaccinationId: String, documentId: String) {
+    fun deleteDocument(context: Context, petId: String, vaccinationId: String, documentId: String) {
+        if (documentId.startsWith("pending_")) {
+            val actualId = documentId.removePrefix("pending_")
+            RepositoryProvider.petRepository.removePendingVaccinationDocument(petId, vaccinationId, actualId)
+            _uiState.value = _uiState.value.copy(
+                vaccine = _uiState.value.vaccine?.copy(
+                    attachedDocuments = _uiState.value.vaccine?.attachedDocuments
+                        .orEmpty()
+                        .filter { it.id != documentId }
+                ),
+                toastMessage = "Document deleted successfully"
+            )
+            return
+        }
         if (documentId.isBlank()) {
             _uiState.value = _uiState.value.copy(
                 error = "This document cannot be deleted yet because it has no server id."
             )
+            return
+        }
+        if (!isOnline(context)) {
+            _uiState.value = _uiState.value.copy(
+                vaccine = _uiState.value.vaccine?.copy(
+                    attachedDocuments = _uiState.value.vaccine?.attachedDocuments
+                        .orEmpty()
+                        .filter { (it.documentId ?: it.id).orEmpty() != documentId }
+                ),
+                toastMessage = "Document deleted successfully"
+            )
+            RepositoryProvider.petRepository.queueVaccinationDocumentDelete(petId, vaccinationId, documentId)
             return
         }
         viewModelScope.launch {
@@ -314,9 +370,10 @@ class VaccineDetailsViewModel : ViewModel() {
                     _uiState.value = _uiState.value.copy(
                         vaccine = _uiState.value.vaccine?.copy(
                             attachedDocuments = updatedVacc?.attachedDocuments?.map { doc ->
-                                AttachedDocument(id = doc.id, fileName = doc.fileName, fileUri = doc.fileUri)
+                                AttachedDocument(id = doc.id, documentId = doc.documentId, fileName = doc.fileName, fileUri = doc.fileUri)
                             } ?: emptyList()
-                        )
+                        ),
+                        toastMessage = "Document deleted successfully"
                     )
                 }
                 .onFailure { e ->
@@ -326,6 +383,7 @@ class VaccineDetailsViewModel : ViewModel() {
     }
 
     fun clearError() { _uiState.value = _uiState.value.copy(error = null) }
+    fun clearToast() { _uiState.value = _uiState.value.copy(toastMessage = null) }
 
     private fun resolveVaccineName(
         vaccineId: String?,

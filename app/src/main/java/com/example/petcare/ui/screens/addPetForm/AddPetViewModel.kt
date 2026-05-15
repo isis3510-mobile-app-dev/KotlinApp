@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
 import com.example.petcare.data.model.CreatePetRequest
+import com.example.petcare.data.model.CreateWeightLogRequest
 import com.example.petcare.data.repository.RepositoryProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -138,6 +139,16 @@ class AddPetViewModel(application: Application) : AndroidViewModel(application) 
             }.fold(
                 onSuccess = { pet ->
                     _state.value = _state.value.copy(isLoading = false)
+                    val weight = normalizeForCommit(s.weight, InputFieldPolicy.DECIMAL).trimToNullIfBlank()?.toDoubleOrNull()
+                    if (weight != null) {
+                        viewModelScope.launch {
+                            val today = java.time.LocalDate.now().toString() + "T00:00:00Z"
+                            RepositoryProvider.weightLogRepository.createWeightLog(
+                                pet.id,
+                                CreateWeightLogRequest(weight = weight, loggedAt = today)
+                            )
+                        }
+                    }
                     onSuccess(pet)
                 },
                 onFailure = { e ->

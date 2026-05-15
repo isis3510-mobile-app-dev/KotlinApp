@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.petcare.data.analytics.FeatureExecutionTracker
+import com.example.petcare.data.model.CreateWeightLogRequest
 import com.example.petcare.data.model.UpdatePetRequest
 import com.example.petcare.data.repository.RepositoryProvider
 import com.example.petcare.util.InputFieldPolicy
@@ -30,6 +31,7 @@ data class EditPetState(
     val name: String           = "",
     val breed: String          = "",
     val weight: String         = "",
+    val originalWeight: String = "",
     val color: String          = "",
     val birthDate: String      = "",   // dd/MM/yyyy from DateTextField, or yyyy-MM-dd from API
     val knownAllergies: String = "",
@@ -63,6 +65,7 @@ class EditPetViewModel(application: Application) : AndroidViewModel(application)
             name           = sanitizeForEditing(name, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.PET_NAME).value,
             breed          = sanitizeForEditing(breed, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.BREED).value,
             weight         = sanitizeForEditing(weight, InputFieldPolicy.DECIMAL, InputTextLimits.WEIGHT, 199.0).value,
+            originalWeight = weight,
             color          = sanitizeForEditing(color, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.COLOR).value,
             birthDate      = birthDate,
             knownAllergies = sanitizeForEditing(knownAllergies, InputFieldPolicy.GENERAL_TEXT, InputTextLimits.NOTES).value,
@@ -124,6 +127,17 @@ class EditPetViewModel(application: Application) : AndroidViewModel(application)
                 RepositoryProvider.petRepository.updatePet(petId, request)
             }.fold(
                 onSuccess = {
+                    val newWeight = normalizeForCommit(s.weight, InputFieldPolicy.DECIMAL).trimToNullIfBlank()?.toDoubleOrNull()
+                    val oldWeight = normalizeForCommit(s.originalWeight, InputFieldPolicy.DECIMAL).trimToNullIfBlank()?.toDoubleOrNull()
+                    if (newWeight != null && newWeight != oldWeight) {
+                        viewModelScope.launch {
+                            val today = java.time.LocalDate.now().toString() + "T00:00:00Z"
+                            RepositoryProvider.weightLogRepository.createWeightLog(
+                                petId,
+                                CreateWeightLogRequest(weight = newWeight, loggedAt = today)
+                            )
+                        }
+                    }
                     _state.value = _state.value.copy(isSaving = false, isSaved = true)
                 },
                 onFailure = { e ->

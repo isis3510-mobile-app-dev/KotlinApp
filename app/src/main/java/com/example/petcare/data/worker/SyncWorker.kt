@@ -79,6 +79,7 @@ class SyncWorker(
                     syncPendingVaccinationUpdates(db, api)
                     syncPendingVaccinationDeletes(db, api)
                     syncPendingVaccinationDocuments(api)
+                    syncPendingVaxDocumentDeletes(api)
                     android.util.Log.d("VAX_SYNC", "vaccination-sync coroutine finished thread=${Thread.currentThread().name}")
                 }
                 launch(Dispatchers.IO + CoroutineName("events-sync")) {
@@ -87,6 +88,7 @@ class SyncWorker(
                     syncPendingEventUpdates(db, api)
                     syncPendingEventDeletes(db, api)
                     syncPendingEventDocuments(api)
+                    syncPendingEventDocumentDeletes(api)
                     android.util.Log.d("EVENT_SYNC", "event-sync coroutine finished thread=${Thread.currentThread().name}")
                 }
                 launch(Dispatchers.IO + CoroutineName("weight-sync")) {
@@ -577,6 +579,8 @@ class SyncWorker(
                     deleteLocalPendingDocument(pending.localUri)
                     com.example.petcare.data.repository.RepositoryProvider.eventRepository
                         .invalidateLruForPet(pending.petId)
+                    com.example.petcare.data.repository.RepositoryProvider.eventRepository
+                        .invalidateEventLru(pending.eventId)
                     android.util.Log.d("EVENT_DOC_UPLOAD", "Worker synced pending event document id=${pending.id}")
                 } catch (e: Exception) {
                     android.util.Log.e("EVENT_DOC_UPLOAD", "Worker pending event document sync failed id=${pending.id}: ${e.message}", e)
@@ -589,6 +593,68 @@ class SyncWorker(
                 hive.putPendingEventDocumentsByKey(key, gson.toJson(remaining))
             }
         }
+    }
+
+    private suspend fun syncPendingEventDocumentDeletes(api: ApiService) {
+        val hive = HiveCacheManager(applicationContext)
+        val gson = Gson()
+        val json = hive.getPendingEventDocumentDeletes() ?: return
+        val pending = runCatching {
+            gson.fromJson(json, Array<String>::class.java).toList()
+        }.getOrElse {
+            android.util.Log.e("DOC_DELETE", "Worker failed to parse pending event doc deletes: ${it.message}", it)
+            return
+        }
+        val remaining = pending.toMutableList()
+        pending.forEach { entry ->
+            val parts = entry.split("|")
+            if (parts.size < 3) { remaining.remove(entry); return@forEach }
+            val (petId, eventId, docId) = parts
+            runCatching {
+                val response = api.deleteEventDocument(eventId, docId)
+                if (response.isSuccessful || response.code() == 204 || response.code() == 404) {
+                    remaining.remove(entry)
+                    com.example.petcare.data.repository.RepositoryProvider.eventRepository
+                        .invalidateLruForPet(petId)
+                    android.util.Log.d("DOC_DELETE", "Worker synced event doc delete eventId=$eventId docId=$docId")
+                }
+            }.onFailure {
+                android.util.Log.e("DOC_DELETE", "Worker event doc delete failed eventId=$eventId docId=$docId: ${it.message}", it)
+            }
+        }
+        if (remaining.isEmpty()) hive.invalidatePendingEventDocumentDeletes()
+        else hive.putPendingEventDocumentDeletes(gson.toJson(remaining))
+    }
+
+    private suspend fun syncPendingVaxDocumentDeletes(api: ApiService) {
+        val hive = HiveCacheManager(applicationContext)
+        val gson = Gson()
+        val json = hive.getPendingVaxDocumentDeletes() ?: return
+        val pending = runCatching {
+            gson.fromJson(json, Array<String>::class.java).toList()
+        }.getOrElse {
+            android.util.Log.e("DOC_DELETE", "Worker failed to parse pending vax doc deletes: ${it.message}", it)
+            return
+        }
+        val remaining = pending.toMutableList()
+        pending.forEach { entry ->
+            val parts = entry.split("|")
+            if (parts.size < 3) { remaining.remove(entry); return@forEach }
+            val (petId, vaccinationId, docId) = parts
+            runCatching {
+                val response = api.deleteVaccinationDocument(petId, vaccinationId, docId)
+                if (response.isSuccessful || response.code() == 404) {
+                    remaining.remove(entry)
+                    com.example.petcare.data.repository.RepositoryProvider.petRepository
+                        .invalidatePetLru(petId)
+                    android.util.Log.d("DOC_DELETE", "Worker synced vax doc delete vaccinationId=$vaccinationId docId=$docId")
+                }
+            }.onFailure {
+                android.util.Log.e("DOC_DELETE", "Worker vax doc delete failed vaccinationId=$vaccinationId docId=$docId: ${it.message}", it)
+            }
+        }
+        if (remaining.isEmpty()) hive.invalidatePendingVaxDocumentDeletes()
+        else hive.putPendingVaxDocumentDeletes(gson.toJson(remaining))
     }
 
     private fun movePendingDocumentsToServerPet(
@@ -663,6 +729,9 @@ class SyncWorker(
                     )
                 }
 
+                // Store redirect BEFORE deleting the old entity so any concurrent
+                // getEvent("local_ev_xxx") call can follow it to the server ID.
+                HiveCacheManager(applicationContext).putLocalEventIdRedirect(entity.id, created.id)
                 db.eventDao().deleteById(entity.id)
                 db.eventDao().upsert(createdEntity)
 

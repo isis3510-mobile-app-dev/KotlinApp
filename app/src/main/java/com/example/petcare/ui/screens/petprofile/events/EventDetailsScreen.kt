@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material3.*
+import android.widget.Toast
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +52,13 @@ fun EventDetailsScreen(
 
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) onNavigateBack()
+    }
+
+    LaunchedEffect(uiState.toastMessage) {
+        uiState.toastMessage?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            viewModel.clearToast()
+        }
     }
 
     // FIX: separate delete and save dialogs - each one waits for user confirmation before acting
@@ -276,6 +284,9 @@ fun EventDetailsScreen(
                                 addDisabledMessage = "Only one document is allowed for events. Delete the current document to upload another.",
                                 onDocumentPicked = { uri, mimeType, fileName ->
                                     viewModel.addDocument(context, petId, uri, mimeType, fileName)
+                                },
+                                onDeleteDocument = { docId ->
+                                    viewModel.deleteDocument(context, eventId, docId)
                                 }
                             )
 
@@ -346,6 +357,9 @@ fun EventDetailsScreen(
                                 addDisabledMessage = "Only one document is allowed for events. Delete the current document to upload another.",
                                 onDocumentPicked = { uri, mimeType, fileName ->
                                     viewModel.addDocument(context, petId, uri, mimeType, fileName)
+                                },
+                                onDeleteDocument = { docId ->
+                                    viewModel.deleteDocument(context, eventId, docId)
                                 }
                             )
                         }
