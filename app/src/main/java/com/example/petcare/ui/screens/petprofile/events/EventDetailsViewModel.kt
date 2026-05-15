@@ -150,13 +150,16 @@ class EventDetailsViewModel : ViewModel() {
     fun saveEdits() {
         val event = _uiState.value.event ?: return
         val s     = _uiState.value
-
+        Log.d("EVENT_SAVE", "saveEdits() called eventId=${event.id}")
+        Log.d("EVENT_SAVE", "editTitle='${s.editTitle}' editDate='${s.editDate}' editTime='${s.editTime}'")
         val isoDate = EventDateUtils.toIsoFromAppDateTime(
             appDate = s.editDate,
             appTime = s.editTime,
             fallbackRaw = event.date
         )
+        Log.d("EVENT_SAVE", "isoDate=$isoDate")
         if (isoDate == null) {
+            Log.w("EVENT_SAVE", "isoDate is null — aborting with date error")
             _uiState.value = s.copy(
                 isSaving = false,
                 error = "Invalid event date/time. Please choose a valid date."
@@ -180,6 +183,7 @@ class EventDetailsViewModel : ViewModel() {
             validateCommittedInput(s.editClinic, InputFieldPolicy.GENERAL_TEXT, maxLength = InputTextLimits.PROVIDER_OR_CLINIC),
             validateCommittedInput(s.editPrice, InputFieldPolicy.DECIMAL, maxLength = InputTextLimits.PRICE, fieldName = "Price")
         ).firstOrNull()
+        Log.d("EVENT_SAVE", "validationMessage=$validationMessage")
         if (validationMessage != null) {
             _uiState.value = s.copy(isSaving = false, error = validationMessage)
             return
@@ -187,6 +191,7 @@ class EventDetailsViewModel : ViewModel() {
 
         viewModelScope.launch {
             _uiState.value = s.copy(isSaving = true, error = null)
+            Log.d("EVENT_SAVE", "Calling updateEvent eventId=${event.id}")
             FeatureExecutionTracker.track("Edit Event") {
                 RepositoryProvider.eventRepository.updateEvent(
                     eventId     = event.id,
@@ -199,6 +204,7 @@ class EventDetailsViewModel : ViewModel() {
                 )
             }.fold(
                 onSuccess = { updated ->
+                    Log.d("EVENT_SAVE", "updateEvent success updatedId=${updated.id}")
                     _uiState.value = _uiState.value.copy(
                         event     = updated,
                         isSaving  = false,
@@ -206,6 +212,7 @@ class EventDetailsViewModel : ViewModel() {
                     )
                 },
                 onFailure = { e ->
+                    Log.e("EVENT_SAVE", "updateEvent failed: ${e.message}", e)
                     _uiState.value = _uiState.value.copy(isSaving = false, error = e.message)
                 }
             )
