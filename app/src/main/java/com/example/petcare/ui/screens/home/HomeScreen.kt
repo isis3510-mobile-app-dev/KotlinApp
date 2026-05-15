@@ -78,7 +78,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text       = displayName.truncateForDisplay(DisplayTextLimits.COMPACT_TITLE),
+                    text       = displayName.truncateForDisplay(DisplayTextLimits.HOME_PET_CARD),
                     fontSize   = 32.sp,
                     fontWeight = FontWeight.Bold,
                     color      = MaterialTheme.colorScheme.onBackground,
