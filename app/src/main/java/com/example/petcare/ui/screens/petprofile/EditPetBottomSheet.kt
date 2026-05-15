@@ -108,12 +108,15 @@ fun EditPetBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState       = sheetState,
+        // The scrollable form can fight sheet dragging and make the sheet jitter during flings.
+        sheetGesturesEnabled = false,
         dragHandle       = {}
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.92f)
+                .navigationBarsPadding()
                 .padding(horizontal = 24.dp)
         ) {
 
@@ -130,7 +133,10 @@ fun EditPetBottomSheet(
             }
 
             Column(
-                modifier            = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                modifier            = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
 
@@ -235,12 +241,15 @@ fun EditPetBottomSheet(
                     Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(20.dp))
             }
 
             // ── Save / Cancel ─────────────────────────────────────────────
             Row(
-                modifier              = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                modifier              = Modifier
+                    .fillMaxWidth()
+                    .imePadding()
+                    .padding(top = 12.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
