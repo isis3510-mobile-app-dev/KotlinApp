@@ -222,10 +222,11 @@ class EventRepository(
         provider: String,
         clinic: String,
         price: Double?,
-        date: String
+        date: String,
     ): Result<Event> {
         return if (isOnline()) {
             runCatching {
+                Log.d("EVENT_REPO", "Online path — building body")
                 val currentEvent = getEvent(eventId).getOrThrow()
                 val normalizedDocuments = currentEvent.attachedDocuments.map { doc ->
                     mapOf(
@@ -243,28 +244,52 @@ class EventRepository(
                     "attachedDocuments" to normalizedDocuments
                 )
                 if (price != null) body["price"] = price
+                Log.d("EVENT_REPO", "Calling api.updateEvent body=$body")
                 val response = api.updateEvent(eventId, body)
+                Log.d("EVENT_REPO", "Response code=${response.code()} isSuccessful=${response.isSuccessful}")
                 if (!response.isSuccessful) error("Update fail: ${response.code()}")
                 val event = response.body() ?: error("Empty update response")
+                Log.d("EVENT_REPO", "Update success from server eventId=${event.id}")
                 eventDao.upsert(event.toEntity())
                 invalidateBothCaches(event.petId, eventId)
                 event
+            }.onFailure { e ->
+                Log.e("EVENT_REPO", "Online path exception: ${e.message}", e)
             }
         } else {
             runCatching {
+                Log.d("EVENT_REPO", "Offline path — updating local DB eventId=$eventId")
                 val existing = eventDao.getById(eventId) ?: error("Not found")
-                eventDao.updateEventPending(
-                    id = eventId,
-                    title = title,
-                    eventType = existing.eventType,
-                    date = date,
-                    price = price,
-                    provider = provider,
-                    clinic = clinic,
-                    description = description,
-                    followUpDate = existing.followUpDate
-                )
+                Log.d("EVENT_REPO", "existing in DB=$existing")
+                if (existing.pendingOperation == "CREATE") {
+                    Log.d("EVENT_REPO", "Offline update on pending CREATE — patching fields, keeping op=CREATE")
+                    eventDao.updateEventFields(
+                        id          = eventId,
+                        title       = title,
+                        date        = date,
+                        price       = price,
+                        provider    = provider,
+                        clinic      = clinic,
+                        description = description,
+                        followUpDate = existing.followUpDate
+                    )
+                } else {
+                    eventDao.updateEventPending(
+                        id           = eventId,
+                        title        = title,
+                        eventType    = existing.eventType,
+                        date         = date,
+                        price        = price,
+                        provider     = provider,
+                        clinic       = clinic,
+                        description  = description,
+                        followUpDate = existing.followUpDate
+                    )
+                }
                 // Evict list LRU immediately so the card reflects the local change
+                val after = eventDao.getById(eventId)
+                Log.d("EVENT_REPO", "DB after update=$after")
+                after?.toEvent() ?: error("Error after update")
                 lru.invalidateList(listCacheKey(existing.petId, null))
                 lru.invalidateEvent(eventId)
                 enqueueSyncWork()

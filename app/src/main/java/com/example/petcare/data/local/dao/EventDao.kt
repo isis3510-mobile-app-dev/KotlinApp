@@ -177,4 +177,28 @@ interface EventDao {
         description: String,
         followUpDate: String?
     )
+
+    @Query("""
+    UPDATE events_local
+    SET title        = :title,
+        date         = :date,
+        price        = :price,
+        provider     = :provider,
+        clinic       = :clinic,
+        description  = :description,
+        followUpDate = :followUpDate
+    WHERE id = :id
+""")
+    suspend fun updateEventFields(
+        id: String,
+        title: String,
+        date: String,
+        price: Double?,
+        provider: String,
+        clinic: String,
+        description: String,
+        followUpDate: String?
+    )
+
+
 }
